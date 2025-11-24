@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- MAPLIBRE MAPVIEW -->
+    <org.maplibre.android.maps.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- WEATHER + TEMP TOP LEFT -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_margin="16dp"
+        android:gravity="center_vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:src="@drawable/ic_weather_rain"
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
+
+        <TextView
+            android:id="@+id/txtTemperature"
+            android:text="11º"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginStart="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- RIGHT PANEL TOP (DESTINATION INFO) -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/panel_bg"
+        android:gravity="center"
+        android:layout_width="160dp"
+        android:layout_height="140dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp">
+
+        <ImageView
+            android:src="@drawable/ic_flag_checkered"
+            android:layout_width="48dp"
+            android:layout_height="48dp" />
+
+        <TextView
+            android:id="@+id/txtEta"
+            android:text="-- minutos"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:layout_marginTop="8dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/txtDistance"
+            android:text="-- Km"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- RIGHT PANEL BOTTOM (EMPTY FOR NOW — LANE INFO LATER) -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:background="@drawable/panel_bg"
+        android:layout_width="160dp"
+        android:layout_height="260dp"
+        android:layout_gravity="end|center_vertical"
+        android:layout_margin="16dp">
+    </LinearLayout>
+
+    <!-- SPEED + LIMIT BOTTOM RIGHT -->
+    <LinearLayout
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp">
+
+        <ImageView
+            android:src="@drawable/ic_speed_limit_50"
+            android:layout_width="64dp"
+            android:layout_height="64dp" />
+
+        <TextView
+            android:id="@+id/txtCurrentSpeed"
+            android:text="12 Km/h"
+            android:textColor="#FFFFFF"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginStart="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+    <!-- SETTINGS ICON BOTTOM LEFT -->
+    <ImageView
+        android:id="@+id/btnSettings"
+        android:src="@drawable/ic_settings"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="20dp" />
+
+</FrameLayout>
+

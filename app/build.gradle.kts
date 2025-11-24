@@ -5,9 +5,7 @@ plugins {
 
 android {
     namespace = "com.example.myapplication"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.myapplication"
@@ -28,10 +26,12 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
@@ -44,9 +44,10 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    // osmdroid for OpenStreetMap
-    //implementation("org.osmdroid:osmdroid-android:6.1.16")
 
-    implementation(libs.android.sdk)
+    // MapLibre SDK
+    implementation("org.maplibre.gl:android-sdk:11.8.5")
+
+
     implementation(libs.play.services.location)
 }

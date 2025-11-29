@@ -70,6 +70,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             // Start mock driving simulation
             startMockLocationFeed()
         }
+
+        val density = resources.displayMetrics.density
+        val rightPanelWidthPx = (280 * density).toInt()
+
+        mapLibreMap.setPadding(
+            0,
+            0,
+            rightPanelWidthPx,
+            0
+        )
     }
 
     // -------------------------

@@ -20,7 +20,7 @@
     <LinearLayout
         android:id="@+id/rightPanel"
         android:orientation="vertical"
-        android:layout_width="280dp"
+        android:layout_width="320dp"
         android:layout_height="0dp"
         android:layout_margin="8dp"
         app:layout_constraintTop_toTopOf="parent"
@@ -34,7 +34,9 @@
             android:padding="16dp"
             android:layout_width="match_parent"
             android:layout_height="150dp"
-            android:gravity="center">
+            android:gravity="center"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp">
 
             <ImageView
                 android:src="@drawable/ic_flag_checkered"
@@ -69,7 +71,9 @@
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
             android:layout_weight="1"
-            android:gravity="center">
+            android:gravity="center"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp">
 
             <!-- Lane View TODO -->
             <!--<ImageView
@@ -87,10 +91,12 @@
             android:orientation="horizontal"
             android:background="@drawable/panel_bottom_speed"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
+            android:layout_height="96dp"
             android:padding="12dp"
             android:gravity="center_vertical"
-            android:layout_marginTop="12dp">
+            android:layout_marginTop="12dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp">
 
             <TextView
                 android:id="@+id/txtSpeedLimit"
@@ -99,7 +105,7 @@
                 android:gravity="center"
                 android:textStyle="bold"
                 android:textColor="#000000"
-                android:textSize="20sp"
+                android:textSize="24sp"
                 android:layout_width="56dp"
                 android:layout_height="56dp" />
 
@@ -108,7 +114,7 @@
                 android:text="12 Km/h"
                 android:textStyle="bold"
                 android:textColor="#FFFFFF"
-                android:textSize="20sp"
+                android:textSize="32sp"
                 android:layout_marginStart="12dp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
@@ -132,16 +138,16 @@
         <ImageView
             android:id="@+id/weatherIcon"
             android:src="@drawable/ic_weather_rain"
-            android:layout_width="36dp"
-            android:layout_height="36dp" />
+            android:layout_width="96dp"
+            android:layout_height="96dp" />
 
         <TextView
             android:id="@+id/txtTemperature"
-            android:text="11º"
+            android:text="11º "
             android:textColor="#FFFFFF"
             android:textStyle="bold"
-            android:textSize="18sp"
-            android:layout_marginStart="8dp"
+            android:textSize="48sp"
+            android:layout_marginStart="16dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
     </LinearLayout>
@@ -150,8 +156,8 @@
     <ImageView
         android:id="@+id/btnSettings"
         android:src="@drawable/ic_settings"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
         android:layout_margin="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

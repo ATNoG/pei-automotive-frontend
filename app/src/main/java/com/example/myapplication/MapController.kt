@@ -117,7 +117,7 @@ class MapController(
         val symbolLayer = SymbolLayer(ARROW_LAYER_ID, ARROW_SOURCE_ID).apply {
             setProperties(
                 iconImage(ARROW_IMAGE_ID),
-                iconSize(0.3f),
+                iconSize(0.6f),
                 iconAllowOverlap(true),
                 iconIgnorePlacement(true),
 
@@ -150,7 +150,7 @@ class MapController(
 
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))
-            .zoom(17.5)
+            .zoom(19.0)
             .tilt(60.0)
             .bearing(bearing.toDouble())
             .build()
@@ -169,7 +169,7 @@ class MapController(
     }
 
     // --- route simulation: pass list of Pair(lat,lon) or Points ---
-    fun simulateRoute(points: List<Pair<Double, Double>>, stepMs: Long = 1200L) {
+    fun simulateRoute(points: List<Pair<Double, Double>>, stepMs: Long = 600L) {
         if (points.isEmpty()) return
         stopRouteSimulation()
 

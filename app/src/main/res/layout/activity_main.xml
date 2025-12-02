@@ -29,38 +29,55 @@
 
         <!-- TOP INFO BOX -->
         <LinearLayout
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:background="@drawable/panel_top_box"
             android:padding="16dp"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
-            android:gravity="center"
+            android:layout_height="120dp"
+            android:gravity="center_vertical"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp">
 
+            <!-- LEFT ICON -->
             <ImageView
-                android:src="@drawable/ic_flag_checkered"
+                android:background="@drawable/eta_flag_bg"
                 android:layout_width="56dp"
-                android:layout_height="56dp" />
+                android:layout_height="56dp"
+                android:src="@drawable/ic_flag_checkered" />
 
-            <TextView
-                android:id="@+id/txtDistance"
-                android:text="-- Km"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:layout_marginTop="8dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+            <!-- SPACE BETWEEN ICON AND TEXT -->
+            <Space
+                android:layout_width="48dp"
+                android:layout_height="0dp" />
 
-            <TextView
-                android:id="@+id/txtEta"
-                android:text="-- minutos"
-                android:textColor="#FFFFFF"
-                android:textSize="18sp"
+            <!-- RIGHT TEXT COLUMN -->
+            <LinearLayout
+                android:orientation="vertical"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content">
+
+                <TextView
+                    android:id="@+id/txtDistance"
+                    android:text="-- Km"
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="center"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/txtEta"
+                    android:text="-- Minutos"
+                    android:textColor="#FFFFFF"
+                    android:textSize="24sp"
+                    android:gravity="center"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
 
         </LinearLayout>
+
 
         <!-- LANE PREVIEW BOX -->
         <LinearLayout
@@ -138,15 +155,15 @@
         <ImageView
             android:id="@+id/weatherIcon"
             android:src="@drawable/ic_weather_rain"
-            android:layout_width="96dp"
-            android:layout_height="96dp" />
+            android:layout_width="80dp"
+            android:layout_height="80dp" />
 
         <TextView
             android:id="@+id/txtTemperature"
             android:text="11º "
             android:textColor="#FFFFFF"
             android:textStyle="bold"
-            android:textSize="48sp"
+            android:textSize="42sp"
             android:layout_marginStart="16dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>

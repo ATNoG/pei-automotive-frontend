@@ -169,7 +169,7 @@ class MapController(
     }
 
     // --- route simulation: pass list of Pair(lat,lon) or Points ---
-    fun simulateRoute(points: List<Pair<Double, Double>>, stepMs: Long = 600L) {
+    fun simulateRoute(points: List<Pair<Double, Double>>, stepMs: Long = 900L) {
         if (points.isEmpty()) return
         stopRouteSimulation()
 
@@ -178,6 +178,10 @@ class MapController(
 
         routeRunnable = object : Runnable {
             override fun run() {
+                if (routeIndex == 0) {
+                    mainHandler.postDelayed(this, 7000L)
+                }
+
                 if (routeIndex >= routePoints.size) {
                     routeRunnable = null
                     return

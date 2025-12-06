@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/mainContainer"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    android:fitsSystemWindows="true">
+
+    <!-- MAP -->
+    <org.maplibre.android.maps.MapView
+        android:id="@+id/mapView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/rightPanel"
+        app:layout_constraintHorizontal_weight="1" />
+
+    <!-- RIGHT PANEL (wraps two boxes like screenshot) -->
+    <LinearLayout
+        android:id="@+id/rightPanel"
+        android:orientation="vertical"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_margin="8dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/mapView"
+        app:layout_constraintWidth_percent="0.3">
+
+        <!-- TOP INFO BOX -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:background="@drawable/panel_top_box"
+            android:padding="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="6dp">
+
+            <!-- LEFT ICON -->
+            <ImageView
+                android:background="@drawable/eta_flag_bg"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:src="@drawable/ic_flag_checkered"
+                android:adjustViewBounds="true"
+                android:scaleType="fitCenter"
+                android:minWidth="40dp"
+                android:minHeight="40dp" />
+
+            <!-- SPACE BETWEEN ICON AND TEXT -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="0.2" />
+
+            <!-- RIGHT TEXT COLUMN -->
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="0.8">
+
+                <TextView
+                    android:id="@+id/txtDistance"
+                    android:text="-- Km"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:layout_marginBottom="4dp"
+                    android:gravity="center"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+
+                <TextView
+                    android:id="@+id/txtEta"
+                    android:text="-- Minutos"
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:gravity="center"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+        <!-- LANE PREVIEW BOX -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:background="@drawable/panel_lane_box"
+            android:padding="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_marginTop="6dp"
+            android:layout_weight="2"
+            android:gravity="center"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="6dp">
+
+            <!-- Lane View TODO -->
+            <!--<ImageView
+                android:id="@+id/lanePreview"
+                android:src="@drawable/ic_lane_preview"
+                android:layout_width="140dp"
+                android:layout_height="180dp"
+                android:adjustViewBounds="true" />-->
+
+        </LinearLayout>
+
+        <!-- SPEED AREA -->
+        <LinearLayout
+            android:id="@+id/speedArea"
+            android:orientation="horizontal"
+            android:background="@drawable/panel_bottom_speed"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="12dp"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp">
+
+            <TextView
+                android:id="@+id/txtSpeedLimit"
+                android:background="@drawable/speed_limit_circle"
+                android:text="50"
+                android:gravity="center"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:textSize="18sp"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0"
+                android:minWidth="40dp"
+                android:minHeight="40dp" />
+
+            <TextView
+                android:id="@+id/txtCurrentSpeed"
+                android:text="12 Km/h"
+                android:textStyle="bold"
+                android:textColor="#FFFFFF"
+                android:textSize="24sp"
+                android:layout_marginStart="12dp"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- WEATHER BADGE -->
+    <LinearLayout
+        android:id="@+id/weatherBadge"
+        android:orientation="horizontal"
+        android:background="@drawable/weather_bg"
+        android:padding="8dp"
+        android:layout_margin="12dp"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/weatherIcon"
+            android:src="@drawable/ic_weather_rain"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/txtTemperature"
+            android:text="11º "
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="32sp"
+            android:layout_marginStart="12dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- SETTINGS BUTTON -->
+    <ImageView
+        android:id="@+id/btnSettings"
+        android:src="@drawable/ic_settings"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_margin="12dp"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

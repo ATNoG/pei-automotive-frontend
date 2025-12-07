@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Fade in red -->
+    <alpha
+        android:fromAlpha="0"
+        android:toAlpha="0.6"
+        android:duration="300"
+        android:startOffset="0" />
+    
+    <!-- Fade out red -->
+    <alpha
+        android:fromAlpha="0.6"
+        android:toAlpha="0"
+        android:duration="300"
+        android:startOffset="300" />
+    
+    <!-- Fade in red again -->
+    <alpha
+        android:fromAlpha="0"
+        android:toAlpha="0.6"
+        android:duration="300"
+        android:startOffset="600" />
+    
+    <!-- Fade out red -->
+    <alpha
+        android:fromAlpha="0.6"
+        android:toAlpha="0"
+        android:duration="300"
+        android:startOffset="900" />
+</set>
+```
+
+Now let me update the UiController to handle the speed alert animation:

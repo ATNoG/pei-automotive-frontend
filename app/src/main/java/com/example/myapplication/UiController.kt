@@ -2,6 +2,9 @@ package com.example.myapplication
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.util.Log
+import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -19,13 +22,15 @@ class UiController(private val activity: Activity) {
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
     private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
+    private val speedAlertIcon: ImageView? = activity.findViewById(R.id.speedAlertIcon)
+    private val speedAlertBlur: View? = activity.findViewById(R.id.speedAlertBlur)
 
     fun updateSpeedLimit(limit: Int) {
         txtSpeedLimit?.text = limit.toString()
     }
 
     fun updateCurrentSpeed(speedKmh: Int) {
-        txtCurrentSpeed?.text = "$speedKmh Km/h"
+        txtCurrentSpeed?.text = speedKmh.toString()
     }
 
     fun updateTemperature(tempC: Int) {
@@ -51,5 +56,45 @@ class UiController(private val activity: Activity) {
 
     fun showConnectionStatus(message: String) {
         Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+    }
+
+    fun showSpeedAlert() {
+        Log.d("UI_ALERT", "showSpeedAlert called")
+        Log.d("UI_ALERT", "speedAlertIcon: $speedAlertIcon")
+        Log.d("UI_ALERT", "speedAlertBlur: $speedAlertBlur")
+        
+        // Show the red blur background
+        speedAlertBlur?.visibility = View.VISIBLE
+        Log.d("UI_ALERT", "Blur visibility set to VISIBLE")
+        
+        // Start heartbeat animation on icon
+        try {
+            val heartbeat = AnimationUtils.loadAnimation(activity, R.anim.heartbeat)
+            Log.d("UI_ALERT", "Heartbeat animation loaded: $heartbeat")
+            heartbeat.repeatMode = android.view.animation.Animation.RESTART
+            heartbeat.repeatCount = android.view.animation.Animation.INFINITE
+            speedAlertIcon?.startAnimation(heartbeat)
+            Log.d("UI_ALERT", "Heartbeat animation started")
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting heartbeat: ${e.message}")
+        }
+        
+        // Start pulse animation on blur
+        try {
+            val pulse = AnimationUtils.loadAnimation(activity, R.anim.red_pulse)
+            Log.d("UI_ALERT", "Pulse animation loaded: $pulse")
+            pulse.repeatMode = android.view.animation.Animation.RESTART
+            pulse.repeatCount = android.view.animation.Animation.INFINITE
+            speedAlertBlur?.startAnimation(pulse)
+            Log.d("UI_ALERT", "Pulse animation started")
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting pulse: ${e.message}")
+        }
+    }
+
+    fun hideSpeedAlert() {
+        speedAlertIcon?.clearAnimation()
+        speedAlertBlur?.clearAnimation()
+        speedAlertBlur?.visibility = View.GONE
     }
 }

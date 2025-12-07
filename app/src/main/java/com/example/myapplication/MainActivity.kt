@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
@@ -19,11 +20,11 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
-        // create controllers
+        // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
         uiController = UiController(this)
 
-        // Setup MQTT
+        // Setup MQTT (after uiController is initialized)
         setupMqtt()
 
         // wire map ready callback
@@ -38,13 +39,16 @@ class MainActivity : AppCompatActivity() {
 
         // Set callback for received messages
         mqttManager.setOnMessageReceived { topic, message ->
+            Log.d("MQTT_MSG", "Received on topic: $topic")
             when {
-                topic.startsWith("alerts/") -> {
+                topic == "alerts/speed" -> {
+                    Log.d("MQTT_MSG", "Speed alert received!")
                     runOnUiThread {
-                        uiController.showPopup("Alert", message)
+                        uiController.showSpeedAlert()
                     }
                 }
-                topic.startsWith("cars/updates") -> {
+                topic == "cars/updates" -> {
+                    Log.d("MQTT_MSG", "Car update received: $message")
                     try {
                         val carData = org.json.JSONObject(message)
                         val carId = carData.optString("car_id", "Unknown")
@@ -53,15 +57,28 @@ class MainActivity : AppCompatActivity() {
                         val speedKmh = carData.optDouble("speed_kmh", 0.0)
                         val headingDeg = carData.optDouble("heading_deg", 0.0).toFloat()
                         
+                        Log.d("MQTT_MSG", "Car: $carId, Speed: $speedKmh km/h, Heading: $headingDeg")
+                        
                         runOnUiThread {
                             // Update map with car position and heading
                             mapController.setSingleLocation(lat, lon, headingDeg)
                             // Update speed on UI
                             uiController.updateCurrentSpeed(speedKmh.toInt())
+                            // Hide alert if speed is back to normal
+                            if (speedKmh < 60) { // Adjust threshold as needed
+                                Log.d("MQTT_MSG", "Speed normal, hiding alert")
+                                uiController.hideSpeedAlert()
+                            } else {
+                                Log.d("MQTT_MSG", "Speed exceeded, showing alert")
+                                uiController.showSpeedAlert()
+                            }
                         }
                     } catch (e: Exception) {
-                        // Ignore JSON parsing errors
+                        Log.e("MQTT_MSG", "Error parsing car update: ${e.message}")
                     }
+                }
+                else -> {
+                    // Ignore other alerts
                 }
             }
         }

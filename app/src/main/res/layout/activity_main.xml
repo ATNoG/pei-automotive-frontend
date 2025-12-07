@@ -103,39 +103,88 @@
         </LinearLayout>
 
         <!-- SPEED AREA -->
-        <LinearLayout
-            android:id="@+id/speedArea"
-            android:orientation="horizontal"
-            android:background="@drawable/panel_bottom_speed"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="96dp"
-            android:padding="12dp"
-            android:gravity="center_vertical"
             android:layout_marginTop="12dp"
             android:layout_marginLeft="10dp"
-            android:layout_marginRight="10dp">
+            android:layout_marginRight="10dp"
+            android:background="@drawable/panel_bottom_speed">
 
-            <TextView
-                android:id="@+id/txtSpeedLimit"
-                android:background="@drawable/speed_limit_circle"
-                android:text="50"
-                android:gravity="center"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:textSize="24sp"
-                android:layout_width="56dp"
-                android:layout_height="56dp" />
+            <!-- Red blur background for speed alert (initially invisible) -->
+            <View
+                android:id="@+id/speedAlertBlur"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/speed_alert_red_blur"
+                android:alpha="0"
+                android:visibility="gone" />
 
-            <TextView
-                android:id="@+id/txtCurrentSpeed"
-                android:text="12 Km/h"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:textSize="32sp"
-                android:layout_marginStart="12dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
+            <LinearLayout
+                android:id="@+id/speedArea"
+                android:orientation="horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="96dp"
+                android:padding="12dp"
+                android:gravity="center_vertical">
+
+                <!-- Speed limit circle (always visible) -->
+                <TextView
+                    android:id="@+id/txtSpeedLimit"
+                    android:background="@drawable/speed_limit_circle"
+                    android:text="30"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:textSize="24sp"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp" />
+
+                <Space
+                    android:layout_width="12dp"
+                    android:layout_height="0dp" />
+
+                <!-- SPEED ALERT ICON (pulses on alert) -->
+                <ImageView
+                    android:id="@+id/speedAlertIcon"
+                    android:src="@drawable/speed_limit_30_sign_icon"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:scaleType="centerInside"
+                    android:visibility="visible" />
+
+                <Space
+                    android:layout_width="12dp"
+                    android:layout_height="0dp" />
+
+                <!-- Current speed (large, right side) -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="right|center_vertical"
+                    android:paddingEnd="12dp">
+
+                    <TextView
+                        android:id="@+id/txtCurrentSpeed"
+                        android:text="12"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF"
+                        android:textSize="64sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                    <TextView
+                        android:text="Km/h"
+                        android:textColor="#FFFFFF"
+                        android:textSize="64sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="4dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </FrameLayout>
 
     </LinearLayout>
 

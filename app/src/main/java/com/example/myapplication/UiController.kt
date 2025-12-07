@@ -1,15 +1,17 @@
 package com.example.myapplication
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 
 /**
  * UiController - small helper to update right-panel widgets.
  *
  * Exposes clear methods: updateSpeedLimit, updateCurrentSpeed, updateTemperature, updateWeatherIcon, updateEtaAndDistance
  */
-class UiController(activity: Activity) {
+class UiController(private val activity: Activity) {
 
     private val txtSpeedLimit: TextView? = activity.findViewById(R.id.txtSpeedLimit)
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
@@ -37,5 +39,17 @@ class UiController(activity: Activity) {
     fun updateEtaAndDistance(etaText: String, distanceText: String) {
         txtEta?.text = etaText
         txtDistance?.text = distanceText
+    }
+
+    fun showPopup(title: String, message: String) {
+        AlertDialog.Builder(activity)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+            .show()
+    }
+
+    fun showConnectionStatus(message: String) {
+        Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
     }
 }

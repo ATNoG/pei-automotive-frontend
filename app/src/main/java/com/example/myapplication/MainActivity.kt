@@ -9,6 +9,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var mapController: MapController
     private lateinit var uiController: UiController
+    private lateinit var mqttManager: MqttManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,6 +22,9 @@ class MainActivity : AppCompatActivity() {
         // create controllers
         mapController = MapController(this, findViewById(R.id.mapView))
         uiController = UiController(this)
+
+        // Setup MQTT
+        setupMqtt()
 
         // wire map ready callback
         mapController.init {
@@ -54,6 +58,45 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupMqtt() {
+        // Create MQTT manager with your broker details
+        mqttManager = MqttManager(this, "192.168.1.201", 1884)
+
+        // Set callback for received messages
+        mqttManager.setOnMessageReceived { topic, message ->
+            runOnUiThread {
+                uiController.showPopup("Topic: $topic", message)
+            }
+        }
+
+        // Connect to broker
+        mqttManager.connect(
+            onSuccess = {
+                runOnUiThread {
+                    uiController.showConnectionStatus("✓ Connected to broker")
+                }
+                // Subscribe to topics after connection
+                mqttManager.subscribe("alerts/#",
+                    onSuccess = { 
+                        runOnUiThread {
+                            uiController.showConnectionStatus("✓ Subscribed to alerts/#")
+                        }
+                    },
+                    onError = { error -> 
+                        runOnUiThread {
+                            uiController.showConnectionStatus("✗ Subscribe failed: $error")
+                        }
+                    }
+                )
+            },
+            onError = { error ->
+                runOnUiThread {
+                    uiController.showConnectionStatus("✗ Connection failed: $error")
+                }
+            }
+        )
+    }
+
     override fun onStart() {
         super.onStart()
         mapController.onStart()
@@ -75,6 +118,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        mqttManager.disconnect()
         mapController.onDestroy()
         super.onDestroy()
     }

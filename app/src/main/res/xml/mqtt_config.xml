@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mqtt_host">192.168.1.201</string>
+    <integer name="mqtt_port">1884</integer>
+
+    <string name="mqtt_username"></string>
+    <string name="mqtt_password"></string>
+
+    <string name="topic_car_updates">cars/updates</string>
+    <string name="topic_alerts">alerts/#</string>
+
+    <string name="mqtt_client_prefix">android-automotive</string>
+</resources>

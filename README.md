@@ -48,7 +48,7 @@ cd pei-automotive-frontend
 
 2. Create your configuration file:
 ```bash
-cp local.properties.example local.properties
+vim local.properties
 ```
 
 3. Edit `local.properties` and add your API keys and MQTT broker details:

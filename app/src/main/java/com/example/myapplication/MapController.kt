@@ -42,7 +42,7 @@ class MapController(
     private var styleLoadedCallback: (() -> Unit)? = null
 
     companion object {
-        private const val STYLE_URL = "https://api.maptiler.com/maps/streets/style.json?key=VpgyO2ogB4DeaiIKkKXE"
+        private val STYLE_URL = "https://api.maptiler.com/maps/streets/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
         private const val ARROW_SOURCE_ID = "arrow-source"
         private const val ARROW_LAYER_ID = "arrow-layer"
         private const val ARROW_IMAGE_ID = "arrow-image"

@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         // initialize MapLibre (only required once, before creating MapView)
-        MapLibre.getInstance(this, "VpgyO2ogB4DeaiIKkKXE", WellKnownTileServer.MapTiler)
+        MapLibre.getInstance(this, BuildConfig.MAPTILER_API_KEY, WellKnownTileServer.MapTiler)
 
         setContentView(R.layout.activity_main)
 
@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupMqtt() {
         // Create MQTT manager with your broker details
-        mqttManager = MqttManager(this, "192.168.1.201", 1884)
+        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT)
 
         // Set callback for received messages
         mqttManager.setOnMessageReceived { topic, message ->

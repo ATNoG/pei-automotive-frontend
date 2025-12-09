@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupMqtt() {
         // Create MQTT manager with your broker details
-        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT)
+        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt())
 
         // Set callback for received messages
         mqttManager.setOnMessageReceived { topic, message ->

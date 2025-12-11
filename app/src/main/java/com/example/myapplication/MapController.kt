@@ -46,12 +46,28 @@ class MapController(
         private const val ARROW_SOURCE_ID = "arrow-source"
         private const val ARROW_LAYER_ID = "arrow-layer"
         private const val ARROW_IMAGE_ID = "arrow-image"
+        
+        // Second car (other vehicle)
+        private const val OTHER_CAR_SOURCE_ID = "other-car-source"
+        private const val OTHER_CAR_LAYER_ID = "other-car-layer"
+        private const val OTHER_CAR_IMAGE_ID = "other-car-image"
     }
 
     // simulation state
     private var routePoints: List<Point> = emptyList()
     private var routeIndex = 0
     private var routeRunnable: Runnable? = null
+    
+    // Track user car position for camera
+    private var userCarLat: Double = 0.0
+    private var userCarLon: Double = 0.0
+    private var userCarBearing: Float = 0.0f
+    
+    // Track other car position for smooth animation
+    private var otherCarLat: Double = 0.0
+    private var otherCarLon: Double = 0.0
+    private var otherCarBearing: Float = 0.0f
+    private var otherCarAnimationRunnable: Runnable? = null
 
     fun init(onReady: () -> Unit) {
         this.styleLoadedCallback = onReady
@@ -71,9 +87,13 @@ class MapController(
             // 1) pad camera so map visual center is left of UI panel
             setMapCameraPaddingDp(0, 0, 280, 0) // right padding = panel width in dp
 
-            // 2) add arrow image, source, and symbol layer
+            // 2) add arrow image, source, and symbol layer for user car
             addArrowImageToStyle(style)
             addArrowSourceAndLayer(style)
+            
+            // 2b) add other car image, source, and symbol layer
+            addOtherCarImageToStyle(style)
+            addOtherCarSourceAndLayer(style)
 
             // 3) try to brighten common road layers (best-effort)
             brightenRoads(style)
@@ -99,9 +119,14 @@ class MapController(
         // load drawable (put ic_map_arrow in res/drawable)
         try {
             val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_map_arrow)
-            style.addImage(ARROW_IMAGE_ID, bmp)
+            if (bmp != null) {
+                style.addImage(ARROW_IMAGE_ID, bmp)
+                android.util.Log.d("MapController", "User car arrow image loaded successfully")
+            } else {
+                android.util.Log.e("MapController", "Failed to load user car arrow image - bitmap is null")
+            }
         } catch (t: Throwable) {
-            // silently continue if no drawable
+            android.util.Log.e("MapController", "Error loading user car arrow image: ${t.message}")
         }
     }
 
@@ -117,7 +142,7 @@ class MapController(
         val symbolLayer = SymbolLayer(ARROW_LAYER_ID, ARROW_SOURCE_ID).apply {
             setProperties(
                 iconImage(ARROW_IMAGE_ID),
-                iconSize(0.6f),
+                iconSize(0.25f),  // Smaller to fit on the road
                 iconAllowOverlap(true),
                 iconIgnorePlacement(true),
 
@@ -132,22 +157,100 @@ class MapController(
 
         style.addLayer(symbolLayer)
     }
+    
+    // --- other car symbol setup ---
+    private fun addOtherCarImageToStyle(style: Style) {
+        // load drawable for the other car
+        try {
+            // Try to use the same arrow for now (will be colored differently via tint)
+            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_map_arrow)
+            if (bmp != null) {
+                style.addImage(OTHER_CAR_IMAGE_ID, bmp)
+                android.util.Log.d("MapController", "Other car arrow image loaded successfully")
+            } else {
+                android.util.Log.e("MapController", "Failed to load other car arrow image - bitmap is null")
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e("MapController", "Error loading other car arrow image: ${t.message}")
+        }
+    }
+
+    private fun addOtherCarSourceAndLayer(style: Style) {
+        val initialFeature = Feature.fromGeometry(Point.fromLngLat(0.0, 0.0))
+        val src = GeoJsonSource(
+            OTHER_CAR_SOURCE_ID,
+            FeatureCollection.fromFeatures(arrayOf(initialFeature))
+        )
+        style.addSource(src)
+
+        val symbolLayer = SymbolLayer(OTHER_CAR_LAYER_ID, OTHER_CAR_SOURCE_ID).apply {
+            setProperties(
+                iconImage(OTHER_CAR_IMAGE_ID),
+                iconSize(0.18f),  // Much smaller to distinguish from user car
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_CENTER),
+                iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                iconRotate(0.0f),
+                iconOpacity(0.85f)  // Slightly transparent to distinguish
+            )
+        }
+
+        style.addLayer(symbolLayer)
+    }
 
 
-    // update arrow feature & rotation, move camera to it
-    fun updateArrowPosition(lat: Double, lon: Double, bearing: Float, animateMs: Long = 600) {
+    // update arrow feature & rotation with smooth animation, move camera to it
+    fun updateArrowPosition(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
         val map = mapLibreMap ?: return
         val style = map.style ?: return
-
-        val pt = Point.fromLngLat(lon, lat)
-        val feature = Feature.fromGeometry(pt)
-
-        (style.getSourceAs(ARROW_SOURCE_ID) as? GeoJsonSource)
-            ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
-
-        val layer = style.getLayerAs<SymbolLayer>(ARROW_LAYER_ID)
-        layer?.setProperties(iconRotate(bearing))
-
+        
+        // Store the previous position
+        val startLat = if (userCarLat == 0.0) lat else userCarLat
+        val startLon = if (userCarLon == 0.0) lon else userCarLon
+        val startBearing = if (userCarBearing == 0.0f) bearing else userCarBearing
+        
+        // Animate both camera and icon smoothly
+        val startTime = System.currentTimeMillis()
+        val frameRate = 16L // ~60fps
+        
+        val animationRunnable = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / animateMs).coerceIn(0f, 1f)
+                
+                // Ease-in-out interpolation
+                val easedProgress = if (progress < 0.5f) {
+                    2 * progress * progress
+                } else {
+                    1 - Math.pow((-2.0 * progress + 2.0), 2.0).toFloat() / 2
+                }
+                
+                // Interpolate position
+                val currentLat = startLat + (lat - startLat) * easedProgress
+                val currentLon = startLon + (lon - startLon) * easedProgress
+                val currentBearing = startBearing + (bearing - startBearing) * easedProgress
+                
+                // Update icon position
+                val pt = Point.fromLngLat(currentLon, currentLat)
+                val feature = Feature.fromGeometry(pt)
+                (style.getSourceAs(ARROW_SOURCE_ID) as? GeoJsonSource)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+                
+                val layer = style.getLayerAs<SymbolLayer>(ARROW_LAYER_ID)
+                layer?.setProperties(iconRotate(currentBearing))
+                
+                // Continue animation
+                if (progress < 1.0f) {
+                    mainHandler.postDelayed(this, frameRate)
+                }
+            }
+        }
+        
+        // Start icon animation
+        animationRunnable.run()
+        
+        // Animate camera separately (smoother)
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))
             .zoom(19.0)
@@ -157,8 +260,82 @@ class MapController(
 
         map.animateCamera(
             CameraUpdateFactory.newCameraPosition(camera),
-            animateMs.toInt()   // ← FIX HERE
+            animateMs.toInt()
         )
+    }
+    
+    // Update the user's car position (main car that camera follows)
+    fun updateUserCar(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
+        android.util.Log.d("MapController", "updateUserCar: lat=$lat, lon=$lon, bearing=$bearing")
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = bearing
+        updateArrowPosition(lat, lon, bearing, animateMs)
+    }
+    
+    // Update the other car position with smooth animation (doesn't move camera)
+    fun updateOtherCar(lat: Double, lon: Double, bearing: Float) {
+        android.util.Log.d("MapController", "updateOtherCar: lat=$lat, lon=$lon, bearing=$bearing")
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+        
+        // Store the previous position
+        val startLat = if (otherCarLat == 0.0) lat else otherCarLat
+        val startLon = if (otherCarLon == 0.0) lon else otherCarLon
+        val startBearing = if (otherCarBearing == 0.0f) bearing else otherCarBearing
+        
+        // Cancel any existing animation
+        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        
+        // Animate over 800ms with 60fps
+        val animationDuration = 800L
+        val frameRate = 16L // ~60fps
+        val totalFrames = (animationDuration / frameRate).toInt()
+        var currentFrame = 0
+        val startTime = System.currentTimeMillis()
+        
+        otherCarAnimationRunnable = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
+                
+                // Ease-in-out interpolation for smooth movement
+                val easedProgress = if (progress < 0.5f) {
+                    2 * progress * progress
+                } else {
+                    1 - Math.pow((-2.0 * progress + 2.0), 2.0).toFloat() / 2
+                }
+                
+                // Interpolate position
+                val currentLat = startLat + (lat - startLat) * easedProgress
+                val currentLon = startLon + (lon - startLon) * easedProgress
+                val currentBearing = startBearing + (bearing - startBearing) * easedProgress
+                
+                // Update the map
+                val pt = Point.fromLngLat(currentLon, currentLat)
+                val feature = Feature.fromGeometry(pt)
+                
+                (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+                
+                val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
+                layer?.setProperties(iconRotate(currentBearing))
+                
+                // Continue animation or finish
+                if (progress < 1.0f) {
+                    mainHandler.postDelayed(this, frameRate)
+                } else {
+                    // Store final position
+                    otherCarLat = lat
+                    otherCarLon = lon
+                    otherCarBearing = bearing
+                    otherCarAnimationRunnable = null
+                    android.util.Log.d("MapController", "Other car animation completed")
+                }
+            }
+        }
+        
+        otherCarAnimationRunnable?.run()
     }
 
 
@@ -202,6 +379,29 @@ class MapController(
     private fun stopRouteSimulation() {
         routeRunnable?.let { mainHandler.removeCallbacks(it) }
         routeRunnable = null
+    }
+    
+    /**
+     * Clear/hide the other car marker (used when switching to speed test)
+     */
+    fun clearOtherCar() {
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+        
+        // Cancel any animation
+        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        otherCarAnimationRunnable = null
+        
+        // Clear the source (empty feature collection)
+        (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        
+        // Reset tracking variables
+        otherCarLat = 0.0
+        otherCarLon = 0.0
+        otherCarBearing = 0.0f
+        
+        android.util.Log.d("MapController", "Other car cleared")
     }
 
     // compute bearing from point a to b (bearing in degrees)

@@ -56,6 +56,9 @@ vim local.properties
 # MapTiler API Key (get yours at https://cloud.maptiler.com/)
 MAPTILER_API_KEY=your_actual_maptiler_api_key_here
 
+# OpenWeatherMap API Key
+OPENWEATHER_API_KEY=your_openweathermap_api_key_here
+
 # MQTT Broker Configuration
 MQTT_BROKER_ADDRESS=192.168.1.201
 MQTT_BROKER_PORT=1884
@@ -75,22 +78,6 @@ MQTT_BROKER_PORT=1884
 
 Alternatively, use Android Studio's "Run" button to build and deploy.
 
-## Configuration
-
-All sensitive configuration values are stored in `local.properties` file, which is not committed to version control for security.
-
-### Required Configuration
-
-Create a `local.properties` file in the project root with the following values:
-
-```properties
-MAPTILER_API_KEY=your_maptiler_api_key_here
-# MQTT Broker Configuration
-# Update these with your MQTT broker's address and port
-MQTT_BROKER_ADDRESS=192.168.1.201
-MQTT_BROKER_PORT=1884
-```
-
 ### Getting a MapTiler API Key
 
 1. Visit [https://cloud.maptiler.com/](https://cloud.maptiler.com/)
@@ -98,6 +85,14 @@ MQTT_BROKER_PORT=1884
 3. Navigate to "Account" → "Keys"
 4. Copy your API key
 5. Paste it into `local.properties` as `MAPTILER_API_KEY`
+
+### Getting an OpenWeatherMap API Key
+
+1. Visit [https://openweathermap.org/api](https://openweathermap.org/api)
+2. Sign up for a free account
+3. Navigate to "API keys" section
+4. Generate a new API key (or copy the default one)
+5. Paste it into `local.properties` as `OPENWEATHER_API_KEY`
 
 ### MQTT Broker Setup
 

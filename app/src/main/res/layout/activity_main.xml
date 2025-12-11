@@ -79,28 +79,23 @@
         </LinearLayout>
 
 
-        <!-- LANE PREVIEW BOX -->
-        <LinearLayout
-            android:orientation="vertical"
+        <!-- LANE PREVIEW BOX / OVERTAKING ANIMATION -->
+        <FrameLayout
             android:background="@drawable/panel_lane_box"
-            android:padding="16dp"
+            android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_marginTop="12dp"
             android:layout_weight="1"
-            android:gravity="center"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp">
 
-            <!-- Lane View TODO -->
-            <!--<ImageView
-                android:id="@+id/lanePreview"
-                android:src="@drawable/ic_lane_preview"
-                android:layout_width="140dp"
-                android:layout_height="180dp"
-                android:adjustViewBounds="true" />-->
+            <com.example.myapplication.OvertakingAnimationView
+                android:id="@+id/overtakingAnimation"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
 
-        </LinearLayout>
+        </FrameLayout>
 
         <!-- SPEED AREA -->
         <FrameLayout
@@ -225,6 +220,9 @@
         android:layout_width="96dp"
         android:layout_height="96dp"
         android:layout_margin="16dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackgroundBorderless"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 

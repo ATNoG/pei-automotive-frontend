@@ -27,10 +27,14 @@ class UiController(private val activity: Activity) {
 
     fun updateSpeedLimit(limit: Int) {
         txtSpeedLimit?.text = limit.toString()
+        // Also update right panel speed limit if it exists
+        activity.findViewById<TextView>(R.id.txtSpeedLimitRight)?.text = limit.toString()
     }
 
     fun updateCurrentSpeed(speedKmh: Int) {
         txtCurrentSpeed?.text = speedKmh.toString()
+        // Also update right panel speed if it exists
+        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
     }
 
     fun updateTemperature(tempC: Int) {
@@ -44,6 +48,9 @@ class UiController(private val activity: Activity) {
     fun updateEtaAndDistance(etaText: String, distanceText: String) {
         txtEta?.text = etaText
         txtDistance?.text = distanceText
+        // Also update phone layout navigation panel if it exists
+        activity.findViewById<TextView>(R.id.txtNavDistance)?.text = distanceText
+        activity.findViewById<TextView>(R.id.txtNavTime)?.text = etaText
     }
 
     fun showPopup(title: String, message: String) {

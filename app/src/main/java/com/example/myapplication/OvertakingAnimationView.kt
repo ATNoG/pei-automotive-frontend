@@ -4,11 +4,11 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
-import kotlin.math.abs
 
 /**
  * Custom view that displays a 3D-style overtaking animation
  * Shows two cars on a road with perspective from behind the user's car
+ * Modernized with gradients, shadows, and HUD aesthetics
  */
 class OvertakingAnimationView @JvmOverloads constructor(
     context: Context,
@@ -16,75 +16,111 @@ class OvertakingAnimationView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    // Paint objects for drawing
+    // 1. IMPROVEMENT: Use Gradient for the road to simulate "fog" and distance
+    // We initialize shaders in onSizeChanged to get correct dimensions
     private val roadPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#505050")
         style = Paint.Style.FILL
     }
     
     private val laneDividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+        color = Color.parseColor("#FFFFFF") // White with slight transparency
+        alpha = 200
         style = Paint.Style.FILL
     }
     
     private val roadEdgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
-        strokeWidth = 4f
+        color = Color.parseColor("#E0E0E0")
+        strokeWidth = 6f // Thicker edge
         style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
     }
-    
+
+    // 2. IMPROVEMENT: Car paints now use Shadows and Gradients
     private val blueCarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#2196F3") // Blue - user car (overtaking)
         style = Paint.Style.FILL
+        // Add a subtle drop shadow
+        setShadowLayer(12f, 0f, 10f, Color.BLACK)
     }
     
     private val redCarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#F44336") // Red - other car (being overtaken)
         style = Paint.Style.FILL
+        setShadowLayer(12f, 0f, 10f, Color.BLACK)
     }
     
     private val carWindowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#90CAF9") // Light blue
+        // Darker window for modern look
+        color = Color.parseColor("#37474F") 
         style = Paint.Style.FILL
     }
     
+    // 3. IMPROVEMENT: Modern Grass/Background color (Darker, less saturated)
     private val grassPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#4CAF50") // Green
+        color = Color.parseColor("#1b2e1b") // Very dark green, almost black (Night mode style)
         style = Paint.Style.FILL
     }
+    
+    // Shadow paint for under the car
+    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.BLACK
+        alpha = 100
+        maskFilter = BlurMaskFilter(15f, BlurMaskFilter.Blur.NORMAL)
+    }
 
-    // Car positions (0.0 to 1.0, where 0 is left lane, 1 is right lane)
-    // Blue car (user) - starts ahead in right lane
-    private var blueCarLanePosition = 0.7f  // Right lane
-    private var blueCarDistance = 0.4f      // Ahead
-    
-    // Red car (other) - starts behind in right lane
-    private var redCarLanePosition = 0.7f   // Right lane
-    private var redCarDistance = 0.15f      // Behind
-    
-    // Animation state
+    // State variables (kept from original code)
+    private var blueCarLanePosition = 0.7f
+    private var blueCarDistance = 0.4f
+    private var redCarLanePosition = 0.7f
+    private var redCarDistance = 0.15f
     private var isAnimating = false
+    private var currentAnimator: android.animation.ValueAnimator? = null
 
+    // Initialize Gradients when view size is known
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w > 0 && h > 0) {
+            // Road Gradient: Darker at top (distance), Lighter at bottom
+            roadPaint.shader = LinearGradient(
+                w / 2f, h * 0.1f, w / 2f, h.toFloat(),
+                Color.parseColor("#121212"), // Deep dark gray at horizon
+                Color.parseColor("#3E3E3E"), // Lighter gray near user
+                Shader.TileMode.CLAMP
+            )
+            
+            // Blue Car Gradient (Metallic look)
+            blueCarPaint.shader = LinearGradient(
+                0f, 0f, 0f, 100f, // Coordinates adjusted dynamically in drawCar
+                Color.parseColor("#2979FF"), // Lighter Blue
+                Color.parseColor("#1565C0"), // Darker Blue
+                Shader.TileMode.MIRROR
+            )
 
+            // Red Car Gradient
+            redCarPaint.shader = LinearGradient(
+                0f, 0f, 0f, 100f,
+                Color.parseColor("#FF5252"), // Lighter Red
+                Color.parseColor("#D32F2F"), // Darker Red
+                Shader.TileMode.MIRROR
+            )
+        }
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         
         val width = width.toFloat()
         val height = height.toFloat()
-        
         if (width == 0f || height == 0f) return
         
-        // Draw grass background
+        // Draw Background
         canvas.drawRect(0f, 0f, width, height, grassPaint)
         
-        // Calculate perspective road dimensions
-        val roadTopWidth = width * 0.3f
-        val roadBottomWidth = width * 0.9f
-        val roadTop = height * 0.1f
-        val roadBottom = height * 0.95f
+        // Perspective Math
+        val roadTopWidth = width * 0.25f // Narrower top for more dramatic perspective
+        val roadBottomWidth = width * 0.95f
+        val roadTop = height * 0.15f
+        val roadBottom = height * 1.0f // Go all the way to bottom
         
-        // Draw road with perspective
+        // Draw Road Body
         val roadPath = Path().apply {
             moveTo(width / 2 - roadBottomWidth / 2, roadBottom)
             lineTo(width / 2 - roadTopWidth / 2, roadTop)
@@ -94,26 +130,14 @@ class OvertakingAnimationView @JvmOverloads constructor(
         }
         canvas.drawPath(roadPath, roadPaint)
         
-        // Draw road edges
-        canvas.drawLine(
-            width / 2 - roadBottomWidth / 2, roadBottom,
-            width / 2 - roadTopWidth / 2, roadTop,
-            roadEdgePaint
-        )
-        canvas.drawLine(
-            width / 2 + roadBottomWidth / 2, roadBottom,
-            width / 2 + roadTopWidth / 2, roadTop,
-            roadEdgePaint
-        )
-        
-        // Draw lane dividers (dashed line in middle)
+        // Draw Lane Dividers
         drawDashedLaneDivider(canvas, width, height, roadTopWidth, roadBottomWidth, roadTop, roadBottom)
-        
-        // Draw red car (behind) - drawn first so it's behind blue car when overlapping
+
+        // Draw Cars
+        // Note: We need to update shader coordinates for cars based on their size during drawCar
         drawCar(canvas, width, height, roadTopWidth, roadBottomWidth, roadTop, roadBottom, 
                 redCarLanePosition, redCarDistance, redCarPaint, "red")
         
-        // Draw blue car (ahead)
         drawCar(canvas, width, height, roadTopWidth, roadBottomWidth, roadTop, roadBottom,
                 blueCarLanePosition, blueCarDistance, blueCarPaint, "blue")
     }
@@ -134,22 +158,15 @@ class OvertakingAnimationView @JvmOverloads constructor(
             if (i % 2 == 0) {
                 val yStart = roadTop + i * segmentHeight
                 val yEnd = roadTop + (i + 1) * segmentHeight
-                
-                // Calculate X positions with perspective
-                val xStartTop = width / 2
-                val xStartBottom = width / 2
-                
                 val progressStart = (yStart - roadTop) / (roadBottom - roadTop)
                 val progressEnd = (yEnd - roadTop) / (roadBottom - roadTop)
-                
                 val widthAtStart = roadTopWidth + (roadBottomWidth - roadTopWidth) * progressStart
                 val widthAtEnd = roadTopWidth + (roadBottomWidth - roadTopWidth) * progressEnd
                 
-                canvas.drawLine(
-                    xStartTop, yStart,
-                    xStartBottom, yEnd,
-                    laneDividerPaint
-                )
+                // Draw tapered line (thinner at top)
+                laneDividerPaint.strokeWidth = 2f + (10f * progressStart) 
+                
+                canvas.drawLine(width / 2, yStart, width / 2, yEnd, laneDividerPaint)
             }
         }
     }
@@ -167,89 +184,77 @@ class OvertakingAnimationView @JvmOverloads constructor(
         carPaint: Paint,
         carType: String
     ) {
-        // Calculate position based on distance (perspective)
         val yPosition = roadBottom - (roadBottom - roadTop) * distance
         val roadWidthAtY = roadTopWidth + (roadBottomWidth - roadTopWidth) * (1f - distance)
         
-        // Scale car based on distance (further = smaller)
         val scale = 0.4f + (1f - distance) * 0.6f
-        val carWidth = roadWidthAtY * 0.15f * scale
-        val carHeight = carWidth * 1.6f
+        val carWidth = roadWidthAtY * 0.18f * scale // Slightly wider cars
+        val carHeight = carWidth * 1.8f
         
-        // Lane position (with perspective)
         val laneOffset = (lanePosition - 0.5f) * roadWidthAtY * 0.5f
         val carCenterX = width / 2 + laneOffset
-        
         val carTop = yPosition - carHeight
         val carBottom = yPosition
         
-        // Car body
-        val carRect = RectF(
-            carCenterX - carWidth / 2,
-            carTop,
-            carCenterX + carWidth / 2,
-            carBottom
+        // 4. IMPROVEMENT: Update Shader locally to match car size (Vertical Gradient)
+        val shader = LinearGradient(
+            0f, carTop, 0f, carBottom,
+            if(carType=="blue") Color.parseColor("#448AFF") else Color.parseColor("#FF5252"),
+            if(carType=="blue") Color.parseColor("#1565C0") else Color.parseColor("#B71C1C"),
+            Shader.TileMode.CLAMP
         )
-        canvas.drawRoundRect(carRect, carWidth * 0.15f, carWidth * 0.15f, carPaint)
-        
-        // Windshield
-        val windowRect = RectF(
-            carCenterX - carWidth / 3,
-            carTop + carHeight * 0.15f,
-            carCenterX + carWidth / 3,
-            carTop + carHeight * 0.4f
+        carPaint.shader = shader
+
+        // Draw Soft Shadow under car
+        val shadowRect = RectF(
+            carCenterX - carWidth * 0.6f,
+            carBottom - carHeight * 0.1f,
+            carCenterX + carWidth * 0.6f,
+            carBottom + carHeight * 0.1f
         )
-        canvas.drawRoundRect(windowRect, carWidth * 0.1f, carWidth * 0.1f, carWindowPaint)
+        canvas.drawOval(shadowRect, shadowPaint)
+
+        // Draw Car Body
+        val carRect = RectF(carCenterX - carWidth / 2, carTop, carCenterX + carWidth / 2, carBottom)
+        canvas.drawRoundRect(carRect, carWidth * 0.3f, carWidth * 0.3f, carPaint)
         
-        // Rear lights for red car
-        if (carType == "red") {
-            val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.parseColor("#FF0000")
-                style = Paint.Style.FILL
-            }
-            val lightRadius = carWidth * 0.1f
-            canvas.drawCircle(
-                carCenterX - carWidth / 3,
-                carBottom - carHeight * 0.08f,
-                lightRadius,
-                lightPaint
-            )
-            canvas.drawCircle(
-                carCenterX + carWidth / 3,
-                carBottom - carHeight * 0.08f,
-                lightRadius,
-                lightPaint
-            )
+        // Draw Rear Window (Trapezoid shape using Path for better look)
+        val windowPath = Path()
+        val wTop = carTop + carHeight * 0.2f
+        val wBottom = carTop + carHeight * 0.45f
+        val wHalfWidthTop = carWidth * 0.25f
+        val wHalfWidthBottom = carWidth * 0.35f
+        
+        windowPath.moveTo(carCenterX - wHalfWidthTop, wTop)
+        windowPath.lineTo(carCenterX + wHalfWidthTop, wTop)
+        windowPath.lineTo(carCenterX + wHalfWidthBottom, wBottom)
+        windowPath.lineTo(carCenterX - wHalfWidthBottom, wBottom)
+        windowPath.close()
+        canvas.drawPath(windowPath, carWindowPaint)
+        
+        // Rear lights (Glow effect)
+        val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.RED
+            style = Paint.Style.FILL
+            // Add glow
+            maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.SOLID)
         }
+        
+        canvas.drawCircle(carCenterX - carWidth * 0.3f, carBottom - carHeight * 0.1f, carWidth * 0.12f, lightPaint)
+        canvas.drawCircle(carCenterX + carWidth * 0.3f, carBottom - carHeight * 0.1f, carWidth * 0.12f, lightPaint)
     }
     
-    private var currentAnimator: android.animation.ValueAnimator? = null
-    
-    /**
-     * Start overtaking animation
-     * Blue car (ahead) overtakes red car (behind) by moving left, passing, then returning right
-     */
     fun startOvertakingAnimation(duration: Long = 5000) {
-        if (isAnimating) return // Don't start if already animating
-        
-        // Cancel any existing animation
+        if (isAnimating) return
         currentAnimator?.cancel()
-        
         isAnimating = true
-        
         val animator = android.animation.ValueAnimator.ofFloat(0f, 1f)
         animator.duration = duration
-        animator.interpolator = android.view.animation.LinearInterpolator()
+        // IMPROVEMENT: Use AccelerateDecelerate for more realistic car movement
+        animator.interpolator = android.view.animation.AccelerateDecelerateInterpolator()
         
         animator.addUpdateListener { animation ->
             val progress = animation.animatedValue as Float
-            
-            // Blue car overtakes red car
-            // Phase 1 (0-0.2): Blue moves to left lane
-            // Phase 2 (0.2-0.5): Blue accelerates past red in left lane
-            // Phase 3 (0.5-0.7): Blue moves back to right lane ahead of red
-            // Phase 4 (0.7-1.0): Both continue in right lane, blue ahead
-            
             when {
                 progress < 0.2f -> {
                     // Phase 1: Blue moves to left lane

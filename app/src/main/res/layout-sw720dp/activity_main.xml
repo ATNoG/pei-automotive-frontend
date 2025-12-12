@@ -4,32 +4,28 @@
     android:id="@+id/mainContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
     android:fitsSystemWindows="true">
 
-    <!-- MAP -->
+    <!-- MAP (full width) -->
     <org.maplibre.android.maps.MapView
         android:id="@+id/mapView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/rightPanel"
-        app:layout_constraintHorizontal_weight="1" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
-    <!-- RIGHT PANEL (wraps two boxes like screenshot) -->
+    <!-- RIGHT PANEL (Modern CardView based design) -->
     <LinearLayout
         android:id="@+id/rightPanel"
         android:orientation="vertical"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_margin="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="0dp"
+        android:layout_marginStart="8dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/mapView"
-        app:layout_constraintWidth_percent="0.3">
+        app:layout_constraintWidth_percent="0.25">
 
         <!-- TOP INFO BOX -->
         <LinearLayout
@@ -50,7 +46,7 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="0"
-                android:src="@drawable/ic_flag_checkered"
+                android:src="@drawable/check_flag"
                 android:adjustViewBounds="true"
                 android:scaleType="fitCenter"
                 android:minWidth="40dp"
@@ -92,7 +88,7 @@
         </LinearLayout>
 
 
-        <!-- LANE PREVIEW BOX / OVERTAKING ANIMATION -->
+        <!-- LANE PREVIEW BOX / TOP-DOWN CAR VIEW -->
         <FrameLayout
             android:background="@drawable/panel_lane_box"
             android:padding="8dp"
@@ -104,10 +100,20 @@
             android:layout_marginRight="10dp"
             android:layout_marginBottom="6dp">
 
-            <com.example.myapplication.OvertakingAnimationView
-                android:id="@+id/overtakingAnimation"
+            <com.example.myapplication.TopDownCarView
+                android:id="@+id/topDownCarView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
+
+            <ImageView
+                android:id="@+id/overtakingWarningIcon"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:layout_gravity="top|start"
+                android:layout_margin="12dp"
+                android:src="@drawable/red_warning"
+                android:visibility="gone"
+                android:contentDescription="Overtaking warning" />
 
         </FrameLayout>
 
@@ -138,33 +144,34 @@
                     android:padding="12dp"
                     android:gravity="center_vertical">
 
-                    <!-- Speed limit circle (always visible) -->
-                    <TextView
-                        android:id="@+id/txtSpeedLimit"
-                        android:background="@drawable/speed_limit_circle"
-                        android:text="30"
-                        android:gravity="center"
-                        android:textStyle="bold"
-                        android:textColor="#000000"
-                        android:textSize="16sp"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="0"
-                        android:minWidth="35dp"
-                        android:minHeight="35dp" />
+                    <!-- Speed limit circle with red border -->
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="12dp">
+                        
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:background="@drawable/speed_limit_circle_bg" />
+                        
+                        <TextView
+                            android:id="@+id/txtSpeedLimit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="50"
+                            android:textColor="#000000"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+                    </FrameLayout>
 
-                    <Space
-                        android:layout_width="8dp"
-                        android:layout_height="0dp" />
-
-                    <!-- SPEED ALERT ICON (pulses on alert) -->
+                    <!-- SPEED ALERT ICON (hidden) -->
                     <ImageView
                         android:id="@+id/speedAlertIcon"
-                        android:src="@drawable/speed_limit_30_sign_icon"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:scaleType="centerInside"
-                        android:visibility="visible" />
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone" />
 
                     <Space
                         android:layout_width="8dp"
@@ -184,14 +191,14 @@
                             android:text="12"
                             android:textStyle="bold"
                             android:textColor="#FFFFFF"
-                            android:textSize="40sp"
+                            android:textSize="28sp"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
 
                         <TextView
                             android:text="Km/h"
                             android:textColor="#FFFFFF"
-                            android:textSize="40sp"
+                            android:textSize="28sp"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:paddingStart="4dp" />
@@ -237,9 +244,10 @@
     <ImageView
         android:id="@+id/btnSettings"
         android:src="@drawable/ic_settings"
-        android:layout_width="56dp"
-        android:layout_height="56dp"
-        android:layout_margin="12dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="12dp"
+        android:layout_marginBottom="25dp"
         android:adjustViewBounds="true"
         android:scaleType="fitCenter"
         android:clickable="true"

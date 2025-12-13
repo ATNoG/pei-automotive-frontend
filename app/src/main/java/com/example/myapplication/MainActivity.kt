@@ -18,16 +18,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mqttManager: MqttManager
     private lateinit var topDownCarView: TopDownCarView
     private lateinit var overtakingWarningIcon: ImageView
-    
+
     private var currentLat: Double = 40.63807349301117
     private var currentLon: Double = -8.749651444529503
-    
+
     // Track car positions for top-down view
     private var userCarLat: Double = 0.0
     private var userCarLon: Double = 0.0
     private var userCarBearing: Float = 0f
     private val otherCarPositions = mutableListOf<Pair<Double, Double>>()
-    
+
     // Track if we've seen both cars (to detect overtaking start)
     private var hasSeenUserCar = false
     private var hasSeenOtherCar = false
@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity() {
 
         // Setup settings button click listener
         setupSettingsButton()
-        
+
         // Setup weather updates
         setupWeatherUpdates()
 
@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
             // called when style & layers are ready
         }
     }
-    
+
     private fun setupSettingsButton() {
         val settingsButton = findViewById<ImageView>(R.id.btnSettings)
         settingsButton?.apply {
@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
     }
-    
+
     private fun setupWeatherUpdates() {
         // Fetch weather every 10 minutes
         lifecycleScope.launch {
@@ -86,14 +86,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private suspend fun fetchAndUpdateWeather() {
         val apiKey = BuildConfig.OPENWEATHER_API_KEY
         if (apiKey.isEmpty()) {
             Log.w("WEATHER", "OpenWeatherMap API key not configured")
             return
         }
-        
+
         Log.d("WEATHER", "Fetching weather for location: $currentLat, $currentLon")
         val weatherData = OpenWeatherMapClient.getWeather(currentLat, currentLon, apiKey)
         if (weatherData != null) {
@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             Log.e("WEATHER", "Failed to fetch weather data - received null response")
         }
     }
-    
+
     private fun fetchAndUpdateSpeedLimit(lat: Double, lon: Double) {
         lifecycleScope.launch {
             val speedLimit = OverpassApiClient.getSpeedLimit(lat, lon)
@@ -148,9 +148,9 @@ class MainActivity : AppCompatActivity() {
                         val lon = carData.optDouble("longitude", 0.0)
                         val speedKmh = carData.optDouble("speed_kmh", 0.0)
                         val headingDeg = carData.optDouble("heading_deg", 0.0).toFloat()
-                        
+
                         Log.d("MQTT_MSG", "Car: $carId, Speed: $speedKmh km/h, Heading: $headingDeg")
-                        
+
                         runOnUiThread {
                             // Handle different cars based on car_id
                             when (carId) {
@@ -159,35 +159,35 @@ class MainActivity : AppCompatActivity() {
                                     Log.d("MQTT_MSG", "Updating user car (front)")
                                     mapController.updateUserCar(lat, lon, headingDeg)
                                     uiController.updateCurrentSpeed(speedKmh.toInt())
-                                    
+
                                     // Update current location for weather and speed limit
                                     currentLat = lat
                                     currentLon = lon
-                                    
+
                                     // Track user position and bearing for top-down view
                                     userCarLat = lat
                                     userCarLon = lon
                                     userCarBearing = headingDeg
-                                    
+
                                     // Fetch speed limit from Overpass API
                                     fetchAndUpdateSpeedLimit(lat, lon)
-                                    
+
                                     // Mark that we've seen the user car
                                     if (!hasSeenUserCar) {
                                         hasSeenUserCar = true
                                         Log.d("ANIMATION", "User car detected")
                                     }
-                                    
+
                                     // Update top-down view
                                     updateTopDownView()
-                                    
+
                                     // Trigger animation tracking if both cars detected
                                     if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
                                         Log.d("ANIMATION", "Starting overtaking tracking")
                                         overtakingAnimationStarted = true
                                         overtakingWarningIcon.visibility = View.VISIBLE
                                     }
-                                    
+
                                     // Check speed threshold for alerts
                                     if (speedKmh < 60) {
                                         uiController.hideSpeedAlert()
@@ -199,20 +199,20 @@ class MainActivity : AppCompatActivity() {
                                     // This is the other car - update secondary position only
                                     Log.d("MQTT_MSG", "Updating other car (behind)")
                                     mapController.updateOtherCar(lat, lon, headingDeg)
-                                    
+
                                     // Track other car position
                                     otherCarPositions.clear()
                                     otherCarPositions.add(Pair(lat, lon))
-                                    
+
                                     // Mark that we've seen the other car
                                     if (!hasSeenOtherCar) {
                                         hasSeenOtherCar = true
                                         Log.d("ANIMATION", "Other car detected")
                                     }
-                                    
+
                                     // Update top-down view
                                     updateTopDownView()
-                                    
+
                                     // Trigger animation tracking if both cars detected
                                     if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
                                         Log.d("ANIMATION", "Starting overtaking tracking")
@@ -223,7 +223,7 @@ class MainActivity : AppCompatActivity() {
                                 "speed-car" -> {
                                     // This is a speed-measuring car - update its position
                                     Log.d("MQTT_MSG", "Updating speed measuring car")
-                                    
+
                                     // Reset overtaking animation state (different test scenario)
                                     if (hasSeenUserCar || hasSeenOtherCar || overtakingAnimationStarted) {
                                         hasSeenUserCar = false
@@ -234,12 +234,12 @@ class MainActivity : AppCompatActivity() {
                                         overtakingWarningIcon.visibility = View.GONE
                                         Log.d("ANIMATION", "Reset overtaking state for speed test")
                                     }
-                                    
+
                                     // Track user position and bearing
                                     userCarLat = lat
                                     userCarLon = lon
                                     userCarBearing = headingDeg
-                                    
+
                                     mapController.updateUserCar(lat, lon, headingDeg)
                                     uiController.updateCurrentSpeed(speedKmh.toInt())
                                     // Update current location for weather
@@ -253,10 +253,8 @@ class MainActivity : AppCompatActivity() {
                                     }
                                 }
                                 else -> {
-                                    // Fallback for any other car_id (backward compatibility)
-                                    Log.d("MQTT_MSG", "Unknown car_id, using single location mode")
-                                    mapController.setSingleLocation(lat, lon, headingDeg)
-                                    uiController.updateCurrentSpeed(speedKmh.toInt())
+                                    // Ignore unknown cars
+                                    Log.d("MQTT_MSG", "Unknown car_id '$carId', ignoring")
                                 }
                             }
                         }
@@ -279,27 +277,27 @@ class MainActivity : AppCompatActivity() {
                 }
                 // Subscribe to topics after connection
                 mqttManager.subscribe("alerts/#",
-                    onSuccess = { 
+                    onSuccess = {
                         runOnUiThread {
                             uiController.showConnectionStatus("✓ Subscribed to alerts/#")
                         }
                     },
-                    onError = { error -> 
+                    onError = { error ->
                         runOnUiThread {
                             uiController.showConnectionStatus("✗ Subscribe failed: $error")
                         }
                     }
                 )
-                
+
                 // Also subscribe to car updates
                 mqttManager.subscribe("cars/updates",
-                    onSuccess = { 
+                    onSuccess = {
                         Log.d("MQTT_SUBSCRIBE", "Successfully subscribed to cars/updates")
                         runOnUiThread {
                             uiController.showConnectionStatus("✓ Subscribed to cars/updates")
                         }
                     },
-                    onError = { error -> 
+                    onError = { error ->
                         runOnUiThread {
                             uiController.showConnectionStatus("✗ Subscribe failed: $error")
                         }
@@ -322,33 +320,33 @@ class MainActivity : AppCompatActivity() {
     private fun calculateRelativePosition(otherLat: Double, otherLon: Double): Pair<Float, Float> {
         // Earth radius in meters
         val earthRadius = 6371000.0
-        
+
         // Convert to radians
         val lat1 = Math.toRadians(userCarLat)
         val lon1 = Math.toRadians(userCarLon)
         val lat2 = Math.toRadians(otherLat)
         val lon2 = Math.toRadians(otherLon)
-        
+
         // Calculate differences in meters (approximate for small distances)
         val dLat = lat2 - lat1
         val dLon = lon2 - lon1
-        
+
         val northMeters = (dLat * earthRadius).toFloat()
         val eastMeters = (dLon * earthRadius * Math.cos(lat1)).toFloat()
-        
+
         // Rotate coordinates based on user car bearing
         // Bearing 0° = North, 90° = East, 180° = South, 270° = West
         val bearingRad = Math.toRadians(userCarBearing.toDouble())
         val cosB = Math.cos(bearingRad).toFloat()
         val sinB = Math.sin(bearingRad).toFloat()
-        
+
         // Transform to car's reference frame (forward = +y, left = -x, right = +x)
         val lateralMeters = eastMeters * cosB - northMeters * sinB  // Perpendicular to heading
         val longitudinalMeters = northMeters * cosB + eastMeters * sinB  // Along heading
-        
+
         return Pair(lateralMeters, longitudinalMeters)
     }
-    
+
     /**
      * Update the top-down car view with current relative positions
      */
@@ -356,16 +354,16 @@ class MainActivity : AppCompatActivity() {
         if (userCarLat == 0.0 || userCarLon == 0.0) {
             return // User position not set yet
         }
-        
+
         Log.d("TOP_DOWN", "Updating view with ${otherCarPositions.size} other cars")
-        
+
         // Convert other car positions to relative coordinates
         val relativePositions = otherCarPositions.map { (lat, lon) ->
             val (x, y) = calculateRelativePosition(lat, lon)
             Log.d("TOP_DOWN", "Other car relative position: x=$x m, y=$y m")
             TopDownCarView.CarPosition(x, y)
         }
-        
+
         topDownCarView.updateOtherCars(relativePositions)
     }
 
@@ -390,7 +388,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    
+
     override fun onDestroy() {
         mqttManager.disconnect()
         mapController.onDestroy()

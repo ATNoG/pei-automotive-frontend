@@ -2,17 +2,19 @@
 
 Frontend system for the [**Automotive App Project**](https://github.com/ATNoG/pei-automotive).
 
-This repo is an Android automotive app designed for in-vehicle use, who connects to the backend's message broker to receive alerts and updates to then display them accordingly.
+This repo is an Android Automotive app designed for in-vehicle use, who connects to the backend's message broker to receive alerts and updates to then display them accordingly.
 
 ## Overview
 
-This Android application is built specifically for automotive environments (Android Automotive OS). 
+This Android application is built specifically for automotive environments (**Android Automotive OS**). 
 
-It connects to the mosquitto MQTT broker to get the cars positions and display them on the map. It also listens to the alerts topics to show them to the user in an intuitive way. We also implemented a routing system to optimize the route between two points and allow the user to navigate through the map.
+It connects to the **mosquitto MQTT broker** to get the cars positions and display them on the map. It also listens to the `alerts/*` topics to show them to the user in an intuitive way.
 
-### User Interface
+We also implemented a routing system to optimize the route between two points and allow the user to navigate through the map.
 
-<img src="screenshot_20251214_145000.png">
+## User Interface
+
+<img src="ui.png">
 
 The UI has a full-screen map view optimized for automotive displays. On the right-side, there is an information panel with essential driving data. It has the current route information (time and distance left). Bellow there's a top view of nearby cars. And at the bottom there's the current speed and speed limit.
 

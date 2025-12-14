@@ -10,13 +10,18 @@ This Android application is built specifically for automotive environments (**An
 
 It connects to the **mosquitto MQTT broker** to get the cars positions and display them on the map. It also listens to the `alerts/*` topics to show them to the user in an intuitive way.
 
-We also implemented a routing system to optimize the route between two points and allow the user to navigate through the map.
+We implemented a routing system to optimize the route between two points and allow the user to navigate through the map.
 
 ## User Interface
 
 <img src="ui.png">
 
-The UI has a full-screen map view optimized for automotive displays. On the right-side, there is an information panel with essential driving data. It has the current route information (time and distance left). Bellow there's a top view of nearby cars. And at the bottom there's the current speed and speed limit.
+The UI has a full-screen map view optimized for automotive displays.
+
+On the right-side, there is an information panel with essential driving data:
+ - It has the current route information (time and distance left). 
+ - A top view of nearby cars.
+ - The current speed and speed limit.
 
 ## Requirements
 
@@ -24,7 +29,7 @@ To build this, we will assume you already followed the build process for the [ba
 
 For this app to work, you must:
  - Have **Android Studio** installed.
- - Have an Android Automotive OS compatible device or emulator (we personally use the [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit) and Android Studio to ...).
+ - Have an Android Automotive OS compatible device or emulator (we personally use the [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit)).
  - Make sure that device where the backend is running is in the same network as the device where the frontend will be running.
  - Have a **MapTiler** API Key (get yours at https://cloud.maptiler.com/).
  - Have an **OpenWeatherMap** API Key (get yours at https://openweathermap.org/api).

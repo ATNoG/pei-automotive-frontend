@@ -62,7 +62,7 @@ MQTT_BROKER_PORT=1884
 
 ### 3. Open and run the app
 
-Open the app in Android Studio, select your device or emulator and run the app (click the green play button (▶️)).
+Open the app in Android Studio, select your device or emulator and run the app.
 
 And that's it! On the Docker logs, you should see a new device connected to the MQTT broker. Now, we can start using the app.
 

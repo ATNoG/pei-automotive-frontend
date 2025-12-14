@@ -3,24 +3,54 @@ package com.example.myapplication
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.ViewGroup
+import android.widget.Button
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.config.AppConfig
+import com.example.myapplication.navigation.NavigationListener
+import com.example.myapplication.navigation.NavigationManager
+import com.example.myapplication.navigation.models.*
+import com.example.myapplication.navigation.routing.OsrmApiClient
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), NavigationListener {
+
+    companion object {
+        private const val TAG = "MainActivity"
+        
+        // Car IDs configuration - delegate to AppConfig for centralized management
+        val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
+        val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
+        
+        // Speed threshold from config
+        val SPEED_ALERT_THRESHOLD get() = AppConfig.SPEED_ALERT_THRESHOLD_KMH
+    }
 
     private lateinit var mapController: MapController
     private lateinit var uiController: UiController
     private lateinit var mqttManager: MqttManager
+    private lateinit var navigationManager: NavigationManager
     private lateinit var topDownCarView: TopDownCarView
     private lateinit var overtakingWarningIcon: ImageView
     
-    private var currentLat: Double = 40.63807349301117
-    private var currentLon: Double = -8.749651444529503
+    // Initial position from config
+    private val initialPosition = AppConfig.DEFAULT_INITIAL_POSITION
+    
+    // Destination from config
+    private val mercadoSantiago = AppConfig.Destinations.MERCADO_SANTIAGO
+    
+    private var currentLat: Double = AppConfig.DEFAULT_INITIAL_POSITION.latitude
+    private var currentLon: Double = AppConfig.DEFAULT_INITIAL_POSITION.longitude
+    private var currentSpeed: Double = 0.0
+    private var currentBearing: Float = 0f
     
     // Track car positions for top-down view
     private var userCarLat: Double = 0.0
@@ -32,6 +62,9 @@ class MainActivity : AppCompatActivity() {
     private var hasSeenUserCar = false
     private var hasSeenOtherCar = false
     private var overtakingAnimationStarted = false
+    
+    // Pending route for navigation dialog
+    private var pendingRoute: NavigationRoute? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,14 +74,23 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
+        // Initialize OsrmApiClient with OpenRouteService API key
+        OsrmApiClient.initialize(BuildConfig.OPENROUTESERVICE_API_KEY)
+
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
         uiController = UiController(this)
         topDownCarView = findViewById(R.id.topDownCarView)
         overtakingWarningIcon = findViewById(R.id.overtakingWarningIcon)
+        
+        // Setup Navigation Manager
+        setupNavigation()
 
         // Setup settings button click listener
         setupSettingsButton()
+        
+        // Setup navigation button click listener
+        setupNavigationButton()
         
         // Setup weather updates
         setupWeatherUpdates()
@@ -59,6 +101,214 @@ class MainActivity : AppCompatActivity() {
         // wire map ready callback
         mapController.init {
             // called when style & layers are ready
+            // Set initial position on the map
+            mapController.setSingleLocation(
+                initialPosition.latitude,
+                initialPosition.longitude,
+                0f
+            )
+        }
+    }
+    
+    private fun setupNavigation() {
+        navigationManager = NavigationManager()
+        navigationManager.setNavigationListener(this)
+    }
+    
+    private fun setupNavigationButton() {
+        // Start Route button (top right panel)
+        findViewById<TextView>(R.id.btnStartRoute)?.setOnClickListener {
+            showNavigationDialog()
+        }
+        
+        // Stop navigation button (below nav panel when active)
+        findViewById<ImageView>(R.id.btnStopNavigation)?.setOnClickListener {
+            stopNavigation()
+        }
+    }
+    
+    private fun showNavigationDialog() {
+        // Inflate overlay layout
+        val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
+        
+        // Add overlay to root layout
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        rootView.addView(overlayView)
+        
+        val routeInfoPreview = overlayView.findViewById<LinearLayout>(R.id.routeInfoPreview)
+        val txtRouteInfo = overlayView.findViewById<TextView>(R.id.txtRouteInfo)
+        val btnStartNavigation = overlayView.findViewById<Button>(R.id.btnStartNavigation)
+        
+        // Close button (X)
+        overlayView.findViewById<ImageButton>(R.id.btnClose)?.setOnClickListener {
+            pendingRoute = null
+            rootView.removeView(overlayView)
+        }
+        
+        // Mercado Santiago button - calculate route
+        overlayView.findViewById<Button>(R.id.btnDestMercadoSantiago)?.setOnClickListener {
+            routeInfoPreview?.visibility = View.VISIBLE
+            txtRouteInfo?.text = "Calculating route..."
+            btnStartNavigation?.isEnabled = false
+            btnStartNavigation?.text = "Calculating..."
+            
+            // Calculate route to Mercado Santiago
+            calculateRouteForDialog(mercadoSantiago) { route ->
+                if (route != null) {
+                    pendingRoute = route
+                    val distKm = String.format("%.1f", route.totalDistance / 1000)
+                    val timeMin = (route.totalDuration / 60).toInt()
+                    txtRouteInfo?.text = "$distKm km · $timeMin minutes"
+                    btnStartNavigation?.isEnabled = true
+                    btnStartNavigation?.text = "Start Navigation"
+                    
+                    // Auto-start navigation after route calculation
+                    rootView.postDelayed({
+                        if (pendingRoute != null) {
+                            rootView.removeView(overlayView)
+                            startNavigation(route)
+                        }
+                    }, 300)
+                } else {
+                    txtRouteInfo?.text = "Error calculating route"
+                    btnStartNavigation?.isEnabled = false
+                    btnStartNavigation?.text = "Try Again"
+                }
+            }
+        }
+        
+        // Start navigation button
+        btnStartNavigation?.setOnClickListener {
+            pendingRoute?.let { route ->
+                rootView.removeView(overlayView)
+                startNavigation(route)
+            }
+        }
+        
+        // Cancel button
+        overlayView.findViewById<Button>(R.id.btnCancel)?.setOnClickListener {
+            pendingRoute = null
+            rootView.removeView(overlayView)
+        }
+        
+        // Close on background click
+        overlayView.setOnClickListener {
+            pendingRoute = null
+            rootView.removeView(overlayView)
+        }
+        
+        // Prevent clicks on card from closing overlay
+        overlayView.findViewById<View>(R.id.dialogCard)?.setOnClickListener {
+            // Do nothing - prevent propagation
+        }
+    }
+    
+    private fun calculateRouteForDialog(destination: LatLng, callback: (NavigationRoute?) -> Unit) {
+        lifecycleScope.launch {
+            val origin = LatLng(currentLat, currentLon)
+            val route = com.example.myapplication.navigation.routing.OsrmApiClient.calculateRoute(origin, destination)
+            runOnUiThread {
+                callback(route)
+            }
+        }
+    }
+    
+    private fun startNavigation(route: NavigationRoute) {
+        Log.d("MainActivity", "Starting navigation: ${route.totalDistance / 1000} km")
+        navigationManager.startNavigation(route)
+    }
+    
+    private fun stopNavigation() {
+        navigationManager.stopNavigation()
+    }
+    
+    /**
+     * Stop navigation after arrival popup is closed.
+     * Called by UiController when user closes the arrival popup.
+     */
+    fun stopNavigationAfterArrival() {
+        Log.d("MainActivity", "Stopping navigation after arrival")
+        uiController.hideNavigationMode()
+        mapController.clearRoute()
+        navigationManager.stopNavigation()
+    }
+    
+    // ========== NavigationListener Implementation ==========
+    
+    override fun onRouteCalculating() {
+        runOnUiThread {
+            uiController.showRouteCalculating()
+        }
+    }
+    
+    override fun onNavigationStarted(route: NavigationRoute) {
+        Log.d("MainActivity", "Navigation started: ${route.totalDistance / 1000} km")
+        runOnUiThread {
+            // Show navigation UI
+            uiController.showNavigationMode()
+            
+            // Display route on map - DON'T fit bounds, keep camera following car
+            mapController.displayRoute(route, fitBounds = false)
+            
+            // Update UI with first step
+            route.steps.firstOrNull()?.let { step ->
+                uiController.updateNavigationStep(step)
+            }
+        }
+    }
+    
+    override fun onNavigationStopped() {
+        Log.d("MainActivity", "Navigation stopped")
+        runOnUiThread {
+            uiController.hideNavigationMode()
+            mapController.clearRoute()
+        }
+    }
+    
+    override fun onPositionUpdated(position: VehiclePosition) {
+        runOnUiThread {
+            Log.d("MainActivity", "onPositionUpdated: ${position.location.latitude}, ${position.location.longitude}")
+            // Update vehicle marker on map during navigation
+            mapController.updateVehiclePosition(
+                position.location.latitude,
+                position.location.longitude,
+                position.bearing
+            )
+        }
+    }
+    
+    override fun onStateUpdated(state: NavigationState) {
+        runOnUiThread {
+            uiController.updateNavigationState(state)
+        }
+    }
+    
+    override fun onStepChanged(step: NavigationStep, stepIndex: Int) {
+        Log.d("MainActivity", "Step changed: $stepIndex - ${step.instruction}")
+        runOnUiThread {
+            uiController.updateNavigationStep(step)
+        }
+    }
+    
+    override fun onDestinationReached() {
+        Log.d("MainActivity", "Destination reached!")
+        runOnUiThread {
+            // Show popup first
+            uiController.showDestinationReached()
+        }
+    }
+    
+    override fun onRouteRecalculated(route: NavigationRoute) {
+        Log.d("MainActivity", "Route recalculated")
+        runOnUiThread {
+            mapController.displayRoute(route, fitBounds = false)
+        }
+    }
+    
+    override fun onNavigationError(error: String) {
+        Log.e("MainActivity", "Navigation error: $error")
+        runOnUiThread {
+            uiController.showNavigationError(error)
         }
     }
     
@@ -133,131 +383,33 @@ class MainActivity : AppCompatActivity() {
         mqttManager.setOnMessageReceived { topic, message ->
             Log.d("MQTT_MSG", "Received on topic: $topic")
             when {
-                topic == "alerts/speed" -> {
-                    Log.d("MQTT_MSG", "Speed alert received!")
+                topic == AppConfig.MQTT_TOPIC_SPEED_ALERT -> {
+                    Log.d(TAG, "Speed alert received!")
                     runOnUiThread {
                         uiController.showSpeedAlert()
                     }
                 }
-                topic == "cars/updates" -> {
-                    Log.d("MQTT_MSG", "Car update received: $message")
+                topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
+                    Log.d(TAG, "Car update received: $message")
                     try {
                         val carData = org.json.JSONObject(message)
-                        val carId = carData.optString("car_id", "Unknown")
-                        val lat = carData.optDouble("latitude", 0.0)
-                        val lon = carData.optDouble("longitude", 0.0)
-                        val speedKmh = carData.optDouble("speed_kmh", 0.0)
-                        val headingDeg = carData.optDouble("heading_deg", 0.0).toFloat()
                         
-                        Log.d("MQTT_MSG", "Car: $carId, Speed: $speedKmh km/h, Heading: $headingDeg")
+                        // Parse car data - support both Digital Twin nested format and flat format
+                        val parsedData = parseCarUpdateMessage(carData)
+                        val carId = parsedData.carId
+                        val lat = parsedData.latitude
+                        val lon = parsedData.longitude
+                        val speedKmh = parsedData.speedKmh
+                        val headingDeg = parsedData.headingDeg
+                        
+                        Log.d(TAG, "Parsed car: $carId, lat=$lat, lon=$lon, speed=$speedKmh km/h, heading=$headingDeg")
                         
                         runOnUiThread {
-                            // Handle different cars based on car_id
-                            when (carId) {
-                                "overtaking-car-front" -> {
-                                    // This is the user's car - update main position and UI
-                                    Log.d("MQTT_MSG", "Updating user car (front)")
-                                    mapController.updateUserCar(lat, lon, headingDeg)
-                                    uiController.updateCurrentSpeed(speedKmh.toInt())
-                                    
-                                    // Update current location for weather and speed limit
-                                    currentLat = lat
-                                    currentLon = lon
-                                    
-                                    // Track user position and bearing for top-down view
-                                    userCarLat = lat
-                                    userCarLon = lon
-                                    userCarBearing = headingDeg
-                                    
-                                    // Fetch speed limit from Overpass API
-                                    fetchAndUpdateSpeedLimit(lat, lon)
-                                    
-                                    // Mark that we've seen the user car
-                                    if (!hasSeenUserCar) {
-                                        hasSeenUserCar = true
-                                        Log.d("ANIMATION", "User car detected")
-                                    }
-                                    
-                                    // Update top-down view
-                                    updateTopDownView()
-                                    
-                                    // Trigger animation tracking if both cars detected
-                                    if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
-                                        Log.d("ANIMATION", "Starting overtaking tracking")
-                                        overtakingAnimationStarted = true
-                                        overtakingWarningIcon.visibility = View.VISIBLE
-                                    }
-                                    
-                                    // Check speed threshold for alerts
-                                    if (speedKmh < 60) {
-                                        uiController.hideSpeedAlert()
-                                    } else {
-                                        uiController.showSpeedAlert()
-                                    }
-                                }
-                                "overtaking-car-behind" -> {
-                                    // This is the other car - update secondary position only
-                                    Log.d("MQTT_MSG", "Updating other car (behind)")
-                                    mapController.updateOtherCar(lat, lon, headingDeg)
-                                    
-                                    // Track other car position
-                                    otherCarPositions.clear()
-                                    otherCarPositions.add(Pair(lat, lon))
-                                    
-                                    // Mark that we've seen the other car
-                                    if (!hasSeenOtherCar) {
-                                        hasSeenOtherCar = true
-                                        Log.d("ANIMATION", "Other car detected")
-                                    }
-                                    
-                                    // Update top-down view
-                                    updateTopDownView()
-                                    
-                                    // Trigger animation tracking if both cars detected
-                                    if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
-                                        Log.d("ANIMATION", "Starting overtaking tracking")
-                                        overtakingAnimationStarted = true
-                                        overtakingWarningIcon.visibility = View.VISIBLE
-                                    }
-                                }
-                                "speed-car" -> {
-                                    // This is a speed-measuring car - update its position
-                                    Log.d("MQTT_MSG", "Updating speed measuring car")
-                                    
-                                    // Reset overtaking animation state (different test scenario)
-                                    if (hasSeenUserCar || hasSeenOtherCar || overtakingAnimationStarted) {
-                                        hasSeenUserCar = false
-                                        hasSeenOtherCar = false
-                                        overtakingAnimationStarted = false
-                                        otherCarPositions.clear()
-                                        mapController.clearOtherCar()  // Clear other car from map
-                                        overtakingWarningIcon.visibility = View.GONE
-                                        Log.d("ANIMATION", "Reset overtaking state for speed test")
-                                    }
-                                    
-                                    // Track user position and bearing
-                                    userCarLat = lat
-                                    userCarLon = lon
-                                    userCarBearing = headingDeg
-                                    
-                                    mapController.updateUserCar(lat, lon, headingDeg)
-                                    uiController.updateCurrentSpeed(speedKmh.toInt())
-                                    // Update current location for weather
-                                    currentLat = lat
-                                    currentLon = lon
-                                    // Check speed threshold for alerts
-                                    if (speedKmh < 60) {
-                                        uiController.hideSpeedAlert()
-                                    } else {
-                                        uiController.showSpeedAlert()
-                                    }
-                                }
-                                else -> {
-                                    // Fallback for any other car_id (backward compatibility)
-                                    Log.d("MQTT_MSG", "Unknown car_id, using single location mode")
-                                    mapController.setSingleLocation(lat, lon, headingDeg)
-                                    uiController.updateCurrentSpeed(speedKmh.toInt())
-                                }
+                            // Classify car type using configurable sets
+                            when {
+                                carId in USER_CAR_IDS -> handleUserCarUpdate(lat, lon, headingDeg, speedKmh)
+                                carId in OTHER_CAR_IDS -> handleOtherCarUpdate(lat, lon, headingDeg)
+                                else -> handleUnknownCarUpdate(lat, lon, headingDeg, speedKmh)
                             }
                         }
                     } catch (e: Exception) {
@@ -275,43 +427,261 @@ class MainActivity : AppCompatActivity() {
             onSuccess = {
                 Log.d("MQTT_CONNECT", "Successfully connected to MQTT broker")
                 runOnUiThread {
-                    uiController.showConnectionStatus("✓ Connected to broker")
+                    uiController.showConnectionStatus("Connected to broker")
                 }
                 // Subscribe to topics after connection
-                mqttManager.subscribe("alerts/#",
+                mqttManager.subscribe(AppConfig.MQTT_TOPIC_ALERTS,
                     onSuccess = { 
                         runOnUiThread {
-                            uiController.showConnectionStatus("✓ Subscribed to alerts/#")
+                            uiController.showConnectionStatus("Subscribed to ${AppConfig.MQTT_TOPIC_ALERTS}")
                         }
                     },
                     onError = { error -> 
                         runOnUiThread {
-                            uiController.showConnectionStatus("✗ Subscribe failed: $error")
+                            uiController.showConnectionStatus("Subscribe failed: $error")
                         }
                     }
                 )
                 
                 // Also subscribe to car updates
-                mqttManager.subscribe("cars/updates",
+                mqttManager.subscribe(AppConfig.MQTT_TOPIC_CAR_UPDATES,
                     onSuccess = { 
-                        Log.d("MQTT_SUBSCRIBE", "Successfully subscribed to cars/updates")
+                        Log.d(TAG, "Successfully subscribed to ${AppConfig.MQTT_TOPIC_CAR_UPDATES}")
                         runOnUiThread {
-                            uiController.showConnectionStatus("✓ Subscribed to cars/updates")
+                            uiController.showConnectionStatus("Subscribed to ${AppConfig.MQTT_TOPIC_CAR_UPDATES}")
                         }
                     },
                     onError = { error -> 
                         runOnUiThread {
-                            uiController.showConnectionStatus("✗ Subscribe failed: $error")
+                            uiController.showConnectionStatus("Subscribe failed: $error")
                         }
                     }
                 )
             },
             onError = { error ->
                 runOnUiThread {
-                    uiController.showConnectionStatus("✗ Connection failed: $error")
+                    uiController.showConnectionStatus("Connection failed: $error")
                 }
             }
         )
+    }
+
+    /**
+     * Data class for parsed car update message.
+     * Supports both Digital Twin nested format and flat format.
+     */
+    private data class CarUpdateData(
+        val carId: String,
+        val latitude: Double,
+        val longitude: Double,
+        val speedKmh: Double,
+        val headingDeg: Float
+    )
+    
+    /**
+     * Parse car update message from MQTT.
+     * Supports multiple payload formats:
+     * 1. Digital Twin Ditto format: {"gps": {"properties": {"latitude": x, "longitude": y}}}
+     * 2. Flat format: {"car_id": "x", "latitude": y, "longitude": z, "speed_kmh": w, "heading_deg": v}
+     * 3. Hono/Ditto topic format from features
+     */
+    private fun parseCarUpdateMessage(json: org.json.JSONObject): CarUpdateData {
+        val pf = AppConfig.PayloadFormat
+        
+        // Try to get car_id (flat format or Digital Twin)
+        var carId = json.optString(pf.CAR_ID_KEY, "")
+        var lat = 0.0
+        var lon = 0.0
+        var speed = 0.0
+        var heading = 0.0f
+        
+        // Check for Digital Twin Ditto nested format (from the Python script)
+        // Format: {"gps": {"properties": {"latitude": x, "longitude": y}}}
+        val gpsFeature = json.optJSONObject(pf.GPS_FEATURE_KEY)
+        if (gpsFeature != null) {
+            val properties = gpsFeature.optJSONObject(pf.PROPERTIES_KEY)
+            if (properties != null) {
+                lat = properties.optDouble(pf.LATITUDE_KEY, 0.0)
+                lon = properties.optDouble(pf.LONGITUDE_KEY, 0.0)
+                speed = properties.optDouble(pf.SPEED_KMH_KEY, properties.optDouble(pf.SPEED_KEY, 0.0))
+                heading = properties.optDouble(pf.HEADING_DEG_KEY, properties.optDouble(pf.HEADING_KEY, 0.0)).toFloat()
+                // Try to extract car_id from thing_id in topic if not present
+                if (carId.isEmpty()) {
+                    carId = json.optString(pf.THING_ID_KEY, "main-car")
+                        .substringAfterLast(":")
+                        .substringAfterLast("/")
+                        .ifEmpty { "main-car" }
+                }
+            }
+        }
+        
+        // Check for features wrapper (Ditto thing format)
+        // Format: {"features": {"gps": {"properties": {"latitude": x, "longitude": y}}}}
+        val features = json.optJSONObject(pf.FEATURES_KEY)
+        if (features != null && lat == 0.0) {
+            val gpsFromFeatures = features.optJSONObject(pf.GPS_FEATURE_KEY)
+            if (gpsFromFeatures != null) {
+                val properties = gpsFromFeatures.optJSONObject(pf.PROPERTIES_KEY)
+                if (properties != null) {
+                    lat = properties.optDouble(pf.LATITUDE_KEY, 0.0)
+                    lon = properties.optDouble(pf.LONGITUDE_KEY, 0.0)
+                    speed = properties.optDouble(pf.SPEED_KMH_KEY, properties.optDouble(pf.SPEED_KEY, 0.0))
+                    heading = properties.optDouble(pf.HEADING_DEG_KEY, properties.optDouble(pf.HEADING_KEY, 0.0)).toFloat()
+                }
+            }
+            // Extract car_id from thingId
+            if (carId.isEmpty()) {
+                carId = json.optString(pf.THING_ID_KEY, "main-car")
+                    .substringAfterLast(":")
+                    .substringAfterLast("/")
+                    .ifEmpty { "main-car" }
+            }
+        }
+        
+        // Fallback to flat format if nested format didn't work
+        if (lat == 0.0 && lon == 0.0) {
+            lat = json.optDouble(pf.LATITUDE_KEY, 0.0)
+            lon = json.optDouble(pf.LONGITUDE_KEY, 0.0)
+            speed = json.optDouble(pf.SPEED_KMH_KEY, 0.0)
+            heading = json.optDouble(pf.HEADING_DEG_KEY, 0.0).toFloat()
+        }
+        
+        // Default car_id if still empty
+        if (carId.isEmpty()) {
+            carId = "main-car"
+        }
+        
+        return CarUpdateData(carId, lat, lon, speed, heading)
+    }
+    
+    /**
+     * Handle user's car position update.
+     * Updates map, navigation, speed display, and triggers relevant UI updates.
+     */
+    private fun handleUserCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double) {
+        Log.d(TAG, "Updating user car position")
+        
+        // Update current location and bearing
+        currentLat = lat
+        currentLon = lon
+        currentBearing = heading
+        currentSpeed = speedKmh
+        
+        // Update map and navigation
+        if (navigationManager.isNavigating()) {
+            // During navigation, feed position to NavigationManager
+            // This triggers route tracking, step updates, and rerouting
+            navigationManager.onMqttPositionUpdate(lat, lon, heading, speedKmh)
+            // Map update is handled by NavigationListener.onPositionUpdated()
+        } else {
+            // Not navigating - just update position on map
+            mapController.updateUserCar(lat, lon, heading)
+        }
+        
+        // Update speed display
+        uiController.updateCurrentSpeed(speedKmh.toInt())
+        
+        // Track user position and bearing for top-down view
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = heading
+        
+        // Fetch speed limit (throttled internally)
+        fetchAndUpdateSpeedLimit(lat, lon)
+        
+        // Handle overtaking animation state
+        if (!hasSeenUserCar) {
+            hasSeenUserCar = true
+            Log.d(TAG, "User car detected for animation")
+        }
+        updateTopDownView()
+        checkOvertakingAnimationState()
+        
+        // Check speed threshold for alerts
+        updateSpeedAlert(speedKmh)
+    }
+    
+    /**
+     * Handle other car (e.g., overtaking car) position update.
+     */
+    private fun handleOtherCarUpdate(lat: Double, lon: Double, heading: Float) {
+        Log.d(TAG, "Updating other car position")
+        mapController.updateOtherCar(lat, lon, heading)
+        
+        // Track other car position
+        otherCarPositions.clear()
+        otherCarPositions.add(Pair(lat, lon))
+        
+        if (!hasSeenOtherCar) {
+            hasSeenOtherCar = true
+            Log.d(TAG, "Other car detected for animation")
+        }
+        updateTopDownView()
+        checkOvertakingAnimationState()
+    }
+    
+    /**
+     * Handle unknown car ID - use as user car by default.
+     */
+    private fun handleUnknownCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double) {
+        Log.d(TAG, "Unknown car_id, treating as user car")
+        
+        // Reset overtaking animation state
+        resetOvertakingState()
+        
+        // Track as user car
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = heading
+        currentLat = lat
+        currentLon = lon
+        
+        // Update map and navigation
+        if (navigationManager.isNavigating()) {
+            navigationManager.onMqttPositionUpdate(lat, lon, heading, speedKmh)
+        } else {
+            mapController.updateUserCar(lat, lon, heading)
+        }
+        
+        uiController.updateCurrentSpeed(speedKmh.toInt())
+        updateSpeedAlert(speedKmh)
+    }
+    
+    /**
+     * Reset overtaking animation state.
+     */
+    private fun resetOvertakingState() {
+        if (hasSeenUserCar || hasSeenOtherCar || overtakingAnimationStarted) {
+            hasSeenUserCar = false
+            hasSeenOtherCar = false
+            overtakingAnimationStarted = false
+            otherCarPositions.clear()
+            mapController.clearOtherCar()
+            overtakingWarningIcon.visibility = View.GONE
+            Log.d(TAG, "Reset overtaking animation state")
+        }
+    }
+    
+    /**
+     * Check and update overtaking animation state.
+     */
+    private fun checkOvertakingAnimationState() {
+        if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
+            Log.d(TAG, "Starting overtaking animation")
+            overtakingAnimationStarted = true
+            overtakingWarningIcon.visibility = View.VISIBLE
+        }
+    }
+    
+    /**
+     * Update speed alert based on current speed.
+     */
+    private fun updateSpeedAlert(speedKmh: Double) {
+        if (speedKmh < SPEED_ALERT_THRESHOLD) {
+            uiController.hideSpeedAlert()
+        } else {
+            uiController.showSpeedAlert()
+        }
     }
 
     /**
@@ -392,6 +762,7 @@ class MainActivity : AppCompatActivity() {
 
     
     override fun onDestroy() {
+        navigationManager.destroy()
         mqttManager.disconnect()
         mapController.onDestroy()
         super.onDestroy()

@@ -2,26 +2,30 @@ package com.example.myapplication
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.location.Location
 import android.os.Handler
 import android.os.Looper
-import android.util.TypedValue
-import org.maplibre.android.annotations.Marker // NOTE: not used, safe import removed
+import android.util.Log
+import com.example.myapplication.navigation.NavigationConfig
+import com.example.myapplication.navigation.models.LatLng as NavLatLng
+import com.example.myapplication.navigation.models.NavigationRoute
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.OnMapReadyCallback
 import org.maplibre.android.maps.Style
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.PropertyFactory.*
 import org.maplibre.android.style.layers.Property
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
+import org.maplibre.geojson.LineString
 
 /**
  * MapController - encapsulates MapLibre map handling.
@@ -42,6 +46,7 @@ class MapController(
     private var styleLoadedCallback: (() -> Unit)? = null
 
     companion object {
+        private const val TAG = "MapController"
         private val STYLE_URL = "https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
         private const val ARROW_SOURCE_ID = "arrow-source"
         private const val ARROW_LAYER_ID = "arrow-layer"
@@ -51,6 +56,20 @@ class MapController(
         private const val OTHER_CAR_SOURCE_ID = "other-car-source"
         private const val OTHER_CAR_LAYER_ID = "other-car-layer"
         private const val OTHER_CAR_IMAGE_ID = "other-car-image"
+        
+        // Route line constants
+        private const val ROUTE_SOURCE_ID = "route-source"
+        private const val ROUTE_LAYER_ID = "route-layer"
+        private const val ROUTE_CASING_LAYER_ID = "route-casing-layer"
+        
+        // Traveled route constants (gray)
+        private const val ROUTE_TRAVELED_SOURCE_ID = "route-traveled-source"
+        private const val ROUTE_TRAVELED_LAYER_ID = "route-traveled-layer"
+        
+        // Destination marker constants
+        private const val DESTINATION_SOURCE_ID = "destination-source"
+        private const val DESTINATION_LAYER_ID = "destination-layer"
+        private const val DESTINATION_IMAGE_ID = "destination-flag-image"
     }
 
     // simulation state
@@ -73,6 +92,14 @@ class MapController(
     private var otherCarLon: Double = 0.0
     private var otherCarBearing: Float = 0.0f
     private var otherCarAnimationRunnable: Runnable? = null
+    
+    // Navigation route tracking for traveled/remaining display
+    private var fullRoutePoints: List<NavLatLng> = emptyList()
+    private var traveledPath: MutableList<NavLatLng> = mutableListOf()
+    private var lastRouteUpdateTime: Long = 0L
+    
+    // Camera update throttling for performance
+    private var lastCameraUpdateTime: Long = 0L
 
     fun init(onReady: () -> Unit) {
         this.styleLoadedCallback = onReady
@@ -104,10 +131,19 @@ class MapController(
         map.uiSettings.setAllGesturesEnabled(true)
         
         map.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
+            // Performance optimization: Remove unnecessary labels and POIs
+            optimizeMapLayers(style)
+            
             // Add right padding to center navigation arrow on visible map area (excluding right panel)
             // Right panel is 25% of screen width on tablet (~200dp), or 130dp on phone
             val rightPaddingDp = if (context.resources.configuration.smallestScreenWidthDp >= 600) 200 else 65
             setMapCameraPaddingDp(0, 0, rightPaddingDp, 0)
+            
+            // Add route line layers (below arrow)
+            addRouteSourceAndLayers(style)
+            
+            // Add destination marker layer
+            addDestinationSourceAndLayer(style)
 
             // 2) add arrow image, source, and symbol layer for user car
             addArrowImageToStyle(style)
@@ -487,5 +523,380 @@ class MapController(
                 // ignore missing layer
             }
         }
+    }
+    
+    /**
+     * Optimize map performance by removing unnecessary labels and POIs.
+     * Only keep essential road labels for navigation.
+     * MapTiler Streets-v2-dark style layer IDs.
+     * 
+     * PERFORMANCE CRITICAL: Removes ALL non-essential visual elements
+     * for maximum rendering performance during navigation simulation.
+     */
+    private fun optimizeMapLayers(style: Style) {
+        Log.d(TAG, "Optimizing map layers - aggressively hiding POIs and non-essential elements")
+        
+        // AGGRESSIVE OPTIMIZATION: Remove ALL these layer patterns
+        val patternsToHide = listOf(
+            // POI labels - all variations
+            "poi", "place", "label", "symbol", "text", "icon",
+            // Buildings and structures
+            "building", "housenumber", "house", "housenum",
+            // Natural features
+            "water", "waterway", "park", "landuse", "landcover", "mountain", "peak",
+            // Transit and infrastructure
+            "transit", "airport", "aeroway", "railway",
+            // Road labels (keep roads visible but hide labels for performance)
+            "road_label", "road-label", "road_shield", "road-shield", 
+            "road-number", "highway-shield", "road-oneway",
+            // 3D and extrusions (heavy on GPU)
+            "3d", "extrusion",
+            // Boundaries and administrative
+            "boundary", "admin", "state", "country",
+            // Miscellaneous
+            "barrier", "bridge", "tunnel"
+        )
+        
+        // Method 1: Hide by known layer IDs (fast)
+        val explicitLayersToHide = listOf(
+            // POI comprehensive list
+            "poi", "poi-level-1", "poi-level-2", "poi-level-3", "poi_label", "poi-label",
+            "poi_z14", "poi_z15", "poi_z16", "poi-railway", "poi-bus", "poi-park", 
+            "poi-hospital", "poi-school", "poi-restaurant", "poi-cafe", "poi-shop",
+            
+            // Place labels
+            "place-other", "place_other", "place-city", "place_city", "place-village", 
+            "place_village", "place-town", "place_town", "place-neighbourhood", 
+            "place_neighbourhood", "place-suburb", "place_suburb", "place-hamlet", 
+            "place_hamlet", "place-island", "place_island", "place-residential", 
+            "place-quarter", "place_label",
+            
+            // House and building labels
+            "housenumber", "house-number", "housenum-label", "housenum", 
+            "building", "building-top", "building-number", "building-3d", 
+            "building_3d", "building-extrusion",
+            
+            // Water labels
+            "water-name", "water_name", "water-name-lakeline", "water-name-ocean", 
+            "water-name-other", "waterway-name", "waterway_label", "waterway-label",
+            
+            // Park and landuse
+            "park", "park-label", "park_label", "landcover", "landcover-grass", 
+            "landcover-label", "landuse", "landuse-label", "landuse-park",
+            
+            // Transit
+            "transit", "transit-label", "transit_label", "airport", "airport-label", 
+            "airport_label", "aeroway", "aeroway-label", "railway-label",
+            
+            // Road labels and shields (hide for performance, keep road lines)
+            "road_label", "road-label", "road_label_primary", "road_label_secondary",
+            "road-label-small", "road_label_small", "road-label-minor",
+            "road_shield", "road-shield", "highway-shield", "road-number-shield",
+            "road-oneway-arrows", "road-oneway-arrow",
+            
+            // Mountains and natural
+            "mountain_peak", "mountain-peak-label", "peak", "hill-shade",
+            
+            // Generic labels
+            "label", "symbol", "text"
+        )
+        
+        var hiddenCount = 0
+        explicitLayersToHide.forEach { layerId ->
+            try {
+                val layer = style.getLayer(layerId)
+                if (layer != null) {
+                    layer.setProperties(visibility(Property.NONE))
+                    hiddenCount++
+                }
+            } catch (_: Exception) { }
+        }
+        
+        // Method 2: Pattern-based hiding (comprehensive)
+        // Iterate ALL layers and hide based on name patterns
+        style.layers.forEach { layer ->
+            try {
+                val layerName = layer.id.lowercase()
+                
+                // Check if layer name contains any pattern to hide
+                val shouldHide = patternsToHide.any { pattern ->
+                    layerName.contains(pattern.lowercase())
+                } && !layerName.contains("arrow") && !layerName.contains("route") && 
+                  !layerName.contains("destination") && !layerName.contains("car")
+                
+                if (shouldHide) {
+                    layer.setProperties(visibility(Property.NONE))
+                    hiddenCount++
+                }
+            } catch (_: Exception) { }
+        }
+        
+        Log.d(TAG, "Map optimization complete - hidden $hiddenCount layers for maximum performance")
+        Log.d(TAG, "Map now shows: roads, navigation markers, and route lines only")
+    }
+    
+    // --- Route line setup ---
+    private fun addRouteSourceAndLayers(style: Style) {
+        // Add empty route source (remaining route - magenta)
+        val routeSource = GeoJsonSource(ROUTE_SOURCE_ID)
+        style.addSource(routeSource)
+        
+        // Add traveled route source (gray)
+        val routeTraveledSource = GeoJsonSource(ROUTE_TRAVELED_SOURCE_ID)
+        style.addSource(routeTraveledSource)
+        
+        // Add route casing (outer line for border effect)
+        val routeCasingLayer = LineLayer(ROUTE_CASING_LAYER_ID, ROUTE_SOURCE_ID).apply {
+            setProperties(
+                lineColor("#1565C0"),  // Dark blue border
+                lineWidth(12f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        }
+        style.addLayer(routeCasingLayer)
+        
+        // Add traveled route layer (gray, below remaining route)
+        val routeTraveledLayer = LineLayer(ROUTE_TRAVELED_LAYER_ID, ROUTE_TRAVELED_SOURCE_ID).apply {
+            setProperties(
+                lineColor("#666666"),  // Gray for traveled portion
+                lineWidth(8f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND),
+                lineOpacity(0.6f)
+            )
+        }
+        style.addLayerAbove(routeTraveledLayer, ROUTE_CASING_LAYER_ID)
+        
+        // Add route line (inner, bright line - remaining route)
+        val routeLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).apply {
+            setProperties(
+                lineColor("#FF4081"),  // Magenta/pink for remaining route
+                lineWidth(8f),
+                lineCap(Property.LINE_CAP_ROUND),
+                lineJoin(Property.LINE_JOIN_ROUND)
+            )
+        }
+        style.addLayerAbove(routeLayer, ROUTE_TRAVELED_LAYER_ID)
+    }
+    
+    private fun addDestinationSourceAndLayer(style: Style) {
+        // Load destination flag image
+        try {
+            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.check_flag)
+            if (bmp != null) {
+                style.addImage(DESTINATION_IMAGE_ID, bmp)
+                Log.d(TAG, "Destination flag image loaded successfully")
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error loading destination flag image: ${t.message}")
+        }
+        
+        // Add destination source
+        val destSource = GeoJsonSource(DESTINATION_SOURCE_ID)
+        style.addSource(destSource)
+        
+        // Add destination marker as a symbol (flag icon)
+        val destLayer = SymbolLayer(DESTINATION_LAYER_ID, DESTINATION_SOURCE_ID).apply {
+            setProperties(
+                iconImage(DESTINATION_IMAGE_ID),
+                iconSize(0.15f),  // Adjust size as needed
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_BOTTOM),  // Anchor at bottom for flag position
+                iconOffset(arrayOf(0f, 0f))
+            )
+        }
+        style.addLayerAbove(destLayer, ROUTE_LAYER_ID)
+    }
+    
+    /**
+     * Display a navigation route on the map.
+     * 
+     * @param route The NavigationRoute to display
+     * @param fitBounds Whether to zoom to fit the entire route
+     */
+    fun displayRoute(route: NavigationRoute, fitBounds: Boolean = true) {
+        val map = mapLibreMap ?: run {
+            Log.e(TAG, "MapLibreMap is null, cannot display route")
+            return
+        }
+        val style = map.style ?: run {
+            Log.e(TAG, "Style is null, cannot display route")
+            return
+        }
+        
+        Log.d(TAG, "displayRoute called with ${route.routePoints.size} points, fitBounds=$fitBounds")
+        
+        // Store full route for traveled/remaining tracking
+        fullRoutePoints = route.routePoints
+        traveledPath.clear()
+        lastRouteUpdateTime = 0L  // Reset timer to allow immediate trail updates
+        
+        Log.d(TAG, "Route stored: ${fullRoutePoints.size} points, traveled path cleared")
+        
+        // Convert route points to LineString
+        val linePoints = route.routePoints.map { 
+            Point.fromLngLat(it.longitude, it.latitude) 
+        }
+        
+        if (linePoints.size < 2) {
+            Log.e(TAG, "Route has insufficient points (${linePoints.size})")
+            return
+        }
+        
+        val lineString = LineString.fromLngLats(linePoints)
+        val feature = Feature.fromGeometry(lineString)
+        
+        // Update route source (remaining route - starts as full route)
+        (style.getSourceAs(ROUTE_SOURCE_ID) as? GeoJsonSource)?.let { source ->
+            source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+            Log.d(TAG, "Updated ROUTE_SOURCE with ${linePoints.size} points")
+        } ?: Log.e(TAG, "ROUTE_SOURCE not found!")
+        
+        // Clear traveled route initially
+        (style.getSourceAs(ROUTE_TRAVELED_SOURCE_ID) as? GeoJsonSource)?.let { source ->
+            source.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+            Log.d(TAG, "Cleared ROUTE_TRAVELED_SOURCE")
+        } ?: Log.e(TAG, "ROUTE_TRAVELED_SOURCE not found!")
+        
+        // Update destination marker
+        val destPoint = Point.fromLngLat(
+            route.destination.longitude, 
+            route.destination.latitude
+        )
+        (style.getSourceAs(DESTINATION_SOURCE_ID) as? GeoJsonSource)?.let { source ->
+            source.setGeoJson(FeatureCollection.fromFeatures(arrayOf(Feature.fromGeometry(destPoint))))
+            Log.d(TAG, "Updated destination marker at ${route.destination.latitude}, ${route.destination.longitude}")
+        } ?: Log.e(TAG, "DESTINATION_SOURCE not found!")
+        
+        // Fit camera to show entire route
+        if (fitBounds && linePoints.size >= 2) {
+            Log.d(TAG, "Fitting camera to route bounds")
+            fitCameraToRoute(route)
+        }
+    }
+    
+    /**
+     * Clear the route from the map.
+     */
+    fun clearRoute() {
+        val style = mapLibreMap?.style ?: return
+        
+        // Clear full route tracking
+        fullRoutePoints = emptyList()
+        traveledPath.clear()
+        
+        // Clear route line (remaining)
+        (style.getSourceAs(ROUTE_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        
+        // Clear traveled route
+        (style.getSourceAs(ROUTE_TRAVELED_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        
+        // Clear destination marker
+        (style.getSourceAs(DESTINATION_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+        
+        Log.d(TAG, "Route cleared")
+    }
+    
+    /**
+     * Fit the camera to show the entire route.
+     */
+    fun fitCameraToRoute(route: NavigationRoute, paddingDp: Int = 80) {
+        val map = mapLibreMap ?: return
+        
+        if (route.routePoints.size < 2) return
+        
+        val boundsBuilder = LatLngBounds.Builder()
+        route.routePoints.forEach { point ->
+            boundsBuilder.include(LatLng(point.latitude, point.longitude))
+        }
+        
+        val bounds = boundsBuilder.build()
+        val density = context.resources.displayMetrics.density
+        val padding = (paddingDp * density).toInt()
+        
+        map.animateCamera(
+            CameraUpdateFactory.newLatLngBounds(bounds, padding),
+            1500
+        )
+    }
+    
+    /**
+     * Update vehicle position during navigation.
+     * Also updates traveled/remaining route colors dynamically.
+     * 
+     * PERFORMANCE OPTIMIZED: Real-time updates for maximum responsiveness.
+     */
+    fun updateVehiclePosition(lat: Double, lon: Double, bearing: Float) {
+        Log.d(TAG, "updateVehiclePosition called: lat=$lat, lon=$lon, bearing=$bearing")
+        
+        updateArrowPosition(lat, lon, bearing)
+        
+        if (fullRoutePoints.isEmpty()) {
+            Log.d(TAG, "No route points to update")
+            return
+        }
+        
+        // Update traveled path
+        val currentPos = NavLatLng(lat, lon)
+        val currentTime = System.currentTimeMillis()
+        
+        // Always add to traveled path for real-time updates
+        traveledPath.add(currentPos)
+        lastRouteUpdateTime = currentTime
+        
+        val style = mapLibreMap?.style ?: run {
+            Log.e(TAG, "Style is null, cannot update route visualization")
+            return
+        }
+        
+        // Update traveled route (gray) - always update for smooth visualization
+        if (traveledPath.size >= 2) {
+            val traveledPoints = traveledPath.map { Point.fromLngLat(it.longitude, it.latitude) }
+            val traveledLine = LineString.fromLngLats(traveledPoints)
+            (style.getSourceAs(ROUTE_TRAVELED_SOURCE_ID) as? GeoJsonSource)?.setGeoJson(
+                FeatureCollection.fromFeatures(arrayOf(Feature.fromGeometry(traveledLine)))
+            )
+        }
+        
+        // Find closest point on full route to current position
+        var closestIndex = 0
+        var minDistance = Double.MAX_VALUE
+        fullRoutePoints.forEachIndexed { index, point ->
+            val distance = calculateDistance(currentPos, point)
+            if (distance < minDistance) {
+                minDistance = distance
+                closestIndex = index
+            }
+        }
+        
+        // Update remaining route (magenta) - from closest point to end
+        if (closestIndex < fullRoutePoints.size - 1) {
+            val remainingPoints = listOf(currentPos) + fullRoutePoints.subList(closestIndex + 1, fullRoutePoints.size)
+            val remainingLinePoints = remainingPoints.map { Point.fromLngLat(it.longitude, it.latitude) }
+            if (remainingLinePoints.size >= 2) {
+                val remainingLine = LineString.fromLngLats(remainingLinePoints)
+                (style.getSourceAs(ROUTE_SOURCE_ID) as? GeoJsonSource)?.setGeoJson(
+                    FeatureCollection.fromFeatures(arrayOf(Feature.fromGeometry(remainingLine)))
+                )
+            }
+            if (traveledPath.size < 2) Log.d(TAG, "Not enough traveled points yet (${traveledPath.size})")
+        }
+    }
+    
+    // Helper to calculate distance between two NavLatLng points (meters)
+    private fun calculateDistance(from: NavLatLng, to: NavLatLng): Double {
+        val earthRadius = 6371000.0 // meters
+        val dLat = Math.toRadians(to.latitude - from.latitude)
+        val dLon = Math.toRadians(to.longitude - from.longitude)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(from.latitude)) * Math.cos(Math.toRadians(to.latitude)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return earthRadius * c
     }
 }

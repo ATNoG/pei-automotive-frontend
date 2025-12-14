@@ -3,11 +3,20 @@ package com.example.myapplication
 import android.app.Activity
 import android.app.AlertDialog
 import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.AnimationUtils
+import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import com.example.myapplication.navigation.models.ManeuverType
+import com.example.myapplication.navigation.models.NavigationState
+import com.example.myapplication.navigation.models.NavigationStep
+import java.text.SimpleDateFormat
+import java.util.*
 
 /**
  * UiController - small helper to update right-panel widgets.
@@ -24,6 +33,23 @@ class UiController(private val activity: Activity) {
     private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
     private val speedAlertIcon: ImageView? = activity.findViewById(R.id.speedAlertIcon)
     private val speedAlertBlur: View? = activity.findViewById(R.id.speedAlertBlur)
+    
+    // Navigation UI elements
+    private val navigationBanner: LinearLayout? = activity.findViewById(R.id.navigationBanner)
+    private val imgManeuverIcon: ImageView? = activity.findViewById(R.id.imgManeuverIcon)
+    private val txtNextManeuverDistance: TextView? = activity.findViewById(R.id.txtNextManeuverDistance)
+    private val txtManeuverInstruction: TextView? = activity.findViewById(R.id.txtManeuverInstruction)
+    
+    // Navigation panel (top right) elements
+    private val startRouteContainer: LinearLayout? = activity.findViewById(R.id.startRouteContainer)
+    private val navInfoContainer: LinearLayout? = activity.findViewById(R.id.navInfoContainer)
+    private val stopNavContainer: View? = activity.findViewById(R.id.stopNavContainer)
+    private val btnStopNavigation: ImageView? = activity.findViewById(R.id.btnStopNavigation)
+    private val txtNavArrival: TextView? = activity.findViewById(R.id.txtNavArrival)
+    private val txtNavDistance: TextView? = activity.findViewById(R.id.txtNavDistance)
+    
+    // Time formatter for arrival time
+    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     fun updateSpeedLimit(limit: Int) {
         txtSpeedLimit?.text = limit.toString()
@@ -50,7 +76,7 @@ class UiController(private val activity: Activity) {
         txtDistance?.text = distanceText
         // Also update phone layout navigation panel if it exists
         activity.findViewById<TextView>(R.id.txtNavDistance)?.text = distanceText
-        activity.findViewById<TextView>(R.id.txtNavTime)?.text = etaText
+        activity.findViewById<TextView>(R.id.txtNavArrival)?.text = etaText
     }
 
     fun showPopup(title: String, message: String) {
@@ -103,5 +129,206 @@ class UiController(private val activity: Activity) {
         speedAlertIcon?.clearAnimation()
         speedAlertBlur?.clearAnimation()
         speedAlertBlur?.visibility = View.GONE
+    }
+    
+    // ========== Navigation UI Methods ==========
+    
+    /**
+     * Show navigation mode UI (banner, stop button, etc.)
+     */
+    fun showNavigationMode() {
+        navigationBanner?.visibility = View.VISIBLE
+        
+        // Switch navigation panel from "Start Route" to navigation info
+        startRouteContainer?.visibility = View.GONE
+        navInfoContainer?.visibility = View.VISIBLE
+        stopNavContainer?.visibility = View.VISIBLE
+    }
+    
+    /**
+     * Hide navigation mode UI and return to normal state.
+     */
+    fun hideNavigationMode() {
+        navigationBanner?.visibility = View.GONE
+        
+        // Switch navigation panel back to "Start Route" button
+        startRouteContainer?.visibility = View.VISIBLE
+        navInfoContainer?.visibility = View.GONE
+        stopNavContainer?.visibility = View.GONE
+        
+        // Reset navigation info display
+        txtNavArrival?.text = "--:--"
+        txtNavDistance?.text = "--"
+    }
+    
+    /**
+     * Update navigation state UI (distance, ETA, current instruction).
+     */
+    fun updateNavigationState(state: NavigationState) {
+        // Update distance in km
+        val distanceKm = state.remainingDistance / 1000.0
+        val distanceText = if (distanceKm >= 1.0) {
+            String.format("%.1f", distanceKm)
+        } else {
+            String.format("%.0f m", state.remainingDistance)
+        }
+        txtNavDistance?.text = distanceText
+        
+        // Calculate arrival time (current time + remaining duration)
+        val arrivalTimeMillis = System.currentTimeMillis() + (state.remainingDuration * 1000).toLong()
+        val arrivalTime = timeFormat.format(Date(arrivalTimeMillis))
+        txtNavArrival?.text = arrivalTime
+        
+        // Update next maneuver distance
+        txtNextManeuverDistance?.text = state.formatDistanceToNextStep()
+        
+        Log.d("UiController", "Navigation: $distanceText km, arrival: $arrivalTime")
+    }
+    
+    /**
+     * Update the current navigation instruction/step.
+     */
+    fun updateNavigationStep(step: NavigationStep) {
+        txtManeuverInstruction?.text = step.instruction
+        
+        // Update maneuver icon based on type
+        val iconRes = getManeuverIcon(step.maneuverType)
+        imgManeuverIcon?.setImageResource(iconRes)
+    }
+    
+    /**
+     * Show a loading indicator while calculating route.
+     */
+    fun showRouteCalculating() {
+        Toast.makeText(activity, "Calculating route...", Toast.LENGTH_SHORT).show()
+    }
+    
+    /**
+     * Show destination reached message.
+     */
+    fun showDestinationReached() {
+        // Inflate popup layout
+        val popupView = LayoutInflater.from(activity).inflate(R.layout.popup_arrival, null)
+        
+        // Add popup to root layout with specific positioning
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        
+        // Get weather card position for alignment
+        val weatherCard = activity.findViewById<View>(R.id.weatherCard)
+        val weatherCardLocation = IntArray(2)
+        weatherCard?.getLocationOnScreen(weatherCardLocation)
+        
+        val layoutParams = android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            // Position at same height as weather card, to its right
+            gravity = android.view.Gravity.TOP or android.view.Gravity.START
+            topMargin = weatherCardLocation[1] - activity.window.decorView.top
+            leftMargin = (weatherCard?.width ?: 0) + 32 + 16  // weather card width + margin
+        }
+        rootView.addView(popupView, layoutParams)
+        
+        // Function to clean up and stop navigation
+        val closeAndStopNavigation = {
+            if (popupView.parent != null) {
+                rootView.removeView(popupView)
+            }
+            // Call MainActivity to stop navigation
+            if (activity is MainActivity) {
+                activity.runOnUiThread {
+                    (activity as MainActivity).stopNavigationAfterArrival()
+                }
+            }
+        }
+        
+        // Close button stops navigation
+        popupView.findViewById<ImageButton>(R.id.btnCloseArrival)?.setOnClickListener {
+            closeAndStopNavigation()
+        }
+        
+        // Auto-dismiss after 5 seconds and stop navigation
+        popupView.postDelayed({
+            closeAndStopNavigation()
+        }, 5000)
+    }
+    
+    /**
+     * Show navigation error.
+     */
+    fun showNavigationError(error: String) {
+        Toast.makeText(activity, "Error: $error", Toast.LENGTH_LONG).show()
+    }
+    
+    /**
+     * Get the drawable resource for a maneuver type.
+     * Comprehensive mapping for all OSRM maneuver types.
+     */
+    private fun getManeuverIcon(type: ManeuverType): Int {
+        return when (type) {
+            // Left turns
+            ManeuverType.TURN_LEFT -> R.drawable.ic_turn_left
+            ManeuverType.TURN_SLIGHT_LEFT -> R.drawable.ic_turn_slight_left
+            ManeuverType.TURN_SHARP_LEFT -> R.drawable.ic_turn_left
+            ManeuverType.FORK_LEFT -> R.drawable.ic_fork_left
+            ManeuverType.FORK_SLIGHT_LEFT -> R.drawable.ic_fork_left
+            ManeuverType.END_OF_ROAD_LEFT -> R.drawable.ic_turn_left
+            ManeuverType.CONTINUE_LEFT -> R.drawable.ic_turn_slight_left
+            ManeuverType.CONTINUE_SLIGHT_LEFT -> R.drawable.ic_turn_slight_left
+            ManeuverType.MERGE_LEFT -> R.drawable.ic_merge
+            ManeuverType.MERGE_SLIGHT_LEFT -> R.drawable.ic_merge
+            ManeuverType.NEW_NAME_LEFT -> R.drawable.ic_turn_slight_left
+            ManeuverType.NOTIFICATION_LEFT -> R.drawable.ic_turn_left
+            
+            // Right turns
+            ManeuverType.TURN_RIGHT -> R.drawable.ic_turn_right
+            ManeuverType.TURN_SLIGHT_RIGHT -> R.drawable.ic_turn_slight_right
+            ManeuverType.TURN_SHARP_RIGHT -> R.drawable.ic_turn_right
+            ManeuverType.FORK_RIGHT -> R.drawable.ic_fork_right
+            ManeuverType.FORK_SLIGHT_RIGHT -> R.drawable.ic_fork_right
+            ManeuverType.END_OF_ROAD_RIGHT -> R.drawable.ic_turn_right
+            ManeuverType.CONTINUE_RIGHT -> R.drawable.ic_turn_slight_right
+            ManeuverType.CONTINUE_SLIGHT_RIGHT -> R.drawable.ic_turn_slight_right
+            ManeuverType.MERGE_RIGHT -> R.drawable.ic_merge
+            ManeuverType.MERGE_SLIGHT_RIGHT -> R.drawable.ic_merge
+            ManeuverType.NEW_NAME_RIGHT -> R.drawable.ic_turn_slight_right
+            ManeuverType.NOTIFICATION_RIGHT -> R.drawable.ic_turn_right
+            
+            // U-turn
+            ManeuverType.UTURN -> R.drawable.ic_uturn
+            ManeuverType.CONTINUE_UTURN -> R.drawable.ic_uturn
+            
+            // Roundabouts
+            ManeuverType.ROUNDABOUT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_LEFT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_RIGHT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_STRAIGHT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_SHARP_LEFT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_SHARP_RIGHT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_SLIGHT_LEFT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_SLIGHT_RIGHT -> R.drawable.ic_roundabout
+            ManeuverType.ROUNDABOUT_EXIT -> R.drawable.ic_roundabout
+            
+            // Merge
+            ManeuverType.MERGE -> R.drawable.ic_merge
+            
+            // Ramps
+            ManeuverType.ON_RAMP -> R.drawable.ic_ramp
+            ManeuverType.OFF_RAMP -> R.drawable.ic_ramp
+            
+            // Straight/Continue
+            ManeuverType.STRAIGHT -> R.drawable.ic_straight
+            ManeuverType.CONTINUE -> R.drawable.ic_continue
+            ManeuverType.CONTINUE_STRAIGHT -> R.drawable.ic_straight
+            ManeuverType.NEW_NAME_STRAIGHT -> R.drawable.ic_straight
+            ManeuverType.NOTIFICATION_STRAIGHT -> R.drawable.ic_straight
+            
+            // Start/End
+            ManeuverType.DEPART -> R.drawable.ic_straight
+            ManeuverType.ARRIVE -> R.drawable.check_flag
+            
+            // Unknown
+            ManeuverType.UNKNOWN -> R.drawable.ic_straight
+        }
     }
 }

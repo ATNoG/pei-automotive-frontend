@@ -50,6 +50,61 @@
 
     </FrameLayout>
 
+    <!-- NAVIGATION INSTRUCTION BANNER (shown during navigation, ABOVE nav panel) -->
+    <LinearLayout
+        android:id="@+id/navigationBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/card_shadow"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/distanceTimePanel"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Turn direction icon -->
+        <ImageView
+            android:id="@+id/imgManeuverIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_straight"
+            android:scaleType="fitCenter"
+            app:tint="#FFFFFF" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <!-- Distance to next maneuver -->
+            <TextView
+                android:id="@+id/txtNextManeuverDistance"
+                android:text="800 m"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <!-- Instruction text -->
+            <TextView
+                android:id="@+id/txtManeuverInstruction"
+                android:text="Vire à direita"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp"
+                android:maxLines="2"
+                android:maxWidth="250dp"
+                android:ellipsize="end"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- BOTTOM DASHBOARD CARD (Glassmorphism HUD) -->
     <FrameLayout
         android:id="@+id/bottomDashboardContainer"
@@ -162,7 +217,7 @@
 
     </FrameLayout>
 
-    <!-- DISTANCE/TIME PANEL (TOP RIGHT) -->
+    <!-- NAVIGATION PANEL (TOP RIGHT) -->
     <FrameLayout
         android:id="@+id/distanceTimePanel"
         android:layout_width="wrap_content"
@@ -174,32 +229,124 @@
         android:background="@drawable/card_shadow"
         android:padding="4dp">
 
+        <!-- Start Route Button (shown when no route is active) -->
         <LinearLayout
+            android:id="@+id/startRouteContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
-            android:gravity="center">
+            android:gravity="center"
+            android:visibility="visible">
 
             <TextView
-                android:id="@+id/txtNavDistance"
+                android:id="@+id/btnStartRoute"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="– Km"
+                android:text="Start a Route"
                 android:textColor="#FFFFFF"
                 android:textSize="16sp"
-                android:textStyle="bold"/>
-
-            <TextView
-                android:id="@+id/txtNavTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="– Minutos"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp"
-                android:layout_marginTop="4dp"/>
+                android:textStyle="bold"
+                android:paddingHorizontal="24dp"
+                android:paddingVertical="12dp"
+                android:background="@drawable/start_route_button_bg"
+                android:clickable="true"
+                android:focusable="true"/>
 
         </LinearLayout>
+
+        <!-- Navigation Info (shown during navigation) -->
+        <LinearLayout
+            android:id="@+id/navInfoContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:visibility="gone">
+
+            <!-- Arrival Time -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/txtNavArrival"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--:--"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="arrival"
+                    android:textColor="#AAAAAA"
+                    android:textSize="12sp"/>
+
+            </LinearLayout>
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="40dp"
+                android:background="#444444"
+                android:layout_marginHorizontal="16dp"/>
+
+            <!-- Distance -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/txtNavDistance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="km"
+                    android:textColor="#AAAAAA"
+                    android:textSize="12sp"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </FrameLayout>
+
+    <!-- STOP NAVIGATION BUTTON (shown during navigation, below nav panel) -->
+    <FrameLayout
+        android:id="@+id/stopNavContainer"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:layout_constraintTop_toBottomOf="@id/distanceTimePanel"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="@id/distanceTimePanel"
+        android:layout_marginTop="8dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:id="@+id/btnStopNavigation"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_close"
+            android:background="@drawable/stop_navigation_button_bg"
+            android:padding="12dp"
+            android:scaleType="fitCenter"
+            app:tint="#FFFFFF"
+            android:clickable="true"
+            android:focusable="true"/>
 
     </FrameLayout>
 
@@ -208,7 +355,7 @@
         android:id="@+id/overtakingAnimationContainer"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:layout_constraintTop_toBottomOf="@id/distanceTimePanel"
+        app:layout_constraintTop_toBottomOf="@id/stopNavContainer"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="0dp"

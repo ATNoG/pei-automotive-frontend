@@ -25,8 +25,10 @@ import java.util.*
  */
 class UiController(private val activity: Activity) {
 
+    private val speedLimitContainer: View? = activity.findViewById(R.id.speedLimitContainer)
     private val txtSpeedLimit: TextView? = activity.findViewById(R.id.txtSpeedLimit)
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
+    private val txtSpeedUnit: TextView? = activity.findViewById(R.id.txtSpeedUnit)
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
@@ -51,14 +53,49 @@ class UiController(private val activity: Activity) {
     // Time formatter for arrival time
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    fun updateSpeedLimit(limit: Int) {
-        txtSpeedLimit?.text = limit.toString()
+    fun updateSpeedLimit(limit: Int?) {
+        val displayText = limit?.toString() ?: "--"
+        txtSpeedLimit?.text = displayText
         // Also update right panel speed limit if it exists
-        activity.findViewById<TextView>(R.id.txtSpeedLimitRight)?.text = limit.toString()
+        activity.findViewById<TextView>(R.id.txtSpeedLimitRight)?.text = displayText
     }
 
-    fun updateCurrentSpeed(speedKmh: Int) {
+    fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
         txtCurrentSpeed?.text = speedKmh.toString()
+        
+        // Only check speeding if we have a valid speed limit
+        val isSpeeding = speedLimit != null && speedKmh > speedLimit
+        
+        // Change current speed color to red if speeding, otherwise white
+        val speedColor = if (isSpeeding) {
+            android.graphics.Color.RED
+        } else {
+            android.graphics.Color.WHITE
+        }
+        txtCurrentSpeed?.setTextColor(speedColor)
+        txtSpeedUnit?.setTextColor(speedColor)
+        
+        // Change speed limit sign appearance when speeding
+        if (isSpeeding) {
+            // Make speed limit text red
+            txtSpeedLimit?.setTextColor(android.graphics.Color.RED)
+            // Scale up the speed limit sign
+            speedLimitContainer?.animate()
+                ?.scaleX(1.2f)
+                ?.scaleY(1.2f)
+                ?.setDuration(300)
+                ?.start()
+        } else {
+            // Reset speed limit text to black
+            txtSpeedLimit?.setTextColor(android.graphics.Color.BLACK)
+            // Scale back to normal
+            speedLimitContainer?.animate()
+                ?.scaleX(1.0f)
+                ?.scaleY(1.0f)
+                ?.setDuration(300)
+                ?.start()
+        }
+        
         // Also update right panel speed if it exists
         activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
     }

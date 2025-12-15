@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private var currentLat: Double = AppConfig.DEFAULT_INITIAL_POSITION.latitude
     private var currentLon: Double = AppConfig.DEFAULT_INITIAL_POSITION.longitude
     private var currentSpeed: Double = 0.0
+    private var currentSpeedLimit: Int? = null // Default speed limit (null = unknown)
     private var currentBearing: Float = 0f
     
     // Track car positions for top-down view
@@ -107,6 +108,13 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                 initialPosition.longitude,
                 0f
             )
+            
+            // Apply saved map style preference
+            val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+            val isLightMode = prefs.getBoolean("lightMode", false)
+            if (isLightMode) {
+                mapController.setMapStyle(true)
+            }
         }
     }
     
@@ -319,10 +327,56 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             isFocusable = true
             setOnClickListener {
                 Log.d("SETTINGS", "Settings button clicked")
-                Toast.makeText(this@MainActivity, "Feature not done yet...", Toast.LENGTH_LONG).show()
+                showSettingsDialog()
             }
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
+    }
+    
+    private fun showSettingsDialog() {
+        // Inflate settings layout
+        val settingsView = layoutInflater.inflate(R.layout.dialog_settings, null)
+        
+        // Add settings overlay to root layout
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        rootView.addView(settingsView)
+        
+        // Get the switch
+        val switchLightMode = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchLightMode)
+        
+        // Load current preference
+        val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        val isLightMode = prefs.getBoolean("lightMode", false)
+        switchLightMode.isChecked = isLightMode
+        
+        // Handle switch changes
+        switchLightMode.setOnCheckedChangeListener { _, isChecked ->
+            // Save preference
+            prefs.edit().putBoolean("lightMode", isChecked).apply()
+            // Apply map style change
+            mapController.setMapStyle(isChecked)
+            Toast.makeText(this, if (isChecked) "Light mode enabled" else "Dark mode enabled", Toast.LENGTH_SHORT).show()
+        }
+        
+        // Close button (X)
+        settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener {
+            rootView.removeView(settingsView)
+        }
+        
+        // Done button
+        settingsView.findViewById<Button>(R.id.btnSaveSettings)?.setOnClickListener {
+            rootView.removeView(settingsView)
+        }
+        
+        // Close on background click
+        settingsView.setOnClickListener {
+            rootView.removeView(settingsView)
+        }
+        
+        // Prevent clicks on card from closing overlay
+        settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener {
+            // Do nothing - prevent propagation
+        }
     }
 
     private fun setupWeatherUpdates() {
@@ -365,10 +419,19 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                     // Parse the speed limit (might be "50", "50 mph", etc.)
                     val limitValue = speedLimit.replace("[^0-9]".toRegex(), "")
                     if (limitValue.isNotEmpty()) {
-                        uiController.updateSpeedLimit(limitValue.toInt())
+                        currentSpeedLimit = limitValue.toInt()
+                        uiController.updateSpeedLimit(currentSpeedLimit)
                         Log.d("SPEED_LIMIT", "Updated speed limit: $limitValue km/h")
+                    } else {
+                        // Empty after parsing - no valid speed limit
+                        currentSpeedLimit = null
+                        uiController.updateSpeedLimit(null)
+                        Log.d("SPEED_LIMIT", "No valid speed limit in data")
                     }
                 } else {
+                    // No speed limit data available
+                    currentSpeedLimit = null
+                    uiController.updateSpeedLimit(null)
                     Log.d("SPEED_LIMIT", "No speed limit data available")
                 }
             }
@@ -387,6 +450,12 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                     Log.d(TAG, "Speed alert received!")
                     runOnUiThread {
                         uiController.showSpeedAlert()
+                    }
+                }
+                topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> {
+                    Log.d(TAG, "Overtaking alert received: $message")
+                    runOnUiThread {
+                        showOvertakingWarning()
                     }
                 }
                 topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
@@ -579,7 +648,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
         
         // Update speed display
-        uiController.updateCurrentSpeed(speedKmh.toInt())
+        uiController.updateCurrentSpeed(speedKmh.toInt(), currentSpeedLimit)
         
         // Track user position and bearing for top-down view
         userCarLat = lat
@@ -595,7 +664,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             Log.d(TAG, "User car detected for animation")
         }
         updateTopDownView()
-        checkOvertakingAnimationState()
         
         // Check speed threshold for alerts
         updateSpeedAlert(speedKmh)
@@ -617,7 +685,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             Log.d(TAG, "Other car detected for animation")
         }
         updateTopDownView()
-        checkOvertakingAnimationState()
     }
     
     /**
@@ -643,7 +710,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             mapController.updateUserCar(lat, lon, heading)
         }
         
-        uiController.updateCurrentSpeed(speedKmh.toInt())
+        uiController.updateCurrentSpeed(speedKmh.toInt(), currentSpeedLimit)
         updateSpeedAlert(speedKmh)
     }
     
@@ -663,14 +730,26 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     }
     
     /**
-     * Check and update overtaking animation state.
+     * Show overtaking warning when alert is received via MQTT.
      */
-    private fun checkOvertakingAnimationState() {
-        if (!overtakingAnimationStarted && hasSeenUserCar && hasSeenOtherCar) {
-            Log.d(TAG, "Starting overtaking animation")
-            overtakingAnimationStarted = true
-            overtakingWarningIcon.visibility = View.VISIBLE
-        }
+    private fun showOvertakingWarning() {
+        Log.d(TAG, "Showing overtaking warning")
+        overtakingAnimationStarted = true
+        overtakingWarningIcon.visibility = View.VISIBLE
+        
+        // Auto-hide after 5 seconds
+        overtakingWarningIcon.postDelayed({
+            hideOvertakingWarning()
+        }, 5000)
+    }
+    
+    /**
+     * Hide overtaking warning.
+     */
+    private fun hideOvertakingWarning() {
+        Log.d(TAG, "Hiding overtaking warning")
+        overtakingWarningIcon.visibility = View.GONE
+        overtakingAnimationStarted = false
     }
     
     /**

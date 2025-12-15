@@ -116,6 +116,11 @@ object AppConfig {
      */
     const val MQTT_TOPIC_SPEED_ALERT = "alerts/speed"
     
+    /**
+     * MQTT topic for overtaking alerts.
+     */
+    const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
+    
     // ========== Digital Twin Message Parsing ==========
     
     /**

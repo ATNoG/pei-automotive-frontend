@@ -18,13 +18,13 @@ class TopDownCarView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     // Coordinate system bounds (increased for less zoom)
-    private val gridMinX = -15f
-    private val gridMaxX = 15f
+    private val gridMinX = -18f
+    private val gridMaxX = 18f
     private val gridMinY = -25f
     private val gridMaxY = 25f
     
     // User car fixed position in grid coordinates (in right lane)
-    private val userCarGridX = 1.5f  // Position in right lane
+    private val userCarGridX = 4.7f  // Position in right lane
     private val userCarGridY = 0f
     
     // Other car positions (relative to user car in meters)
@@ -126,7 +126,7 @@ class TopDownCarView @JvmOverloads constructor(
         }
         
         // Draw road centered on screen (2 lanes: one each direction)
-        val laneWidth = 7.5f // Width of each lane
+        val laneWidth = 9f // Width of each lane
         val roadWidth = laneWidth * 2f // Total road width
         val roadCenterX = 0f // Center the road at x=0
         
@@ -150,8 +150,8 @@ class TopDownCarView @JvmOverloads constructor(
         for (car in otherCars) {
             // car.x and car.y are already in meters, direction-aware from MainActivity
             // Convert to grid coordinates (1 grid unit = ~2 meters)
-            val gridX = userCarGridX + (car.x / 2f)
-            val gridY = userCarGridY + (car.y / 2f)
+            val gridX = userCarGridX + (car.x / 0.25f)
+            val gridY = userCarGridY + (car.y / 1f)
             
             // Only draw if within reasonable bounds
             if (gridX >= gridMinX && gridX <= gridMaxX && gridY >= gridMinY && gridY <= gridMaxY) {

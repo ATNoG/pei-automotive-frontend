@@ -47,7 +47,8 @@ class MapController(
 
     companion object {
         private const val TAG = "MapController"
-        private val STYLE_URL = "https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+        private val STYLE_URL_DARK = "https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+        private val STYLE_URL_LIGHT = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
         private const val ARROW_SOURCE_ID = "arrow-source"
         private const val ARROW_LAYER_ID = "arrow-layer"
         private const val ARROW_IMAGE_ID = "arrow-image"
@@ -130,7 +131,7 @@ class MapController(
         map.uiSettings.setCompassGravity(android.view.Gravity.TOP or android.view.Gravity.END)
         map.uiSettings.setAllGesturesEnabled(true)
         
-        map.setStyle(Style.Builder().fromUri(STYLE_URL)) { style ->
+        map.setStyle(Style.Builder().fromUri(STYLE_URL_DARK)) { style ->
             // Performance optimization: Remove unnecessary labels and POIs
             optimizeMapLayers(style)
             
@@ -700,7 +701,7 @@ class MapController(
         val destLayer = SymbolLayer(DESTINATION_LAYER_ID, DESTINATION_SOURCE_ID).apply {
             setProperties(
                 iconImage(DESTINATION_IMAGE_ID),
-                iconSize(0.15f),  // Adjust size as needed
+                iconSize(0.06f),  // Adjust size as needed
                 iconAllowOverlap(true),
                 iconIgnorePlacement(true),
                 iconAnchor(Property.ICON_ANCHOR_BOTTOM),  // Anchor at bottom for flag position
@@ -898,5 +899,35 @@ class MapController(
                 Math.sin(dLon / 2) * Math.sin(dLon / 2)
         val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
         return earthRadius * c
+    }
+    
+    /**
+     * Change map style to light or dark mode
+     */
+    fun setMapStyle(lightMode: Boolean, onStyleLoaded: (() -> Unit)? = null) {
+        val styleUrl = if (lightMode) STYLE_URL_LIGHT else STYLE_URL_DARK
+        
+        mapLibreMap?.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
+            // Reapply all configurations
+            optimizeMapLayers(style)
+            
+            val rightPaddingDp = if (context.resources.configuration.smallestScreenWidthDp >= 600) 200 else 65
+            setMapCameraPaddingDp(0, 0, rightPaddingDp, 0)
+            
+            addRouteSourceAndLayers(style)
+            addDestinationSourceAndLayer(style)
+            addArrowImageToStyle(style)
+            addArrowSourceAndLayer(style)
+            addOtherCarImageToStyle(style)
+            addOtherCarSourceAndLayer(style)
+            brightenRoads(style)
+            
+            // Restore current position if available
+            if (userCarVisualLat != 0.0 && userCarVisualLon != 0.0) {
+                updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
+            }
+            
+            onStyleLoaded?.invoke()
+        }
     }
 }

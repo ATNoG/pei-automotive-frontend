@@ -199,7 +199,9 @@
             android:layout_weight="1"
             android:layout_marginTop="6dp"
             android:layout_marginLeft="10dp"
-            android:layout_marginRight="10dp">
+            android:layout_marginRight="10dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <!-- Red blur background for speed alert (initially invisible) -->
             <View
@@ -217,12 +219,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:padding="12dp"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
 
                     <!-- Speed limit circle with red border -->
                     <FrameLayout
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:id="@+id/speedLimitContainer"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
                         android:layout_marginEnd="12dp">
                         
                         <View
@@ -235,9 +240,9 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center"
-                            android:text="50"
+                            android:text="--"
                             android:textColor="#000000"
-                            android:textSize="18sp"
+                            android:textSize="20sp"
                             android:textStyle="bold" />
                     </FrameLayout>
 
@@ -271,6 +276,7 @@
                             android:layout_height="wrap_content" />
 
                         <TextView
+                            android:id="@+id/txtSpeedUnit"
                             android:text="Km/h"
                             android:textColor="#FFFFFF"
                             android:textSize="28sp"
@@ -316,7 +322,7 @@
     </LinearLayout>
 
     <!-- NAVIGATION INSTRUCTION BANNER (shown during navigation) -->
-    <!-- Positioned below weather badge, larger and more prominent -->
+    <!-- Positioned to the right of weather badge -->
     <LinearLayout
         android:id="@+id/navigationBanner"
         android:layout_width="wrap_content"
@@ -326,11 +332,11 @@
         android:paddingHorizontal="20dp"
         android:paddingVertical="16dp"
         android:layout_marginStart="12dp"
-        android:layout_marginTop="8dp"
         android:gravity="center_vertical"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/weatherBadge"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintTop_toTopOf="@id/weatherBadge"
+        app:layout_constraintBottom_toBottomOf="@id/weatherBadge"
+        app:layout_constraintStart_toEndOf="@id/weatherBadge">
 
         <!-- Turn direction icon - larger -->
         <ImageView

@@ -21,8 +21,8 @@ object OverpassApiClient {
             val query = """
                 [out:json][timeout:25];
                 (
-                  way(around:5,$lat,$lon)["maxspeed"];
-                  node(around:5,$lat,$lon)["maxspeed"];
+                  way(around:15,$lat,$lon)["maxspeed"];
+                  node(around:15,$lat,$lon)["maxspeed"];
                 );
                 out body;
                 >;

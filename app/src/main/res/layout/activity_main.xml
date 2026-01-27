@@ -147,14 +147,14 @@
             </FrameLayout>
 
             <ImageView 
-                android:id="@+id/weatherIcon"
+                android:id="@+id/weatherIconBottom"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_weather_sun"
                 app:tint="#FFD54F"/>
             
             <TextView
-                android:id="@+id/txtTemperature"
+                android:id="@+id/txtTemperatureBottom"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="24°"

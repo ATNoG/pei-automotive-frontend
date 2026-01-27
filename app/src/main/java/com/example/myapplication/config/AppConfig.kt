@@ -4,10 +4,10 @@ import com.example.myapplication.navigation.models.LatLng
 
 /**
  * AppConfig - Centralized configuration for the automotive navigation app.
- * 
+ *
  * This object provides a single source of truth for all application-wide
  * configuration parameters, making the system easy to tune and maintain.
- * 
+ *
  * SCALABILITY FEATURES:
  * - All hardcoded values extracted to configurable constants
  * - Clear documentation of each parameter's purpose
@@ -15,14 +15,14 @@ import com.example.myapplication.navigation.models.LatLng
  * - Future: Can be loaded from external config file or server
  */
 object AppConfig {
-    
+
     // ========== Car Identification ==========
-    
+
     /**
      * Car IDs that represent the user's vehicle.
      * These should match the car_id values sent from your Digital Twin system.
-     * 
-     * When a car update message arrives with one of these IDs, 
+     *
+     * When a car update message arrives with one of these IDs,
      * it will be treated as the main vehicle and:
      * - The map camera will follow it
      * - Navigation will track its position
@@ -35,7 +35,7 @@ object AppConfig {
         "speed-car",
         "curved-route-car"
     )
-    
+
     /**
      * Car IDs that represent other vehicles (for overtaking animation).
      * These vehicles are displayed on the map but don't control the camera.
@@ -43,86 +43,104 @@ object AppConfig {
     val OTHER_CAR_IDS = setOf(
         "overtaking-car-behind"
     )
-    
+
     // ========== Default Positions ==========
-    
+
     /**
      * Default initial position when app starts.
      * This is used before any GPS/MQTT data is received.
-     * 
+     *
      * Location: Aveiro, Portugal
      */
     val DEFAULT_INITIAL_POSITION = LatLng(40.63200640747191, -8.65031482855802)
-    
+
     /**
      * Predefined destinations for navigation demo.
      * These can be extended for different demo scenarios.
      */
     object Destinations {
         val MERCADO_SANTIAGO = LatLng(40.62682666363219, -8.650806765235274)
-        
+
         // Add more predefined destinations here as needed
         // val UNIVERSITY = LatLng(40.XXX, -8.XXX)
         // val HOSPITAL = LatLng(40.XXX, -8.XXX)
     }
-    
+
     // ========== Speed Alerts ==========
-    
+
     /**
      * Speed threshold for triggering speed alerts (km/h).
      * When the vehicle exceeds this speed, a visual alert is shown.
      */
     const val SPEED_ALERT_THRESHOLD_KMH = 60.0
-    
+
     // ========== Weather Updates ==========
-    
+
     /**
      * Interval between weather updates in milliseconds.
      * Default: 10 minutes (600000ms)
      */
     const val WEATHER_UPDATE_INTERVAL_MS = 600000L
-    
+
+    /**
+     * Enable/disable weather alert notifications.
+     * When true, weather alerts from OpenWeatherMap will be displayed as popups.
+     */
+    const val WEATHER_ALERTS_ENABLED = true
+
+    /**
+     * Auto-dismiss time for weather alert popups in milliseconds.
+     * Default: 8 seconds (8000ms)
+     */
+    const val WEATHER_ALERT_AUTO_DISMISS_MS = 8000L
+
+    /**
+     * Delay between showing multiple alerts (staggered display).
+     * Default: 500ms
+     */
+    const val WEATHER_ALERT_STAGGER_MS = 500L
+
     // ========== Map Settings ==========
-    
+
     /**
      * Default map zoom level when following the vehicle.
      */
     const val DEFAULT_MAP_ZOOM = 19.0
-    
+
     /**
      * Default map tilt angle (degrees) for 3D-like view.
      */
     const val DEFAULT_MAP_TILT = 60.0
-    
+
     /**
      * Animation duration for camera movements (milliseconds).
      */
     const val CAMERA_ANIMATION_MS = 800L
-    
+
     // ========== MQTT Topics ==========
-    
+
     /**
      * MQTT topic for car position updates.
      */
     const val MQTT_TOPIC_CAR_UPDATES = "cars/updates"
-    
+
     /**
      * MQTT topic pattern for alerts.
      */
     const val MQTT_TOPIC_ALERTS = "alerts/#"
-    
+
     /**
      * MQTT topic for speed alerts specifically.
      */
     const val MQTT_TOPIC_SPEED_ALERT = "alerts/speed"
-    
+
     /**
      * MQTT topic for overtaking alerts.
      */
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
-    
+
     // ========== Digital Twin Message Parsing ==========
-    
+
     /**
      * Supported payload formats for MQTT messages.
      * The app will try to parse messages in this order.
@@ -136,7 +154,7 @@ object AppConfig {
         const val FEATURES_KEY = "features"
         const val PROPERTIES_KEY = "properties"
         const val THING_ID_KEY = "thingId"
-        
+
         /**
          * Flat format keys (legacy/simple format).
          */
@@ -148,9 +166,9 @@ object AppConfig {
         const val HEADING_DEG_KEY = "heading_deg"
         const val HEADING_KEY = "heading"
     }
-    
+
     // ========== Overtaking Animation ==========
-    
+
     /**
      * Distance range (in meters) for displaying other cars in top-down view.
      */

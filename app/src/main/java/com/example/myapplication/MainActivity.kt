@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private lateinit var navigationManager: NavigationManager
     private lateinit var topDownCarView: TopDownCarView
     private lateinit var overtakingWarningIcon: ImageView
+    private lateinit var alertNotificationManager: AlertNotificationManager
     
     // Initial position from config
     private val initialPosition = AppConfig.DEFAULT_INITIAL_POSITION
@@ -83,6 +84,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         uiController = UiController(this)
         topDownCarView = findViewById(R.id.topDownCarView)
         overtakingWarningIcon = findViewById(R.id.overtakingWarningIcon)
+        alertNotificationManager = AlertNotificationManager(this)
         
         // Setup Navigation Manager
         setupNavigation()
@@ -93,7 +95,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         // Setup navigation button click listener
         setupNavigationButton()
         
-        // Setup weather updates
+        // Setup weather updates (which includes alerts)
         setupWeatherUpdates()
 
         // Setup MQTT (after uiController is initialized)
@@ -399,7 +401,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
 
         Log.d("WEATHER", "Fetching weather for location: $currentLat, $currentLon")
-        val weatherData = OpenWeatherMapClient.getWeather(currentLat, currentLon, apiKey)
+        val (weatherData, alerts) = OpenWeatherMapClient.getWeatherAndAlerts(currentLat, currentLon, apiKey)
+        
         if (weatherData != null) {
             runOnUiThread {
                 uiController.updateTemperature(weatherData.temperature)
@@ -408,6 +411,18 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             }
         } else {
             Log.e("WEATHER", "Failed to fetch weather data - received null response")
+        }
+        
+        // Handle weather alerts
+        if (alerts.isNotEmpty()) {
+            Log.d("WEATHER", "Found ${alerts.size} weather alerts")
+            runOnUiThread {
+                val activeAlerts = alertNotificationManager.getActiveAlerts(alerts)
+                if (activeAlerts.isNotEmpty()) {
+                    Log.d("WEATHER", "Showing ${activeAlerts.size} active weather alerts")
+                    alertNotificationManager.showWeatherAlerts(activeAlerts)
+                }
+            }
         }
     }
 

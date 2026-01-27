@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/card_shadow"
+    android:padding="4dp">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp"
+        android:gravity="center_vertical"
+        android:background="@drawable/panel_bg">
+
+        <ImageView
+            android:id="@+id/imgAlertIcon"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_weather_rain"
+            android:scaleType="fitCenter"
+            app:tint="#FFD54F"
+            android:contentDescription="Alert icon" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:id="@+id/txtAlertEvent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Severe Weather"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/txtAlertDescription"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Alert description"
+                android:textColor="#AAAAAA"
+                android:textSize="13sp"
+                android:maxLines="2"
+                android:maxWidth="250dp"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

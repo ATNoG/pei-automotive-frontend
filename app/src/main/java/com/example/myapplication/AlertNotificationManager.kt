@@ -17,7 +17,10 @@ class AlertNotificationManager(private val activity: Activity) {
 
     companion object {
         private const val TAG = "AlertNotificationManager"
-        private const val ALERT_DISPLAY_TIME_MS = 5000L
+        private const val BASE_DISPLAY_TIME_MS = 5000L
+        private const val MS_PER_CHARACTER = 50L
+        private const val MIN_DISPLAY_TIME_MS = 8000L
+        private const val MAX_DISPLAY_TIME_MS = 30000L
     }
 
     private val alertQueue: Queue<OpenWeatherMapClient.WeatherAlert> = LinkedList()
@@ -115,12 +118,17 @@ class AlertNotificationManager(private val activity: Activity) {
                 val slideIn = AnimationUtils.loadAnimation(activity, R.anim.alert_slide_in)
                 popupView.startAnimation(slideIn)
 
-                Log.d(TAG, "Showing alert: ${alert.event}")
+                // Calculate display time based on text length
+                val textLength = alert.event.length + alert.description.length
+                val displayTime = (BASE_DISPLAY_TIME_MS + (textLength * MS_PER_CHARACTER))
+                    .coerceIn(MIN_DISPLAY_TIME_MS, MAX_DISPLAY_TIME_MS)
+
+                Log.d(TAG, "Showing alert: ${alert.event} for ${displayTime}ms (text length: $textLength)")
 
                 // Auto dismiss after duration
                 popupView.postDelayed({
                     dismissCurrentAlert()
-                }, ALERT_DISPLAY_TIME_MS)
+                }, displayTime)
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error showing alert: ${e.message}", e)

@@ -119,11 +119,9 @@ class AlertNotificationManager(private val activity: Activity) {
                 popupView.startAnimation(slideIn)
 
                 // Calculate display time based on text length
-                val textLength = alert.event.length + alert.description.length
-                val displayTime = (BASE_DISPLAY_TIME_MS + (textLength * MS_PER_CHARACTER))
-                    .coerceIn(MIN_DISPLAY_TIME_MS, MAX_DISPLAY_TIME_MS)
+                val displayTime = calculateDisplayTime(alert)
 
-                Log.d(TAG, "Showing alert: ${alert.event} for ${displayTime}ms (text length: $textLength)")
+                Log.d(TAG, "Showing alert: ${alert.event} for ${displayTime}ms")
 
                 // Auto dismiss after duration
                 popupView.postDelayed({
@@ -184,6 +182,12 @@ class AlertNotificationManager(private val activity: Activity) {
     fun isAlertActive(alert: OpenWeatherMapClient.WeatherAlert): Boolean {
         val currentTime = System.currentTimeMillis() / 1000
         return currentTime >= alert.start && currentTime <= alert.end
+    }
+
+    private fun calculateDisplayTime(alert: OpenWeatherMapClient.WeatherAlert): Long {
+        val textLength = alert.event.length + alert.description.length
+        return (BASE_DISPLAY_TIME_MS + (textLength * MS_PER_CHARACTER))
+            .coerceIn(MIN_DISPLAY_TIME_MS, MAX_DISPLAY_TIME_MS)
     }
 
     fun getActiveAlerts(alerts: List<OpenWeatherMapClient.WeatherAlert>): List<OpenWeatherMapClient.WeatherAlert> {

@@ -85,6 +85,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         topDownCarView = findViewById(R.id.topDownCarView)
         overtakingWarningIcon = findViewById(R.id.overtakingWarningIcon)
         alertNotificationManager = AlertNotificationManager(this)
+        alertNotificationManager.requestNotificationPermission()
         
         // Setup Navigation Manager
         setupNavigation()

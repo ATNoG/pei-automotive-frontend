@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -27,7 +28,7 @@ class AlertNotificationManager(private val activity: Activity) {
         private const val CHANNEL_NAME = "Weather Alerts"
         private const val CHANNEL_DESCRIPTION = "Notifications for weather alerts and warnings"
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
-        
+
         // Delay between notifications (heads-up notifications auto-dismiss after ~8 seconds)
         private const val NOTIFICATION_DELAY_MS = 9000L
     }
@@ -113,10 +114,10 @@ class AlertNotificationManager(private val activity: Activity) {
 
         isProcessingQueue = true
         val alert = alertQueue.poll()
-        
+
         if (alert != null) {
             showNotification(alert)
-            
+
             // Schedule next alert after delay (to allow current heads-up to auto-dismiss)
             if (alertQueue.isNotEmpty()) {
                 handler.postDelayed({
@@ -149,12 +150,18 @@ class AlertNotificationManager(private val activity: Activity) {
             )
 
             val iconRes = getAlertIcon(alert.event)
+            val emoji = getAlertEmoji(alert.event)
+            val title = "$emoji ${alert.event}"
+            
+            // Create large icon bitmap for right side of notification
+            val largeIcon = BitmapFactory.decodeResource(activity.resources, iconRes)
 
             val builder = NotificationCompat.Builder(activity, CHANNEL_ID)
                 .setSmallIcon(iconRes)
-                .setContentTitle(alert.event)
-                .setContentText(alert.description.take(100))
-                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setLargeIcon(largeIcon)
+                .setContentTitle(title)
+                .setContentText(alert.description.take(150))
+                .setSubText("Weather Alert")
                 .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
@@ -162,7 +169,7 @@ class AlertNotificationManager(private val activity: Activity) {
                 .setOnlyAlertOnce(false)
 
             val currentNotificationId = notificationId++
-            
+
             with(NotificationManagerCompat.from(activity)) {
                 if (ActivityCompat.checkSelfPermission(
                         activity,
@@ -176,6 +183,29 @@ class AlertNotificationManager(private val activity: Activity) {
 
         } catch (e: Exception) {
             Log.e(TAG, "Error showing notification: ${e.message}", e)
+        }
+    }
+
+    private fun getAlertEmoji(event: String): String {
+        return when {
+            event.contains("Tornado", ignoreCase = true) -> "🌪️"
+            event.contains("Thunderstorm", ignoreCase = true) -> "⛈️"
+            event.contains("Rain", ignoreCase = true) -> "🌧️"
+            event.contains("Snow", ignoreCase = true) -> "❄️"
+            event.contains("Wind", ignoreCase = true) -> "💨"
+            event.contains("Fog", ignoreCase = true) -> "🌫️"
+            event.contains("Heat", ignoreCase = true) -> "🔥"
+            event.contains("Cold", ignoreCase = true) -> "🥶"
+            event.contains("Flood", ignoreCase = true) -> "🌊"
+            event.contains("Hurricane", ignoreCase = true) -> "🌀"
+            event.contains("Hail", ignoreCase = true) -> "🧊"
+            event.contains("Dust", ignoreCase = true) -> "🏜️"
+            event.contains("Ice", ignoreCase = true) -> "🧊"
+            event.contains("Frost", ignoreCase = true) -> "❄️"
+            event.contains("Fire", ignoreCase = true) -> "🔥"
+            event.contains("Smoke", ignoreCase = true) -> "💨"
+            event.contains("Storm", ignoreCase = true) -> "🌩️"
+            else -> "⚠️"
         }
     }
 

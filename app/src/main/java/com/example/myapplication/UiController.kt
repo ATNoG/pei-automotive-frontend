@@ -30,6 +30,7 @@ class UiController(private val activity: Activity) {
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
     private val txtSpeedUnit: TextView? = activity.findViewById(R.id.txtSpeedUnit)
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
+    private val txtWindSpeed: TextView? = activity.findViewById(R.id.txtWindSpeed)
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
     private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
@@ -102,6 +103,10 @@ class UiController(private val activity: Activity) {
 
     fun updateTemperature(tempC: Int) {
         txtTemperature?.text = "$tempC°"
+    }
+
+    fun updateWindSpeed(windKmh: Int) {
+        txtWindSpeed?.text = "$windKmh"
     }
 
     fun updateWeatherIcon(isRain: Boolean) {

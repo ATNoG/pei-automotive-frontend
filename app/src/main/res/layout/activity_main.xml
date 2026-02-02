@@ -46,6 +46,36 @@
                 android:textStyle="bold"
                 android:layout_marginStart="8dp"/>
 
+            <View
+                android:layout_width="1dp"
+                android:layout_height="24dp"
+                android:background="#44FFFFFF"
+                android:layout_marginHorizontal="12dp"/>
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_wind"
+                app:tint="#9EC8F5"/>
+
+            <TextView
+                android:id="@+id/txtWindSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:layout_marginStart="8dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="km/h"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp"
+                android:layout_marginStart="4dp"/>
+
         </LinearLayout>
 
     </FrameLayout>

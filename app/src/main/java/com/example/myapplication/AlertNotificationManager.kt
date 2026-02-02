@@ -4,9 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
@@ -139,16 +137,6 @@ class AlertNotificationManager(private val activity: Activity) {
         }
 
         try {
-            val intent = Intent(activity, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            val pendingIntent = PendingIntent.getActivity(
-                activity,
-                0,
-                intent,
-                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-            )
-
             val iconRes = getAlertIcon(alert.event)
             val emoji = getAlertEmoji(alert.event)
             val title = "$emoji ${alert.event}"
@@ -164,7 +152,6 @@ class AlertNotificationManager(private val activity: Activity) {
                 .setSubText("Weather Alert")
                 .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
                 .setAutoCancel(true)
-                .setContentIntent(pendingIntent)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(false)
 
@@ -241,13 +228,6 @@ class AlertNotificationManager(private val activity: Activity) {
         Log.d(TAG, "Cleared all displayed alerts tracking")
     }
 
-    fun clearQueue() {
-        alertQueue.clear()
-        handler.removeCallbacksAndMessages(null)
-        isProcessingQueue = false
-        Log.d(TAG, "Cleared alert queue and pending callbacks")
-    }
-
     fun cancelAllNotifications() {
         val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancelAll()
@@ -258,9 +238,5 @@ class AlertNotificationManager(private val activity: Activity) {
         val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.cancel(notificationId)
         Log.d(TAG, "Cancelled notification with ID: $notificationId")
-    }
-
-    fun getQueueSize(): Int {
-        return alertQueue.size
     }
 }

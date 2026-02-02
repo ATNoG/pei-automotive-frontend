@@ -408,7 +408,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             runOnUiThread {
                 uiController.updateTemperature(weatherData.temperature)
                 uiController.updateWeatherIcon(weatherData.isRain)
-                Log.d("WEATHER", "Updated: ${weatherData.temperature}°C, Condition: ${weatherData.weatherCondition}, IsRain/Clouds: ${weatherData.isRain}")
+                uiController.updateWindSpeed(weatherData.windSpeed)
+                Log.d("WEATHER", "Updated: ${weatherData.temperature}°C, Wind: ${weatherData.windSpeed}km/h, Condition: ${weatherData.weatherCondition}, IsRain/Clouds: ${weatherData.isRain}")
             }
         } else {
             Log.e("WEATHER", "Failed to fetch weather data - received null response")

@@ -16,7 +16,8 @@ object OpenWeatherMapClient {
     data class WeatherData(
         val temperature: Int,
         val weatherCondition: String,
-        val isRain: Boolean
+        val isRain: Boolean,
+        val windSpeed: Int
     )
 
     data class WeatherAlert(
@@ -48,6 +49,8 @@ object OpenWeatherMapClient {
 
                 val current = json.getJSONObject("current")
                 val temp = current.getDouble("temp").toInt()
+                val windSpeedMs = current.getDouble("wind_speed")
+                val windSpeedKmh = (windSpeedMs * 3.6).toInt()
 
                 val weatherArray = current.getJSONArray("weather")
                 val weather = weatherArray.getJSONObject(0)
@@ -59,7 +62,7 @@ object OpenWeatherMapClient {
                             condition.equals("Thunderstorm", ignoreCase = true) ||
                             condition.equals("Clouds", ignoreCase = true)
 
-                WeatherData(temp, condition, isRain)
+                WeatherData(temp, condition, isRain, windSpeedKmh)
             } finally {
                 conn.disconnect()
             }
@@ -177,6 +180,8 @@ object OpenWeatherMapClient {
         return try {
             val current = json.getJSONObject("current")
             val temp = current.getDouble("temp").toInt()
+            val windSpeedMs = current.getDouble("wind_speed")
+            val windSpeedKmh = (windSpeedMs * 3.6).toInt()
 
             val weatherArray = current.getJSONArray("weather")
             val weather = weatherArray.getJSONObject(0)
@@ -187,7 +192,7 @@ object OpenWeatherMapClient {
                         condition.equals("Thunderstorm", ignoreCase = true) ||
                         condition.equals("Clouds", ignoreCase = true)
 
-            WeatherData(temp, condition, isRain)
+            WeatherData(temp, condition, isRain, windSpeedKmh)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing weather data", e)
             null

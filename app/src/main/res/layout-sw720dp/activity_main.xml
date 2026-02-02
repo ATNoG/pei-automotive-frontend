@@ -300,7 +300,9 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:clickable="true"
+        android:focusable="true">
 
         <ImageView
             android:id="@+id/weatherIcon"
@@ -320,36 +322,48 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
-        <View
-            android:layout_width="1dp"
-            android:layout_height="32dp"
-            android:background="#44FFFFFF"
-            android:layout_marginHorizontal="16dp"/>
-
-        <ImageView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:src="@drawable/ic_wind"
-            app:tint="#9EC8F5"/>
-
-        <TextView
-            android:id="@+id/txtWindSpeed"
+        <!-- Wind Section -->
+        <LinearLayout
+            android:id="@+id/windSection"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="12"
-            android:textColor="#FFFFFF"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:layout_marginStart="12dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:visibility="visible">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="km/h"
-            android:textColor="#AAAAAA"
-            android:textSize="16sp"
-            android:layout_marginStart="6dp"/>
-    </LinearLayout>
+            <View
+                android:layout_width="1dp"
+                android:layout_height="32dp"
+                android:background="#44FFFFFF"
+                android:layout_marginHorizontal="16dp"/>
+
+            <ImageView
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_wind"
+                app:tint="#9EC8F5"/>
+
+            <TextView
+                android:id="@+id/txtWindSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="12"
+                android:textColor="#FFFFFF"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:layout_marginStart="12dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="km/h"
+                android:textColor="#AAAAAA"
+                android:textSize="16sp"
+                android:layout_marginStart="6dp"/>
+
+        </LinearLayout>
+
+</LinearLayout>
 
     <!-- NAVIGATION INSTRUCTION BANNER (shown during navigation) -->
     <!-- Positioned to the right of weather badge -->

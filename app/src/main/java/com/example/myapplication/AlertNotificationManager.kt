@@ -46,8 +46,7 @@ class AlertNotificationManager(private val activity: Activity) {
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = CHANNEL_DESCRIPTION
-                enableLights(true)
-                enableVibration(true)
+                enableVibration(false)
                 setShowBadge(true)
             }
 
@@ -228,15 +227,5 @@ class AlertNotificationManager(private val activity: Activity) {
         Log.d(TAG, "Cleared all displayed alerts tracking")
     }
 
-    fun cancelAllNotifications() {
-        val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancelAll()
-        Log.d(TAG, "Cancelled all notifications")
-    }
 
-    fun cancelNotification(notificationId: Int) {
-        val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.cancel(notificationId)
-        Log.d(TAG, "Cancelled notification with ID: $notificationId")
-    }
 }

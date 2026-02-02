@@ -98,6 +98,9 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         
         // Setup weather updates (which includes alerts)
         setupWeatherUpdates()
+        
+        // Setup weather card click listener
+        uiController.setupWeatherCardClick()
 
         // Setup MQTT (after uiController is initialized)
         setupMqtt()
@@ -406,10 +409,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         
         if (weatherData != null) {
             runOnUiThread {
-                uiController.updateTemperature(weatherData.temperature)
-                uiController.updateWeatherIcon(weatherData.isRain)
-                uiController.updateWindSpeed(weatherData.windSpeed)
-                Log.d("WEATHER", "Updated: ${weatherData.temperature}°C, Wind: ${weatherData.windSpeed}km/h, Condition: ${weatherData.weatherCondition}, IsRain/Clouds: ${weatherData.isRain}")
+                uiController.updateFullWeatherData(weatherData, alerts)
+                Log.d("WEATHER", "Updated: ${weatherData.temperature}°C, Wind: ${weatherData.windSpeed}km/h, Humidity: ${weatherData.humidity}%, Condition: ${weatherData.weatherCondition}")
             }
         } else {
             Log.e("WEATHER", "Failed to fetch weather data - received null response")

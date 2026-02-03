@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -30,6 +31,8 @@ class UiController(private val activity: Activity) {
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
     private val txtSpeedUnit: TextView? = activity.findViewById(R.id.txtSpeedUnit)
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
+    private val txtWindSpeed: TextView? = activity.findViewById(R.id.txtWindSpeed)
+    private val weatherCard: View? = activity.findViewById(R.id.weatherCard) ?: activity.findViewById(R.id.weatherBadge)
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
     private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
@@ -52,6 +55,10 @@ class UiController(private val activity: Activity) {
     
     // Time formatter for arrival time
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    
+    // Cached weather data for dialog
+    private var cachedWeatherData: OpenWeatherMapClient.WeatherData? = null
+    private var cachedAlerts: List<OpenWeatherMapClient.WeatherAlert> = emptyList()
 
     fun updateSpeedLimit(limit: Int?) {
         val displayText = limit?.toString() ?: "--"
@@ -104,9 +111,133 @@ class UiController(private val activity: Activity) {
         txtTemperature?.text = "$tempC°"
     }
 
+    fun updateWindSpeed(windKmh: Int) {
+        txtWindSpeed?.text = "$windKmh"
+    }
+    
+
     fun updateWeatherIcon(isRain: Boolean) {
         weatherIcon?.setImageResource(if (isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun)
     }
+    
+    fun updateFullWeatherData(weatherData: OpenWeatherMapClient.WeatherData, alerts: List<OpenWeatherMapClient.WeatherAlert>) {
+        cachedWeatherData = weatherData
+        cachedAlerts = alerts
+        
+        updateTemperature(weatherData.temperature)
+        updateWindSpeed(weatherData.windSpeed)
+        updateWeatherIcon(weatherData.isRain)
+    }
+    
+    fun setupWeatherCardClick() {
+        weatherCard?.setOnClickListener {
+            showWeatherDialog()
+        }
+    }
+    
+    private fun showWeatherDialog() {
+        val weatherData = cachedWeatherData ?: return
+        
+        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        rootView.addView(dialogView)
+        
+        // Populate weather data
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text = "${weatherData.temperature}°"
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text = weatherData.weatherDescription.replaceFirstChar { it.uppercase() }
+        dialogView.findViewById<ImageView>(R.id.imgWeatherDialogIcon)?.setImageResource(
+            if (weatherData.isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun
+        )
+        dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "${weatherData.feelsLike}°"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text = "${weatherData.windSpeed} km/h"
+        dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${weatherData.humidity}%"
+        dialogView.findViewById<TextView>(R.id.txtPressure)?.text = "${weatherData.pressure} hPa"
+        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "${weatherData.visibility} km"
+        dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text = String.format("%.1f", weatherData.uvIndex)
+        
+        // Populate alerts if any
+        val alertsSection = dialogView.findViewById<LinearLayout>(R.id.alertsSection)
+        val alertsContainer = dialogView.findViewById<LinearLayout>(R.id.alertsContainer)
+        if (cachedAlerts.isNotEmpty()) {
+            alertsSection?.visibility = View.VISIBLE
+            alertsContainer?.removeAllViews()
+            
+            cachedAlerts.forEach { alert ->
+                // Create alert card
+                val alertCard = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setBackgroundResource(R.drawable.card_background_with_stroke)
+                    setPadding(32, 24, 32, 24)
+                    val params = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    )
+                    params.bottomMargin = 16
+                    layoutParams = params
+                }
+                
+                // Alert title with emoji
+                val titleText = TextView(activity).apply {
+                    text = "⚠️ ${alert.event}"
+                    setTextColor(android.graphics.Color.parseColor("#FFD54F"))
+                    textSize = 16f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                }
+                alertCard.addView(titleText)
+                
+                // Time period
+                val dateFormat = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                val startTime = dateFormat.format(java.util.Date(alert.start * 1000))
+                val endTime = dateFormat.format(java.util.Date(alert.end * 1000))
+                val timeText = TextView(activity).apply {
+                    text = "🕐 $startTime - $endTime"
+                    setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                    textSize = 13f
+                    setPadding(0, 12, 0, 0)
+                }
+                alertCard.addView(timeText)
+                
+                // Sender/Source
+                if (alert.senderName.isNotEmpty()) {
+                    val senderText = TextView(activity).apply {
+                        text = "📢 ${alert.senderName}"
+                        setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                        textSize = 13f
+                        setPadding(0, 8, 0, 0)
+                    }
+                    alertCard.addView(senderText)
+                }
+                
+                // Description
+                val descText = TextView(activity).apply {
+                    text = alert.description
+                    setTextColor(android.graphics.Color.parseColor("#DDDDDD"))
+                    textSize = 14f
+                    setPadding(0, 16, 0, 0)
+                }
+                alertCard.addView(descText)
+                
+                alertsContainer?.addView(alertCard)
+            }
+        } else {
+            alertsSection?.visibility = View.GONE
+        }
+        
+        // Close button
+        dialogView.findViewById<ImageButton>(R.id.btnCloseWeatherDialog)?.setOnClickListener {
+            rootView.removeView(dialogView)
+        }
+        
+
+        // Overlay click to close
+        dialogView.findViewById<View>(R.id.weatherDialogOverlay)?.setOnClickListener {
+            rootView.removeView(dialogView)
+        }
+        
+        // Prevent clicks on card from closing
+        dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { }
+    }
+
 
     fun updateEtaAndDistance(etaText: String, distanceText: String) {
         txtEta?.text = etaText

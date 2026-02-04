@@ -365,6 +365,57 @@
 
 </LinearLayout>
 
+    <!-- ACCIDENT ALERT BANNER (shown when accident detected ahead) -->
+    <LinearLayout
+        android:id="@+id/accidentAlertBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/accident_alert_bg"
+        android:paddingHorizontal="24dp"
+        android:paddingVertical="16dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginStart="12dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/weatherBadge"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Warning icon -->
+        <ImageView
+            android:id="@+id/imgAccidentIcon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_accident_marker"
+            android:scaleType="fitCenter"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+
+            <!-- Alert title -->
+            <TextView
+                android:id="@+id/txtAccidentTitle"
+                android:text="⚠️ Accident Alert"
+                android:textColor="#FF4444"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <!-- Distance text -->
+            <TextView
+                android:id="@+id/txtAccidentDistance"
+                android:text="500 m ahead"
+                android:textColor="#FFFFFF"
+                android:textSize="16sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- NAVIGATION INSTRUCTION BANNER (shown during navigation) -->
     <!-- Positioned to the right of weather badge -->
     <LinearLayout

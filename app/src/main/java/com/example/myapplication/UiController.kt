@@ -53,6 +53,11 @@ class UiController(private val activity: Activity) {
     private val txtNavArrival: TextView? = activity.findViewById(R.id.txtNavArrival)
     private val txtNavDistance: TextView? = activity.findViewById(R.id.txtNavDistance)
     
+    // Accident alert UI elements
+    private val accidentAlertBanner: LinearLayout? = activity.findViewById(R.id.accidentAlertBanner)
+    private val txtAccidentDistance: TextView? = activity.findViewById(R.id.txtAccidentDistance)
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    
     // Time formatter for arrival time
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     
@@ -297,6 +302,49 @@ class UiController(private val activity: Activity) {
         speedAlertIcon?.clearAnimation()
         speedAlertBlur?.clearAnimation()
         speedAlertBlur?.visibility = View.GONE
+    }
+    
+    // ========== Accident Alert UI Methods ==========
+    
+    /**
+     * Show accident alert banner with distance information.
+     */
+    fun showAccidentAlert(distanceMeters: Double) {
+        Log.d("UI_ALERT", "showAccidentAlert called, distance: $distanceMeters m")
+        
+        // Format distance for display
+        val distanceText = if (distanceMeters >= 1000) {
+            String.format("%.1f km ahead", distanceMeters / 1000)
+        } else {
+            String.format("%.0f m ahead", distanceMeters)
+        }
+        
+        txtAccidentDistance?.text = distanceText
+        accidentAlertBanner?.visibility = View.VISIBLE
+        
+        // Start pulse animation
+        try {
+            val pulse = AnimationUtils.loadAnimation(activity, R.anim.accident_pulse)
+            accidentAlertBanner?.startAnimation(pulse)
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting accident pulse animation: ${e.message}")
+        }
+        
+        // Auto-hide after 15 seconds
+        handler.postDelayed({
+            hideAccidentAlert()
+        }, 15000)
+        
+        Log.d("UI_ALERT", "Accident alert banner shown: $distanceText")
+    }
+    
+    /**
+     * Hide the accident alert banner.
+     */
+    fun hideAccidentAlert() {
+        accidentAlertBanner?.clearAnimation()
+        accidentAlertBanner?.visibility = View.GONE
+        Log.d("UI_ALERT", "Accident alert banner hidden")
     }
     
     // ========== Navigation UI Methods ==========

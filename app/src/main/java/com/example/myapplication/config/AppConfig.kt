@@ -33,7 +33,8 @@ object AppConfig {
         "navigation-car",
         "main-car",
         "speed-car",
-        "curved-route-car"
+        "curved-route-car",
+        "car-behind"
     )
 
     /**
@@ -41,7 +42,9 @@ object AppConfig {
      * These vehicles are displayed on the map but don't control the camera.
      */
     val OTHER_CAR_IDS = setOf(
-        "overtaking-car-behind"
+        "overtaking-car-behind",
+        "accident-car",
+        "car-ahead"
     )
 
     // ========== Default Positions ==========
@@ -138,6 +141,17 @@ object AppConfig {
      * MQTT topic for overtaking alerts.
      */
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
+
+    /**
+     * MQTT topic for accident alerts.
+     */
+    const val MQTT_TOPIC_ACCIDENT_ALERT = "alerts/accident"
+
+    /**
+     * MQTT topic pattern for accident alerts for all cars.
+     * Uses wildcard to receive all accident notifications.
+     */
+    const val MQTT_TOPIC_ACCIDENT_ALERTS_PATTERN = "alerts/accident/#"
 
     // ========== Digital Twin Message Parsing ==========
 

@@ -10,12 +10,14 @@ import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import java.util.LinkedList
+import java.util.Locale
 import java.util.Queue
 
 class AlertNotificationManager(private val activity: Activity) {
@@ -25,6 +27,12 @@ class AlertNotificationManager(private val activity: Activity) {
         private const val CHANNEL_ID = "weather_alerts"
         private const val CHANNEL_NAME = "Weather Alerts"
         private const val CHANNEL_DESCRIPTION = "Notifications for weather alerts and warnings"
+        
+        // Accident alerts channel
+        private const val ACCIDENT_CHANNEL_ID = "accident_alerts"
+        private const val ACCIDENT_CHANNEL_NAME = "Accident Alerts"
+        private const val ACCIDENT_CHANNEL_DESCRIPTION = "Critical notifications for accident alerts ahead"
+        
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
         // Delay between notifications (heads-up notifications auto-dismiss after ~8 seconds)
@@ -32,13 +40,53 @@ class AlertNotificationManager(private val activity: Activity) {
     }
 
     private val displayedAlerts = mutableSetOf<String>()
+    private val displayedAccidentAlerts = mutableSetOf<String>()
     private var notificationId = 1000
     private val alertQueue: Queue<OpenWeatherMapClient.WeatherAlert> = LinkedList()
     private var isProcessingQueue = false
     private val handler = Handler(Looper.getMainLooper())
+    
+    // Text-to-Speech for alerts
+    private var tts: TextToSpeech? = null
+    private var ttsInitialized = false
 
     init {
         createNotificationChannel()
+        createAccidentNotificationChannel()
+        initTextToSpeech()
+    }
+    
+    private fun initTextToSpeech() {
+        tts = TextToSpeech(activity) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val result = tts?.setLanguage(Locale.US)
+                ttsInitialized = result != TextToSpeech.LANG_MISSING_DATA && 
+                                 result != TextToSpeech.LANG_NOT_SUPPORTED
+                if (ttsInitialized) {
+                    Log.d(TAG, "Text-to-Speech initialized successfully")
+                } else {
+                    Log.w(TAG, "Text-to-Speech language not supported")
+                }
+            } else {
+                Log.e(TAG, "Text-to-Speech initialization failed")
+            }
+        }
+    }
+    
+    private fun speakText(text: String) {
+        if (ttsInitialized) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "accident_alert")
+            Log.d(TAG, "TTS speaking: $text")
+        } else {
+            Log.w(TAG, "TTS not initialized, cannot speak: $text")
+        }
+    }
+    
+    fun shutdown() {
+        tts?.stop()
+        tts?.shutdown()
+        tts = null
+        ttsInitialized = false
     }
 
     private fun createNotificationChannel() {
@@ -53,6 +101,22 @@ class AlertNotificationManager(private val activity: Activity) {
             val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
             Log.d(TAG, "Notification channel created: $CHANNEL_ID")
+        }
+    }
+    
+    private fun createAccidentNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel(ACCIDENT_CHANNEL_ID, ACCIDENT_CHANNEL_NAME, importance).apply {
+                description = ACCIDENT_CHANNEL_DESCRIPTION
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 500, 200, 500)
+                setShowBadge(true)
+            }
+
+            val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+            Log.d(TAG, "Accident notification channel created: $ACCIDENT_CHANNEL_ID")
         }
     }
 
@@ -226,6 +290,114 @@ class AlertNotificationManager(private val activity: Activity) {
         displayedAlerts.clear()
         Log.d(TAG, "Cleared all displayed alerts tracking")
     }
-
-
+    
+    // ========== Accident Alert Methods ==========
+    
+    /**
+     * Data class representing an accident alert event.
+     */
+    data class AccidentAlertData(
+        val eventId: String,
+        val latitude: Double,
+        val longitude: Double,
+        val distanceMeters: Double,
+        val timestamp: Long
+    )
+    
+    /**
+     * Show an accident alert notification with text-to-speech.
+     */
+    fun showAccidentAlert(
+        accidentData: AccidentAlertData,
+        onAccidentDisplayed: ((AccidentAlertData) -> Unit)? = null
+    ) {
+        // Check if we already displayed this accident
+        if (displayedAccidentAlerts.contains(accidentData.eventId)) {
+            Log.d(TAG, "Accident ${accidentData.eventId} already displayed, skipping")
+            return
+        }
+        
+        displayedAccidentAlerts.add(accidentData.eventId)
+        Log.d(TAG, "Showing accident alert: ${accidentData.eventId}")
+        
+        // Format distance for display
+        val distanceText = if (accidentData.distanceMeters >= 1000) {
+            String.format("%.1f km", accidentData.distanceMeters / 1000)
+        } else {
+            String.format("%.0f meters", accidentData.distanceMeters)
+        }
+        
+        // NOTE: System notification removed - only UI banner and TTS are used
+        // showAccidentNotification(accidentData.eventId, distanceText)
+        
+        // Speak the alert using TTS
+        val ttsMessage = "Warning! Accident ahead in $distanceText."
+        speakText(ttsMessage)
+        
+        // Invoke callback for UI updates
+        onAccidentDisplayed?.invoke(accidentData)
+    }
+    
+    /**
+     * Show system notification for accident alert.
+     */
+    private fun showAccidentNotification(eventId: String, distanceText: String) {
+        if (!hasNotificationPermission()) {
+            Log.w(TAG, "Notification permission not granted")
+            requestNotificationPermission()
+            return
+        }
+        
+        try {
+            val title = "Accident Alert"
+            val message = "Accident detected ahead in $distanceText. Slow down!"
+            
+            // Create large icon bitmap
+            val largeIcon = BitmapFactory.decodeResource(activity.resources, R.drawable.ic_accident_marker)
+            
+            val builder = NotificationCompat.Builder(activity, ACCIDENT_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_accident_marker)
+                .setLargeIcon(largeIcon)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setSubText("Traffic Alert")
+                .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setAutoCancel(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .setVibrate(longArrayOf(0, 500, 200, 500))
+            
+            val currentNotificationId = notificationId++
+            
+            with(NotificationManagerCompat.from(activity)) {
+                if (ActivityCompat.checkSelfPermission(
+                        activity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+                ) {
+                    notify(currentNotificationId, builder.build())
+                    Log.d(TAG, "Accident notification shown: $eventId with ID: $currentNotificationId")
+                }
+            }
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing accident notification: ${e.message}", e)
+        }
+    }
+    
+    /**
+     * Check if an accident alert has been displayed.
+     */
+    fun isAccidentAlertDisplayed(eventId: String): Boolean {
+        return displayedAccidentAlerts.contains(eventId)
+    }
+    
+    /**
+     * Clear displayed accident alerts.
+     */
+    fun clearDisplayedAccidentAlerts() {
+        displayedAccidentAlerts.clear()
+        Log.d(TAG, "Cleared all displayed accident alerts tracking")
+    }
 }

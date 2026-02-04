@@ -58,6 +58,9 @@ class MapController(
         private const val OTHER_CAR_LAYER_ID = "other-car-layer"
         private const val OTHER_CAR_IMAGE_ID = "other-car-image"
         
+        // Accident car arrow (yellow) for cars that had an accident
+        private const val ACCIDENT_CAR_IMAGE_ID = "accident-car-image"
+        
         // Route line constants
         private const val ROUTE_SOURCE_ID = "route-source"
         private const val ROUTE_LAYER_ID = "route-layer"
@@ -71,6 +74,11 @@ class MapController(
         private const val DESTINATION_SOURCE_ID = "destination-source"
         private const val DESTINATION_LAYER_ID = "destination-layer"
         private const val DESTINATION_IMAGE_ID = "destination-flag-image"
+        
+        // Accident marker constants
+        private const val ACCIDENT_SOURCE_ID = "accident-source"
+        private const val ACCIDENT_LAYER_ID = "accident-layer"
+        private const val ACCIDENT_IMAGE_ID = "accident-marker-image"
     }
 
     // simulation state
@@ -93,6 +101,7 @@ class MapController(
     private var otherCarLon: Double = 0.0
     private var otherCarBearing: Float = 0.0f
     private var otherCarAnimationRunnable: Runnable? = null
+    private var otherCarIsAccidented: Boolean = false  // Track if the other car has had an accident
     
     // Navigation route tracking for traveled/remaining display
     private var fullRoutePoints: List<NavLatLng> = emptyList()
@@ -101,6 +110,10 @@ class MapController(
     
     // Camera update throttling for performance
     private var lastCameraUpdateTime: Long = 0L
+    
+    // Accident markers tracking
+    data class AccidentMarker(val eventId: String, val latitude: Double, val longitude: Double)
+    private val activeAccidents = mutableMapOf<String, AccidentMarker>()
 
     fun init(onReady: () -> Unit) {
         this.styleLoadedCallback = onReady
@@ -145,6 +158,9 @@ class MapController(
             
             // Add destination marker layer
             addDestinationSourceAndLayer(style)
+            
+            // Add accident marker layer
+            addAccidentSourceAndLayer(style)
 
             // 2) add arrow image, source, and symbol layer for user car
             addArrowImageToStyle(style)
@@ -230,6 +246,19 @@ class MapController(
             }
         } catch (t: Throwable) {
             android.util.Log.e("MapController", "Error loading other car arrow image: ${t.message}")
+        }
+        
+        // Also load the accident car arrow (yellow) for cars that had accidents
+        try {
+            val accidentBmp = BitmapFactory.decodeResource(context.resources, R.drawable.accident_car_arrow)
+            if (accidentBmp != null) {
+                style.addImage(ACCIDENT_CAR_IMAGE_ID, accidentBmp)
+                android.util.Log.d("MapController", "Accident car arrow image loaded successfully")
+            } else {
+                android.util.Log.e("MapController", "Failed to load accident car arrow image - bitmap is null")
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e("MapController", "Error loading accident car arrow image: ${t.message}")
         }
     }
 
@@ -428,6 +457,41 @@ class MapController(
         }
         
         otherCarAnimationRunnable?.run()
+    }
+    
+    /**
+     * Mark the other car as having had an accident.
+     * This changes the car's arrow color from gray to yellow.
+     */
+    fun markOtherCarAsAccidented() {
+        android.util.Log.d("MapController", "Marking other car as accidented - changing to yellow arrow")
+        otherCarIsAccidented = true
+        
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+        
+        // Change the icon to the accident (yellow) arrow
+        val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
+        layer?.setProperties(iconImage(ACCIDENT_CAR_IMAGE_ID))
+        
+        android.util.Log.d("MapController", "Other car arrow changed to yellow (accident)")
+    }
+    
+    /**
+     * Reset the other car to normal state (gray arrow).
+     */
+    fun resetOtherCarAccidentState() {
+        android.util.Log.d("MapController", "Resetting other car to normal state - gray arrow")
+        otherCarIsAccidented = false
+        
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+        
+        // Change the icon back to the normal gray arrow
+        val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
+        layer?.setProperties(iconImage(OTHER_CAR_IMAGE_ID))
+        
+        android.util.Log.d("MapController", "Other car arrow changed back to gray (normal)")
     }
 
 
@@ -916,6 +980,7 @@ class MapController(
             
             addRouteSourceAndLayers(style)
             addDestinationSourceAndLayer(style)
+            addAccidentSourceAndLayer(style)
             addArrowImageToStyle(style)
             addArrowSourceAndLayer(style)
             addOtherCarImageToStyle(style)
@@ -927,7 +992,102 @@ class MapController(
                 updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
             }
             
+            // Restore accident markers if any
+            refreshAccidentMarkers()
+            
             onStyleLoaded?.invoke()
         }
+    }
+    
+    // ========== Accident Marker Methods ==========
+    
+    /**
+     * Add accident marker source and layer to the map style.
+     */
+    private fun addAccidentSourceAndLayer(style: Style) {
+        // Load accident marker image
+        try {
+            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_accident_marker)
+            if (bmp != null) {
+                style.addImage(ACCIDENT_IMAGE_ID, bmp)
+                Log.d(TAG, "Accident marker image loaded successfully")
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error loading accident marker image: ${t.message}")
+        }
+        
+        // Add accident source
+        val accidentSource = GeoJsonSource(ACCIDENT_SOURCE_ID)
+        style.addSource(accidentSource)
+        
+        // Add accident marker layer (above route but below car arrows)
+        // Using larger icon size (1.0f) for better visibility on the road
+        val accidentLayer = SymbolLayer(ACCIDENT_LAYER_ID, ACCIDENT_SOURCE_ID).apply {
+            setProperties(
+                iconImage(ACCIDENT_IMAGE_ID),
+                iconSize(1.2f),  // Larger size for better visibility on road
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_BOTTOM)  // Anchor at bottom so triangle points to location
+            )
+        }
+        style.addLayerAbove(accidentLayer, DESTINATION_LAYER_ID)
+    }
+    
+    /**
+     * Add an accident marker to the map.
+     */
+    fun addAccidentMarker(eventId: String, latitude: Double, longitude: Double) {
+        Log.d(TAG, "Adding accident marker: $eventId at ($latitude, $longitude)")
+        
+        // Store the accident
+        activeAccidents[eventId] = AccidentMarker(eventId, latitude, longitude)
+        
+        // Refresh the map markers
+        refreshAccidentMarkers()
+    }
+    
+    /**
+     * Remove an accident marker from the map.
+     */
+    fun removeAccidentMarker(eventId: String) {
+        Log.d(TAG, "Removing accident marker: $eventId")
+        activeAccidents.remove(eventId)
+        refreshAccidentMarkers()
+    }
+    
+    /**
+     * Clear all accident markers from the map.
+     */
+    fun clearAllAccidentMarkers() {
+        Log.d(TAG, "Clearing all accident markers")
+        activeAccidents.clear()
+        refreshAccidentMarkers()
+    }
+    
+    /**
+     * Refresh all accident markers on the map.
+     */
+    private fun refreshAccidentMarkers() {
+        val style = mapLibreMap?.style ?: return
+        
+        val features = activeAccidents.values.map { accident ->
+            Feature.fromGeometry(
+                Point.fromLngLat(accident.longitude, accident.latitude)
+            )
+        }
+        
+        (style.getSourceAs(ACCIDENT_SOURCE_ID) as? GeoJsonSource)?.setGeoJson(
+            FeatureCollection.fromFeatures(features)
+        )
+        
+        Log.d(TAG, "Refreshed ${activeAccidents.size} accident markers on map")
+    }
+    
+    /**
+     * Check if an accident marker exists for the given event ID.
+     */
+    fun hasAccidentMarker(eventId: String): Boolean {
+        return activeAccidents.containsKey(eventId)
     }
 }

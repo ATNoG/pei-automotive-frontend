@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="512dp"
+    android:height="512dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    
+    <!-- Yellow/Orange arrow for accident cars -->
+    <!-- Shadow/glow effect -->
+    <path
+        android:fillColor="#80000000"
+        android:pathData="M256,20 L450,480 L256,380 L62,480 Z"
+        android:strokeWidth="0"/>
+    
+    <!-- Main yellow arrow body -->
+    <path
+        android:fillColor="#FFD600"
+        android:pathData="M256,10 L440,470 L256,370 L72,470 Z"
+        android:strokeWidth="0"/>
+    
+    <!-- Orange border for visibility -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M256,10 L440,470 L256,370 L72,470 Z M256,50 L400,430 L256,350 L112,430 Z"
+        android:fillType="evenOdd"
+        android:strokeWidth="0"/>
+    
+</vector>

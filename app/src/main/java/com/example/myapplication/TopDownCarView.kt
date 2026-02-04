@@ -30,6 +30,9 @@ class TopDownCarView @JvmOverloads constructor(
     // Other car positions (relative to user car in meters)
     private val otherCars = mutableListOf<CarPosition>()
     
+    // Track which cars have had accidents (by car ID)
+    private val accidentedCarIds = mutableSetOf<String>()
+    
     // Paint objects
     private val backgroundPaint = Paint().apply {
         color = Color.parseColor("#040404ff")  // Dark grass
@@ -78,13 +81,21 @@ class TopDownCarView @JvmOverloads constructor(
         setShadowLayer(6f, 0f, 0f, Color.parseColor("#AA000000"))
     }
     
+    // Paint for cars that have had an accident - Yellow/Orange
+    private val accidentedCarPaint = Paint().apply {
+        color = Color.parseColor("#FFD600")  // Yellow/Orange
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        setShadowLayer(8f, 0f, 0f, Color.parseColor("#AAFF9800"))  // Orange glow
+    }
+    
     private val textPaint = Paint().apply {
         color = Color.parseColor("#9E9E9E")
         textSize = 24f
         isAntiAlias = true
     }
     
-    data class CarPosition(val x: Float, val y: Float)
+    data class CarPosition(val x: Float, val y: Float, val carId: String = "", val isAccidented: Boolean = false)
     
     init {
         setLayerType(LAYER_TYPE_SOFTWARE, null) // For shadow support
@@ -98,6 +109,23 @@ class TopDownCarView @JvmOverloads constructor(
         android.util.Log.d("TOP_DOWN_VIEW", "Received ${cars.size} cars to draw")
         otherCars.clear()
         otherCars.addAll(cars)
+        invalidate()
+    }
+    
+    /**
+     * Mark a car as having had an accident (will be drawn in yellow)
+     */
+    fun markCarAsAccidented(carId: String) {
+        accidentedCarIds.add(carId)
+        android.util.Log.d("TOP_DOWN_VIEW", "Marked car $carId as accidented")
+        invalidate()
+    }
+    
+    /**
+     * Clear all accident markers
+     */
+    fun clearAccidentedCars() {
+        accidentedCarIds.clear()
         invalidate()
     }
     
@@ -156,7 +184,13 @@ class TopDownCarView @JvmOverloads constructor(
             // Only draw if within reasonable bounds
             if (gridX >= gridMinX && gridX <= gridMaxX && gridY >= gridMinY && gridY <= gridMaxY) {
                 val (screenX, screenY) = gridToScreen(gridX, gridY)
-                canvas.drawCircle(screenX, screenY, carRadius * scale, otherCarPaint)
+                // Use yellow paint for accidented cars, gray for normal
+                val paint = if (car.isAccidented || accidentedCarIds.contains(car.carId)) {
+                    accidentedCarPaint
+                } else {
+                    otherCarPaint
+                }
+                canvas.drawCircle(screenX, screenY, carRadius * scale, paint)
             }
         }
         

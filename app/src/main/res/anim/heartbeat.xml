@@ -51,6 +51,3 @@
         android:duration="200"
         android:startOffset="900" />
 </set>
-```
-
-Now let me create the red pulse animation for the background:

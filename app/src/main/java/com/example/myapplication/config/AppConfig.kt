@@ -153,6 +153,20 @@ object AppConfig {
      */
     const val MQTT_TOPIC_ACCIDENT_ALERTS_PATTERN = "alerts/accident/#"
 
+    /**
+     * MQTT topic for accident cleared/resolved notifications.
+     * Published when an accident is no longer blocking the road.
+     */
+    const val MQTT_TOPIC_ACCIDENT_CLEARED = "alerts/accident/cleared"
+
+    // ========== Accident Management ==========
+
+    /**
+     * Auto-remove accident markers after this duration if not explicitly cleared (milliseconds).
+     * Default: 15 minutes (900000ms) - safety timeout in case cleared message is missed
+     */
+    const val ACCIDENT_AUTO_CLEAR_TIMEOUT_MS = 900000L
+
     // ========== Digital Twin Message Parsing ==========
 
     /**

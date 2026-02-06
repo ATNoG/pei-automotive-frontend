@@ -128,7 +128,7 @@
             <!-- Alert title -->
             <TextView
                 android:id="@+id/txtAccidentTitle"
-                android:text="⚠️ Accident Alert"
+                android:text="Accident Alert"
                 android:textColor="#FF4444"
                 android:textSize="16sp"
                 android:textStyle="bold"

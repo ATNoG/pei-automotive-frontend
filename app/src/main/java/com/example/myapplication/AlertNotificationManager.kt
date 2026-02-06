@@ -320,15 +320,8 @@ class AlertNotificationManager(private val activity: Activity) {
         displayedAccidentAlerts.add(accidentData.eventId)
         Log.d(TAG, "Showing accident alert: ${accidentData.eventId}")
         
-        // Format distance for display
-        val distanceText = if (accidentData.distanceMeters >= 1000) {
-            String.format("%.1f km", accidentData.distanceMeters / 1000)
-        } else {
-            String.format("%.0f meters", accidentData.distanceMeters)
-        }
-        
-        // NOTE: System notification removed - only UI banner and TTS are used
-        // showAccidentNotification(accidentData.eventId, distanceText)
+        // Use shared distance formatting utility
+        val distanceText = UiController.formatDistance(accidentData.distanceMeters)
         
         // Speak the alert using TTS
         val ttsMessage = "Warning! Accident ahead in $distanceText."
@@ -338,53 +331,6 @@ class AlertNotificationManager(private val activity: Activity) {
         onAccidentDisplayed?.invoke(accidentData)
     }
     
-    /**
-     * Show system notification for accident alert.
-     */
-    private fun showAccidentNotification(eventId: String, distanceText: String) {
-        if (!hasNotificationPermission()) {
-            Log.w(TAG, "Notification permission not granted")
-            requestNotificationPermission()
-            return
-        }
-        
-        try {
-            val title = "Accident Alert"
-            val message = "Accident detected ahead in $distanceText. Slow down!"
-            
-            // Create large icon bitmap
-            val largeIcon = BitmapFactory.decodeResource(activity.resources, R.drawable.ic_accident_marker)
-            
-            val builder = NotificationCompat.Builder(activity, ACCIDENT_CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_accident_marker)
-                .setLargeIcon(largeIcon)
-                .setContentTitle(title)
-                .setContentText(message)
-                .setSubText("Traffic Alert")
-                .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setOnlyAlertOnce(true)
-                .setVibrate(longArrayOf(0, 500, 200, 500))
-            
-            val currentNotificationId = notificationId++
-            
-            with(NotificationManagerCompat.from(activity)) {
-                if (ActivityCompat.checkSelfPermission(
-                        activity,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                ) {
-                    notify(currentNotificationId, builder.build())
-                    Log.d(TAG, "Accident notification shown: $eventId with ID: $currentNotificationId")
-                }
-            }
-            
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing accident notification: ${e.message}", e)
-        }
-    }
     
     /**
      * Check if an accident alert has been displayed.

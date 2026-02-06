@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -20,6 +21,8 @@ import com.example.myapplication.navigation.routing.OsrmApiClient
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
+import kotlin.math.cos
+import kotlin.math.sin
 
 class MainActivity : AppCompatActivity(), NavigationListener {
 
@@ -59,12 +62,17 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private var userCarLon: Double = 0.0
     private var userCarBearing: Float = 0f
     
-    // Other car positions with their IDs for tracking accidents
-    data class OtherCarPosition(val carId: String, val lat: Double, val lon: Double)
-    private val otherCarPositions = mutableListOf<OtherCarPosition>()
+    // Other car positions
+    data class OtherCarPosition(val carId: String, val lat: Double, val lon: Double, val heading: Float)
+    private val otherCarPositions = mutableMapOf<String, OtherCarPosition>()
     
-    // Track which car IDs have had accidents (for yellow coloring)
-    private val accidentedCarIds = mutableSetOf<String>()
+    // Throttling for other car map updates (prevents overload)
+    private val otherCarUpdateHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var otherCarUpdateRunnable: Runnable? = null
+    private val OTHER_CAR_UPDATE_THROTTLE_MS = 100L // Update map at most every 100ms
+    
+    // Security: Rate limiting timestamps (thread-safe)
+    private val alertTimestamps = java.util.Collections.synchronizedList(mutableListOf<Long>())
 
     // Track if we've seen both cars (to detect overtaking start)
     private var hasSeenUserCar = false
@@ -147,6 +155,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
     }
     
+    @SuppressLint("SetTextI18n", "DefaultLocale")
     private fun showNavigationDialog() {
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
@@ -345,6 +354,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
     }
     
+    @SuppressLint("InflateParams")
     private fun showSettingsDialog() {
         // Inflate settings layout
         val settingsView = layoutInflater.inflate(R.layout.dialog_settings, null)
@@ -479,18 +489,22 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                     }
                 }
                 topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> {
-                    Log.d(TAG, "Overtaking alert received: $message")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received: $message")
                     runOnUiThread {
                         showOvertakingWarning()
                     }
                 }
+                topic == AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED -> {
+                    if (BuildConfig.DEBUG) Log.d(TAG, "*** ACCIDENT CLEARED *** message: $message")
+                    handleAccidentCleared(message)
+                }
                 topic.startsWith(AppConfig.MQTT_TOPIC_ACCIDENT_ALERT) || topic.contains("accident") -> {
-                    Log.d(TAG, "*** ACCIDENT ALERT DETECTED *** on topic: $topic")
-                    Log.d(TAG, "Accident message: $message")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "*** ACCIDENT ALERT DETECTED *** on topic: $topic")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Accident message: $message")
                     handleAccidentAlert(topic, message)
                 }
                 topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
-                    Log.d(TAG, "Car update received: $message")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Car update received: $message")
                     try {
                         val carData = org.json.JSONObject(message)
                         
@@ -570,6 +584,16 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                         }
                     )
                 }
+                
+                // Subscribe to accident cleared notifications
+                mqttManager.subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED,
+                    onSuccess = {
+                        Log.d(TAG, "Subscribed to accident cleared notifications")
+                    },
+                    onError = { error ->
+                        Log.e(TAG, "Failed to subscribe to accident cleared: $error")
+                    }
+                )
             },
             onError = { error ->
                 runOnUiThread {
@@ -584,53 +608,43 @@ class MainActivity : AppCompatActivity(), NavigationListener {
      * Parses the accident data and triggers UI updates.
      */
     private fun handleAccidentAlert(topic: String, message: String) {
-        Log.d(TAG, "=== handleAccidentAlert ENTRY ===")
-        Log.d(TAG, "Topic: $topic")
-        Log.d(TAG, "Message: $message")
+        if (BuildConfig.DEBUG) Log.d(TAG, "=== handleAccidentAlert ENTRY ===")
         
         try {
             val json = org.json.JSONObject(message)
-            Log.d(TAG, "JSON parsed successfully")
             
             // Extract target car ID from topic (alerts/accident/{car_id})
             val targetCarId = topic.substringAfterLast("/")
-            Log.d(TAG, "Target car ID from topic: '$targetCarId'")
-            Log.d(TAG, "USER_CAR_IDS: $USER_CAR_IDS")
-            Log.d(TAG, "Is targetCarId in USER_CAR_IDS? ${targetCarId in USER_CAR_IDS}")
             
             // Verify this alert is for one of our user cars
             if (targetCarId !in USER_CAR_IDS) {
-                Log.w(TAG, "Accident alert not for our car ($targetCarId), ignoring. USER_CAR_IDS=$USER_CAR_IDS")
+                if (BuildConfig.DEBUG) Log.w(TAG, "Accident alert not for our car, ignoring")
                 return
             }
             
             // Parse accident data
             val notificationType = json.optString("notification_type", "")
-            Log.d(TAG, "Notification type: '$notificationType'")
             if (notificationType != "accident_alert") {
-                Log.w(TAG, "Not an accident_alert notification type: '$notificationType', ignoring")
+                if (BuildConfig.DEBUG) Log.w(TAG, "Not an accident_alert notification type, ignoring")
                 return
             }
             
             val eventId = json.optString("event_id", "")
             val distanceM = json.optDouble("distance_m", 0.0)
             val timestamp = json.optDouble("timestamp", System.currentTimeMillis() / 1000.0)
-            Log.d(TAG, "Event ID: $eventId, Distance: ${distanceM}m")
             
             // Extract accident location from nested accident object
             val accidentObj = json.optJSONObject("accident")
-            Log.d(TAG, "Accident object: $accidentObj")
             val latitude = accidentObj?.optDouble("latitude", 0.0) ?: 0.0
             val longitude = accidentObj?.optDouble("longitude", 0.0) ?: 0.0
             val accidentCarId = accidentObj?.optString("car_id", "") ?: ""
-            Log.d(TAG, "Accident location: ($latitude, $longitude), car_id: $accidentCarId")
-            
-            if (eventId.isEmpty() || latitude == 0.0 || longitude == 0.0) {
-                Log.e(TAG, "Invalid accident alert data: eventId=$eventId, lat=$latitude, lon=$longitude")
+
+            if (!isValidCoordinate(latitude, longitude)) {
+                Log.w(TAG, "SECURITY: Invalid coordinates, rejecting alert")
                 return
             }
             
-            Log.d(TAG, "*** VALID ACCIDENT ALERT - Processing: $eventId at ($latitude, $longitude), distance=${distanceM}m ***")
+            if (BuildConfig.DEBUG) Log.d(TAG, "VALID ACCIDENT ALERT: $eventId at ($latitude, $longitude)")
             
             // Create accident data object
             val accidentData = AlertNotificationManager.AccidentAlertData(
@@ -645,29 +659,68 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                 Log.d(TAG, "Showing accident alert UI (no notification)...")
                 // Show TTS and UI only (no system notification)
                 alertNotificationManager.showAccidentAlert(accidentData) { data ->
-                    Log.d(TAG, "Accident callback triggered - adding marker and banner")
-                    // Add accident marker to map
+                    Log.d(TAG, "Accident callback triggered - adding marker to map")
+                    // Add accident marker to map at the accident location
                     mapController.addAccidentMarker(data.eventId, data.latitude, data.longitude)
-                    
-                    // Mark the other car as accidented (changes arrow from gray to yellow)
-                    if (accidentCarId.isNotEmpty() && accidentCarId in OTHER_CAR_IDS) {
-                        Log.d(TAG, "Marking car $accidentCarId as accidented on map and road view")
-                        // Add to accidented cars set for future updates
-                        accidentedCarIds.add(accidentCarId)
-                        mapController.markOtherCarAsAccidented()
-                        topDownCarView.markCarAsAccidented(accidentCarId)
-                    }
                     
                     // Show UI alert banner
                     uiController.showAccidentAlert(data.distanceMeters)
                 }
             }
             
-            Log.d(TAG, "=== handleAccidentAlert EXIT SUCCESS ===")
+            if (BuildConfig.DEBUG) Log.d(TAG, "=== handleAccidentAlert EXIT SUCCESS ===")
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing accident alert: ${e.message}", e)
+            Log.e(TAG, "Error parsing accident alert", e)
         }
+    }
+    
+    /**
+     * Handle incoming accident cleared notification from MQTT.
+     * Removes the accident marker from the map when accident is resolved.
+     */
+    private fun handleAccidentCleared(message: String) {
+        if (BuildConfig.DEBUG) Log.d(TAG, "=== handleAccidentCleared ENTRY ===")
+        
+        try {
+            val json = org.json.JSONObject(message)
+            
+            // Parse cleared notification
+            val notificationType = json.optString("notification_type", "")
+            if (notificationType != "accident_cleared") {
+                if (BuildConfig.DEBUG) Log.w(TAG, "Not an accident_cleared notification type, ignoring")
+                return
+            }
+            
+            val eventId = json.optString("event_id", "")
+            if (eventId.isEmpty()) {
+                Log.w(TAG, "Accident cleared message missing event_id, ignoring")
+                return
+            }
+            
+            if (BuildConfig.DEBUG) Log.d(TAG, "ACCIDENT CLEARED: $eventId")
+            
+            runOnUiThread {
+                // Remove accident marker from map
+                mapController.removeAccidentMarker(eventId)
+                Log.d(TAG, "Removed accident marker: $eventId")
+            }
+            
+            if (BuildConfig.DEBUG) Log.d(TAG, "=== handleAccidentCleared EXIT SUCCESS ===")
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing accident cleared notification", e)
+        }
+    }
+
+    
+    /**
+     * Validate geographic coordinates
+     */
+    private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
+        return latitude in -90.0..90.0 && 
+               longitude in -180.0..180.0 &&
+               !(latitude == 0.0 && longitude == 0.0)  // Null Island check
     }
 
     /**
@@ -806,25 +859,50 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     
     /**
      * Handle other car (e.g., overtaking car) position update.
+     * Uses throttling to prevent map overload - updates stored immediately,
+     * but map is updated in batches at most every 100ms.
      */
     private fun handleOtherCarUpdate(carId: String, lat: Double, lon: Double, heading: Float) {
         Log.d(TAG, "Updating other car position: $carId")
-        mapController.updateOtherCar(lat, lon, heading)
         
-        // If this car was marked as accidented, update the map arrow to yellow
-        if (carId in accidentedCarIds) {
-            mapController.markOtherCarAsAccidented()
-        }
-        
-        // Track other car position with its ID
-        otherCarPositions.clear()
-        otherCarPositions.add(OtherCarPosition(carId, lat, lon))
+        // Track other car position (update or add without clearing others)
+        otherCarPositions[carId] = OtherCarPosition(carId, lat, lon, heading)
         
         if (!hasSeenOtherCar) {
             hasSeenOtherCar = true
             Log.d(TAG, "Other car detected for animation")
         }
+        
+        // Schedule throttled map update
+        scheduleOtherCarMapUpdate()
+        
+        // Update top-down view immediately (lightweight)
         updateTopDownView()
+    }
+    
+    /**
+     * Schedule a throttled update of other cars on the map.
+     * If an update is already pending, it will be cancelled and rescheduled.
+     * This ensures we batch multiple position updates together.
+     */
+    private fun scheduleOtherCarMapUpdate() {
+        // Cancel any pending update
+        otherCarUpdateRunnable?.let { otherCarUpdateHandler.removeCallbacks(it) }
+        
+        // Create new update runnable
+        otherCarUpdateRunnable = Runnable {
+            // Update map with all current other car positions
+            val carDataList = otherCarPositions.values.map { 
+                MapController.OtherCarData(it.carId, it.lat, it.lon, it.heading) 
+            }
+            mapController.updateOtherCars(carDataList)
+            Log.d(TAG, "Batch map update: ${carDataList.size} other cars")
+        }
+        
+        // Schedule update after throttle delay
+        otherCarUpdateRunnable?.let { 
+            otherCarUpdateHandler.postDelayed(it, OTHER_CAR_UPDATE_THROTTLE_MS) 
+        }
     }
     
     /**
@@ -846,10 +924,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             hasSeenOtherCar = false
             overtakingAnimationStarted = false
             otherCarPositions.clear()
-            accidentedCarIds.clear()  // Clear accident markers
             mapController.clearOtherCar()
-            mapController.resetOtherCarAccidentState()  // Reset arrow back to gray
-            topDownCarView.clearAccidentedCars()  // Clear yellow circles
             overtakingWarningIcon.visibility = View.GONE
             Log.d(TAG, "Reset overtaking animation state")
         }
@@ -934,12 +1009,10 @@ class MainActivity : AppCompatActivity(), NavigationListener {
 
         Log.d("TOP_DOWN", "Updating view with ${otherCarPositions.size} other cars")
 
-        // Convert other car positions to relative coordinates, including accident state
-        val relativePositions = otherCarPositions.map { otherCar ->
+        // Convert other car positions to relative coordinates
+        val relativePositions = otherCarPositions.values.map { otherCar ->
             val (x, y) = calculateRelativePosition(otherCar.lat, otherCar.lon)
-            val isAccidented = otherCar.carId in accidentedCarIds
-            Log.d("TOP_DOWN", "Other car ${otherCar.carId} relative position: x=$x m, y=$y m, accidented=$isAccidented")
-            TopDownCarView.CarPosition(x, y, otherCar.carId, isAccidented)
+            TopDownCarView.CarPosition(x, y)
         }
 
         topDownCarView.updateOtherCars(relativePositions)
@@ -968,9 +1041,13 @@ class MainActivity : AppCompatActivity(), NavigationListener {
 
 
     override fun onDestroy() {
+        // Cancel any pending other car updates
+        otherCarUpdateRunnable?.let { otherCarUpdateHandler.removeCallbacks(it) }
+        
         navigationManager.destroy()
         mqttManager.disconnect()
         alertNotificationManager.shutdown()
+        uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()
     }

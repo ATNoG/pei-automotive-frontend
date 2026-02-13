@@ -58,6 +58,11 @@ class MapController(
         private const val OTHER_CAR_LAYER_ID = "other-car-layer"
         private const val OTHER_CAR_IMAGE_ID = "other-car-image"
         
+        // Emergency vehicle marker
+        private const val EV_SOURCE_ID = "ev-source"
+        private const val EV_LAYER_ID = "ev-layer"
+        private const val EV_IMAGE_ID = "ev-image"
+        
         // Route line constants
         private const val ROUTE_SOURCE_ID = "route-source"
         private const val ROUTE_LAYER_ID = "route-layer"
@@ -93,6 +98,16 @@ class MapController(
     private var otherCarLon: Double = 0.0
     private var otherCarBearing: Float = 0.0f
     private var otherCarAnimationRunnable: Runnable? = null
+    
+    // Track emergency vehicle positions for smooth animation
+    private val evPositions = mutableMapOf<String, EVMarkerState>()
+    
+    data class EVMarkerState(
+        var lat: Double = 0.0,
+        var lon: Double = 0.0,
+        var bearing: Float = 0f,
+        var animationRunnable: Runnable? = null
+    )
     
     // Navigation route tracking for traveled/remaining display
     private var fullRoutePoints: List<NavLatLng> = emptyList()
@@ -153,6 +168,10 @@ class MapController(
             // 2b) add other car image, source, and symbol layer
             addOtherCarImageToStyle(style)
             addOtherCarSourceAndLayer(style)
+            
+            // 2c) add emergency vehicle image, source, and symbol layer
+            addEVImageToStyle(style)
+            addEVSourceAndLayer(style)
 
             // 3) try to brighten common road layers (best-effort)
             brightenRoads(style)
@@ -255,6 +274,187 @@ class MapController(
         }
 
         style.addLayer(symbolLayer)
+    }
+
+
+    // --- emergency vehicle symbol setup ---
+    private fun addEVImageToStyle(style: Style) {
+        try {
+            // Try to load the dedicated EV navigation arrow PNG first
+            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ev_navigation_arrow)
+            if (bmp != null) {
+                style.addImage(EV_IMAGE_ID, bmp)
+                Log.d(TAG, "EV navigation arrow image loaded (PNG)")
+            } else {
+                // Fallback to vector drawable
+                val vectorBmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_ev_arrow)
+                if (vectorBmp != null) {
+                    style.addImage(EV_IMAGE_ID, vectorBmp)
+                    Log.d(TAG, "EV navigation arrow image loaded (vector fallback)")
+                } else {
+                    Log.e(TAG, "Failed to load EV arrow image")
+                }
+            }
+        } catch (t: Throwable) {
+            // Fallback: use the vector drawable
+            try {
+                val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_ev_arrow)
+                if (drawable != null) {
+                    val bitmap = android.graphics.Bitmap.createBitmap(
+                        drawable.intrinsicWidth.coerceAtLeast(1),
+                        drawable.intrinsicHeight.coerceAtLeast(1),
+                        android.graphics.Bitmap.Config.ARGB_8888
+                    )
+                    val canvas = android.graphics.Canvas(bitmap)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    style.addImage(EV_IMAGE_ID, bitmap)
+                    Log.d(TAG, "EV arrow loaded via drawable conversion")
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error loading EV arrow image: ${e.message}")
+            }
+        }
+    }
+
+    private fun addEVSourceAndLayer(style: Style) {
+        val src = GeoJsonSource(
+            EV_SOURCE_ID,
+            FeatureCollection.fromFeatures(emptyArray())
+        )
+        style.addSource(src)
+
+        val symbolLayer = SymbolLayer(EV_LAYER_ID, EV_SOURCE_ID).apply {
+            setProperties(
+                iconImage(EV_IMAGE_ID),
+                iconSize(0.06f),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_CENTER),
+                iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                iconRotate(0.0f),
+                iconOpacity(0.95f)
+            )
+        }
+        style.addLayer(symbolLayer)
+    }
+
+    /**
+     * Update an emergency vehicle position on the map with smooth animation.
+     * Uses a distinct arrow icon to differentiate from regular vehicles.
+     */
+    fun updateEmergencyVehicle(evId: String, lat: Double, lon: Double, bearing: Float) {
+        Log.d(TAG, "updateEmergencyVehicle: $evId lat=$lat, lon=$lon, bearing=$bearing")
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+
+        val state = evPositions.getOrPut(evId) { EVMarkerState() }
+
+        val startLat = if (state.lat == 0.0) lat else state.lat
+        val startLon = if (state.lon == 0.0) lon else state.lon
+        val startBearing = if (state.bearing == 0f) bearing else state.bearing
+
+        // Cancel any existing animation
+        state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        val animDuration = 800L
+        val frameRate = 16L
+        val startTime = System.currentTimeMillis()
+
+        state.animationRunnable = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / animDuration).coerceIn(0f, 1f)
+
+                val curLat = startLat + (lat - startLat) * progress
+                val curLon = startLon + (lon - startLon) * progress
+                var bearingDiff = bearing - startBearing
+                if (bearingDiff > 180f) bearingDiff -= 360f
+                if (bearingDiff < -180f) bearingDiff += 360f
+                val curBearing = startBearing + bearingDiff * progress
+
+                // Rebuild full feature collection with all EV markers
+                updateAllEVFeatures(style, evId, curLat, curLon, curBearing)
+
+                if (progress < 1.0f) {
+                    mainHandler.postDelayed(this, frameRate)
+                } else {
+                    state.lat = lat
+                    state.lon = lon
+                    state.bearing = bearing
+                    state.animationRunnable = null
+                }
+            }
+        }
+        state.animationRunnable?.run()
+    }
+
+    /**
+     * Build FeatureCollection from all tracked EV positions and push to the source.
+     * During animation of one EV, we use the animated position for that EV and stored positions for others.
+     */
+    private fun updateAllEVFeatures(
+        style: Style,
+        animatingId: String,
+        animLat: Double,
+        animLon: Double,
+        animBearing: Float
+    ) {
+        val features = mutableListOf<Feature>()
+
+        for ((id, state) in evPositions) {
+            val lat = if (id == animatingId) animLat else state.lat
+            val lon = if (id == animatingId) animLon else state.lon
+            val bearing = if (id == animatingId) animBearing else state.bearing
+
+            if (lat == 0.0 && lon == 0.0) continue
+
+            val feature = Feature.fromGeometry(Point.fromLngLat(lon, lat))
+            feature.addNumberProperty("bearing", bearing.toDouble())
+            features.add(feature)
+        }
+
+        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(features))
+
+        // Note: SymbolLayer uses data-driven rotation when we have multiple features;
+        // for simplicity with single EV, we just set the layer rotation to the last animated value.
+        val layer = style.getLayerAs<SymbolLayer>(EV_LAYER_ID)
+        layer?.setProperties(iconRotate(animBearing))
+    }
+
+    /**
+     * Remove a specific emergency vehicle marker from the map.
+     */
+    fun clearEmergencyVehicle(evId: String) {
+        val state = evPositions.remove(evId) ?: return
+        state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
+
+        val style = mapLibreMap?.style ?: return
+        // Rebuild features without the removed EV
+        val features = evPositions.entries.filter { it.value.lat != 0.0 }.map { (_, s) ->
+            Feature.fromGeometry(Point.fromLngLat(s.lon, s.lat))
+        }
+        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(features))
+
+        Log.d(TAG, "Emergency vehicle $evId cleared")
+    }
+
+    /**
+     * Clear all emergency vehicle markers from the map.
+     */
+    fun clearAllEmergencyVehicles() {
+        evPositions.values.forEach { state ->
+            state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
+        }
+        evPositions.clear()
+
+        val style = mapLibreMap?.style ?: return
+        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+
+        Log.d(TAG, "All emergency vehicles cleared")
     }
 
 
@@ -920,6 +1120,8 @@ class MapController(
             addArrowSourceAndLayer(style)
             addOtherCarImageToStyle(style)
             addOtherCarSourceAndLayer(style)
+            addEVImageToStyle(style)
+            addEVSourceAndLayer(style)
             brightenRoads(style)
             
             // Restore current position if available

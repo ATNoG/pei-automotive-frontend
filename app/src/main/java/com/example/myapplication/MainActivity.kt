@@ -41,6 +41,10 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private lateinit var topDownCarView: TopDownCarView
     private lateinit var overtakingWarningIcon: ImageView
     private lateinit var alertNotificationManager: AlertNotificationManager
+    private lateinit var evOverlay: EmergencyVehicleOverlay
+    
+    // Track active emergency vehicles in proximity (evId -> last alert timestamp)
+    private val activeEmergencyVehicles = mutableMapOf<String, Long>()
     
     // Initial position from config
     private val initialPosition = AppConfig.DEFAULT_INITIAL_POSITION
@@ -59,6 +63,9 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private var userCarLon: Double = 0.0
     private var userCarBearing: Float = 0f
     private val otherCarPositions = mutableListOf<Pair<Double, Double>>()
+    
+    // Track emergency vehicle positions for top-down view (evId -> lat,lon)
+    private val evCarPositions = mutableMapOf<String, Pair<Double, Double>>()
 
     // Track if we've seen both cars (to detect overtaking start)
     private var hasSeenUserCar = false
@@ -86,6 +93,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         overtakingWarningIcon = findViewById(R.id.overtakingWarningIcon)
         alertNotificationManager = AlertNotificationManager(this)
         alertNotificationManager.requestNotificationPermission()
+        evOverlay = findViewById(R.id.evOverlay)
         
         // Setup Navigation Manager
         setupNavigation()
@@ -476,6 +484,10 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                         showOvertakingWarning()
                     }
                 }
+                topic == AppConfig.MQTT_TOPIC_EV_ALERT -> {
+                    Log.d(TAG, "Emergency vehicle alert received: $message")
+                    handleEmergencyVehicleAlert(message)
+                }
                 topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
                     Log.d(TAG, "Car update received: $message")
                     try {
@@ -496,6 +508,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                             when {
                                 carId in USER_CAR_IDS -> handleUserCarUpdate(lat, lon, headingDeg, speedKmh)
                                 carId in OTHER_CAR_IDS -> handleOtherCarUpdate(lat, lon, headingDeg)
+                                carId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(carId, lat, lon, headingDeg)
                                 else -> handleUnknownCarUpdate(lat, lon, headingDeg, speedKmh)
                             }
                         }
@@ -770,6 +783,141 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         overtakingAnimationStarted = false
     }
     
+    // ========== Emergency Vehicle Handling ==========
+    
+    /**
+     * Handle an emergency vehicle proximity alert from MQTT.
+     * Alert JSON format (from backend ev-detector):
+     * {
+     *   "alert_type": "emergency_vehicle_nearby",
+     *   "emergency_vehicle_id": "ev-test-emergency",
+     *   "regular_car_id": "navigation-car",
+     *   "distance_m": 342.15,
+     *   "ev_latitude": ..., "ev_longitude": ...,
+     *   "car_latitude": ..., "car_longitude": ...,
+     *   "timestamp": ...
+     * }
+     */
+    private fun handleEmergencyVehicleAlert(message: String) {
+        try {
+            val json = org.json.JSONObject(message)
+            val evId = json.optString("emergency_vehicle_id", "unknown")
+            val regularCarId = json.optString("regular_car_id", "")
+            val evLat = json.optDouble("ev_latitude", 0.0)
+            val evLon = json.optDouble("ev_longitude", 0.0)
+            
+            // Only process if this alert is for one of our user cars
+            if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) {
+                Log.d(TAG, "EV alert not for our car ($regularCarId), ignoring")
+                return
+            }
+            
+            // Compute live distance from current user position
+            val liveDistanceM = haversineDistanceM(currentLat, currentLon, evLat, evLon)
+            
+            Log.d(TAG, "EV alert: $evId is ${liveDistanceM.toInt()}m away (live)")
+            
+            // Track as active EV
+            activeEmergencyVehicles[evId] = System.currentTimeMillis()
+            
+            // Update EV marker on map
+            runOnUiThread {
+                if (evLat != 0.0 && evLon != 0.0) {
+                    val bearing = calculateBearingFromCoords(evLat, evLon, currentLat, currentLon)
+                    mapController.updateEmergencyVehicle(evId, evLat, evLon, bearing)
+                }
+                
+                // Show/expand the EV notification overlay (only triggers expand on first time)
+                evOverlay.showAlert(evId, liveDistanceM)
+            }
+            
+            // Schedule EV cleanup check - if no new alert within 10s, EV likely out of range
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                checkAndCleanupEV(evId)
+            }, 10000)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing EV alert: ${e.message}")
+        }
+    }
+    
+    /**
+     * Handle position updates from an emergency vehicle (shows unique arrow on map).
+     */
+    private fun handleEVCarUpdate(carId: String, lat: Double, lon: Double, heading: Float) {
+        Log.d(TAG, "Updating EV car position: $carId")
+        mapController.updateEmergencyVehicle(carId, lat, lon, heading)
+        
+        // Track EV position for top-down view
+        evCarPositions[carId] = Pair(lat, lon)
+        updateTopDownView()
+        
+        // If this EV is actively tracked (in range), refresh timestamp and update live distance
+        if (activeEmergencyVehicles.containsKey(carId)) {
+            activeEmergencyVehicles[carId] = System.currentTimeMillis()
+            
+            // Compute live distance and update overlay in real-time
+            val liveDistanceM = haversineDistanceM(currentLat, currentLon, lat, lon)
+            evOverlay.updateDistance(liveDistanceM)
+        }
+    }
+    
+    /**
+     * Check if an EV should be cleaned up (no recent alerts = out of range).
+     */
+    private fun checkAndCleanupEV(evId: String) {
+        val lastSeen = activeEmergencyVehicles[evId] ?: return
+        val elapsed = System.currentTimeMillis() - lastSeen
+        
+        // If no new alert in 10+ seconds, consider EV out of range
+        if (elapsed >= 9500) {
+            Log.d(TAG, "EV $evId appears out of range, cleaning up")
+            activeEmergencyVehicles.remove(evId)
+            mapController.clearEmergencyVehicle(evId)
+            evCarPositions.remove(evId)
+            updateTopDownView()
+            
+            // If no more active EVs, dismiss the overlay entirely
+            if (activeEmergencyVehicles.isEmpty()) {
+                evOverlay.dismiss()
+            }
+        }
+    }
+    
+    /**
+     * Calculate bearing from one point toward another.
+     */
+    private fun calculateBearingFromCoords(
+        fromLat: Double, fromLon: Double,
+        toLat: Double, toLon: Double
+    ): Float {
+        val lat1 = Math.toRadians(fromLat)
+        val lon1 = Math.toRadians(fromLon)
+        val lat2 = Math.toRadians(toLat)
+        val lon2 = Math.toRadians(toLon)
+        val y = Math.sin(lon2 - lon1) * Math.cos(lat2)
+        val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(lon2 - lon1)
+        val brng = Math.toDegrees(Math.atan2(y, x))
+        return ((brng + 360.0) % 360.0).toFloat()
+    }
+    
+    /**
+     * Compute haversine distance in meters between two lat/lon points.
+     */
+    private fun haversineDistanceM(
+        lat1: Double, lon1: Double,
+        lat2: Double, lon2: Double
+    ): Double {
+        val R = 6371000.0 // Earth radius in meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        val c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return R * c
+    }
+    
     /**
      * Update speed alert based on current speed.
      */
@@ -834,6 +982,15 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
 
         topDownCarView.updateOtherCars(relativePositions)
+        
+        // Convert EV positions to relative coordinates
+        val evRelativePositions = evCarPositions.values.map { (lat, lon) ->
+            val (x, y) = calculateRelativePosition(lat, lon)
+            Log.d("TOP_DOWN", "EV car relative position: x=$x m, y=$y m")
+            TopDownCarView.CarPosition(x, y)
+        }
+
+        topDownCarView.updateEVCars(evRelativePositions)
     }
 
     override fun onStart() {

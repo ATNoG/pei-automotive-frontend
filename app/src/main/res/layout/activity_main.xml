@@ -496,6 +496,17 @@
         android:background="#44FF0000"
         android:visibility="gone"/>
 
+    <!-- EMERGENCY VEHICLE NOTIFICATION (bottom-right of map area) -->
+    <com.example.myapplication.EmergencyVehicleOverlay
+        android:id="@+id/evOverlay"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/speedPanel"
+        app:layout_constraintEnd_toStartOf="@id/overtakingAnimationContainer" />
+
     <!-- SPEED ALERT ICON (hidden) -->
     <ImageView
         android:id="@+id/speedAlertIcon"

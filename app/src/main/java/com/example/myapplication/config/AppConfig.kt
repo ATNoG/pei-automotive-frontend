@@ -33,7 +33,8 @@ object AppConfig {
         "navigation-car",
         "main-car",
         "speed-car",
-        "curved-route-car"
+        "curved-route-car",
+        "ev-test-regular"
     )
 
     /**

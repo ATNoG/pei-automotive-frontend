@@ -66,14 +66,6 @@ object AppConfig {
         // val HOSPITAL = LatLng(40.XXX, -8.XXX)
     }
 
-    // ========== Speed Alerts ==========
-
-    /**
-     * Speed threshold for triggering speed alerts (km/h).
-     * When the vehicle exceeds this speed, a visual alert is shown.
-     */
-    const val SPEED_ALERT_THRESHOLD_KMH = 60.0
-
     // ========== Weather Updates ==========
 
     /**
@@ -165,6 +157,7 @@ object AppConfig {
         const val SPEED_KEY = "speed"
         const val HEADING_DEG_KEY = "heading_deg"
         const val HEADING_KEY = "heading"
+        const val SPEED_LIMIT_KMH_KEY = "speed_limit_kmh"
     }
 
     // ========== Overtaking Animation ==========

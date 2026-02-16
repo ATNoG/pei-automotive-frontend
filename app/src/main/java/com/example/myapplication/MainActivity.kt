@@ -29,9 +29,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         // Car IDs configuration - delegate to AppConfig for centralized management
         val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
         val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
-        
-        // Speed threshold from config
-        val SPEED_ALERT_THRESHOLD get() = AppConfig.SPEED_ALERT_THRESHOLD_KMH
     }
 
     private lateinit var mapController: MapController
@@ -51,7 +48,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private var currentLat: Double = AppConfig.DEFAULT_INITIAL_POSITION.latitude
     private var currentLon: Double = AppConfig.DEFAULT_INITIAL_POSITION.longitude
     private var currentSpeed: Double = 0.0
-    private var currentSpeedLimit: Int? = null // Default speed limit (null = unknown)
     private var currentBearing: Float = 0f
     
     // Track car positions for top-down view
@@ -429,33 +425,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
     }
 
-    private fun fetchAndUpdateSpeedLimit(lat: Double, lon: Double) {
-        lifecycleScope.launch {
-            val speedLimit = OverpassApiClient.getSpeedLimit(lat, lon)
-            runOnUiThread {
-                if (speedLimit != "--") {
-                    // Parse the speed limit (might be "50", "50 mph", etc.)
-                    val limitValue = speedLimit.replace("[^0-9]".toRegex(), "")
-                    if (limitValue.isNotEmpty()) {
-                        currentSpeedLimit = limitValue.toInt()
-                        uiController.updateSpeedLimit(currentSpeedLimit)
-                        Log.d("SPEED_LIMIT", "Updated speed limit: $limitValue km/h")
-                    } else {
-                        // Empty after parsing - no valid speed limit
-                        currentSpeedLimit = null
-                        uiController.updateSpeedLimit(null)
-                        Log.d("SPEED_LIMIT", "No valid speed limit in data")
-                    }
-                } else {
-                    // No speed limit data available
-                    currentSpeedLimit = null
-                    uiController.updateSpeedLimit(null)
-                    Log.d("SPEED_LIMIT", "No speed limit data available")
-                }
-            }
-        }
-    }
-
     private fun setupMqtt() {
         // Create MQTT manager with your broker details
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt())
@@ -489,14 +458,16 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                         val speedKmh = parsedData.speedKmh
                         val headingDeg = parsedData.headingDeg
                         
-                        Log.d(TAG, "Parsed car: $carId, lat=$lat, lon=$lon, speed=$speedKmh km/h, heading=$headingDeg")
+                        val speedLimitKmh = parsedData.speedLimitKmh
+                        
+                        Log.d(TAG, "Parsed car: $carId, lat=$lat, lon=$lon, speed=$speedKmh km/h, heading=$headingDeg, speedLimit=$speedLimitKmh")
                         
                         runOnUiThread {
                             // Classify car type using configurable sets
                             when {
-                                carId in USER_CAR_IDS -> handleUserCarUpdate(lat, lon, headingDeg, speedKmh)
+                                carId in USER_CAR_IDS -> handleUserCarUpdate(lat, lon, headingDeg, speedKmh, speedLimitKmh)
                                 carId in OTHER_CAR_IDS -> handleOtherCarUpdate(lat, lon, headingDeg)
-                                else -> handleUnknownCarUpdate(lat, lon, headingDeg, speedKmh)
+                                else -> handleUnknownCarUpdate(lat, lon, headingDeg, speedKmh, speedLimitKmh)
                             }
                         }
                     } catch (e: Exception) {
@@ -562,7 +533,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         val latitude: Double,
         val longitude: Double,
         val speedKmh: Double,
-        val headingDeg: Float
+        val headingDeg: Float,
+        val speedLimitKmh: Int? = null
     )
     
     /**
@@ -581,6 +553,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         var lon = 0.0
         var speed = 0.0
         var heading = 0.0f
+        var speedLimit: Int? = null
         
         // Check for Digital Twin Ditto nested format (from the Python script)
         // Format: {"gps": {"properties": {"latitude": x, "longitude": y}}}
@@ -592,6 +565,9 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                 lon = properties.optDouble(pf.LONGITUDE_KEY, 0.0)
                 speed = properties.optDouble(pf.SPEED_KMH_KEY, properties.optDouble(pf.SPEED_KEY, 0.0))
                 heading = properties.optDouble(pf.HEADING_DEG_KEY, properties.optDouble(pf.HEADING_KEY, 0.0)).toFloat()
+                if (!properties.isNull(pf.SPEED_LIMIT_KMH_KEY)) {
+                    speedLimit = properties.optDouble(pf.SPEED_LIMIT_KMH_KEY, -1.0).takeIf { it > 0 }?.toInt()
+                }
                 // Try to extract car_id from thing_id in topic if not present
                 if (carId.isEmpty()) {
                     carId = json.optString(pf.THING_ID_KEY, "main-car")
@@ -614,6 +590,9 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                     lon = properties.optDouble(pf.LONGITUDE_KEY, 0.0)
                     speed = properties.optDouble(pf.SPEED_KMH_KEY, properties.optDouble(pf.SPEED_KEY, 0.0))
                     heading = properties.optDouble(pf.HEADING_DEG_KEY, properties.optDouble(pf.HEADING_KEY, 0.0)).toFloat()
+                    if (speedLimit == null && !properties.isNull(pf.SPEED_LIMIT_KMH_KEY)) {
+                        speedLimit = properties.optDouble(pf.SPEED_LIMIT_KMH_KEY, -1.0).takeIf { it > 0 }?.toInt()
+                    }
                 }
             }
             // Extract car_id from thingId
@@ -632,20 +611,24 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             speed = json.optDouble(pf.SPEED_KMH_KEY, 0.0)
             heading = json.optDouble(pf.HEADING_DEG_KEY, 0.0).toFloat()
         }
+        // Speed limit from flat format (position_processor always sends this)
+        if (speedLimit == null && !json.isNull(pf.SPEED_LIMIT_KMH_KEY)) {
+            speedLimit = json.optDouble(pf.SPEED_LIMIT_KMH_KEY, -1.0).takeIf { it > 0 }?.toInt()
+        }
         
         // Default car_id if still empty
         if (carId.isEmpty()) {
             carId = "main-car"
         }
         
-        return CarUpdateData(carId, lat, lon, speed, heading)
+        return CarUpdateData(carId, lat, lon, speed, heading, speedLimit)
     }
     
     /**
      * Handle user's car position update.
      * Updates map, navigation, speed display, and triggers relevant UI updates.
      */
-    private fun handleUserCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double) {
+    private fun handleUserCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double, speedLimitKmh: Int? = null) {
         Log.d(TAG, "Updating user car position")
         
         // Update current location and bearing
@@ -665,16 +648,16 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             mapController.updateUserCar(lat, lon, heading)
         }
         
-        // Update speed display
-        uiController.updateCurrentSpeed(speedKmh.toInt(), currentSpeedLimit)
+        // Update speed limit sign (value comes from backend via Overpass API)
+        uiController.updateSpeedLimit(speedLimitKmh)
+        
+        // Update speed display (uses backend-provided speed limit for color)
+        uiController.updateCurrentSpeed(speedKmh.toInt(), speedLimitKmh)
         
         // Track user position and bearing for top-down view
         userCarLat = lat
         userCarLon = lon
         userCarBearing = heading
-        
-        // Fetch speed limit (throttled internally)
-        fetchAndUpdateSpeedLimit(lat, lon)
         
         // Handle overtaking animation state
         if (!hasSeenUserCar) {
@@ -683,8 +666,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         }
         updateTopDownView()
         
-        // Check speed threshold for alerts
-        updateSpeedAlert(speedKmh)
+        // Check speed against the real road speed limit from backend
+        updateSpeedAlert(speedKmh, speedLimitKmh)
     }
     
     /**
@@ -708,7 +691,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     /**
      * Handle unknown car ID - use as user car by default.
      */
-    private fun handleUnknownCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double) {
+    private fun handleUnknownCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double, speedLimitKmh: Int? = null) {
         Log.d(TAG, "Unknown car_id, treating as user car")
         
         // Reset overtaking animation state
@@ -728,8 +711,9 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             mapController.updateUserCar(lat, lon, heading)
         }
         
-        uiController.updateCurrentSpeed(speedKmh.toInt(), currentSpeedLimit)
-        updateSpeedAlert(speedKmh)
+        uiController.updateSpeedLimit(speedLimitKmh)
+        uiController.updateCurrentSpeed(speedKmh.toInt(), speedLimitKmh)
+        updateSpeedAlert(speedKmh, speedLimitKmh)
     }
     
     /**
@@ -771,13 +755,15 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     }
     
     /**
-     * Update speed alert based on current speed.
+     * Update speed alert based on current speed vs the real road speed limit
+     * provided by the backend (computed via Overpass API on the server side).
+     * If no speed limit is known, no alert is shown.
      */
-    private fun updateSpeedAlert(speedKmh: Double) {
-        if (speedKmh < SPEED_ALERT_THRESHOLD) {
-            uiController.hideSpeedAlert()
-        } else {
+    private fun updateSpeedAlert(speedKmh: Double, speedLimitKmh: Int? = null) {
+        if (speedLimitKmh != null && speedKmh > speedLimitKmh) {
             uiController.showSpeedAlert()
+        } else {
+            uiController.hideSpeedAlert()
         }
     }
 

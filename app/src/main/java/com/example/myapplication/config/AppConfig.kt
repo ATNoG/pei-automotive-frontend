@@ -34,6 +34,7 @@ object AppConfig {
         "main-car",
         "speed-car",
         "curved-route-car",
+        "ev-test-regular",
         "car-behind"
     )
 
@@ -142,6 +143,27 @@ object AppConfig {
      */
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
 
+    /**
+     * MQTT topic for emergency vehicle proximity alerts.
+     * Published by the backend emergency_vehicle_detector service.
+     */
+    const val MQTT_TOPIC_EV_ALERT = "alerts/emergency_vehicle"
+
+    // ========== Emergency Vehicle ==========
+
+    /**
+     * Car IDs that represent emergency vehicles.
+     * These are displayed with a different navigation arrow on the map.
+     */
+    val EMERGENCY_VEHICLE_IDS = setOf(
+        "ev-test-emergency"
+    )
+
+    /**
+     * Proximity radius in meters for emergency vehicle alerts.
+     * Should match the backend EVDetector.PROXIMITY_M value (500m).
+     */
+    const val EV_PROXIMITY_RADIUS_M = 500
     /**
      * MQTT topic for accident alerts.
      */

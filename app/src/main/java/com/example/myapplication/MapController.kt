@@ -1,10 +1,16 @@
 package com.example.myapplication
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.core.content.ContextCompat
+import com.example.myapplication.config.AppConfig
 import com.example.myapplication.navigation.NavigationConfig
 import com.example.myapplication.navigation.models.LatLng as NavLatLng
 import com.example.myapplication.navigation.models.NavigationRoute
@@ -58,6 +64,11 @@ class MapController(
         private const val OTHER_CAR_LAYER_ID = "other-car-layer"
         private const val OTHER_CAR_IMAGE_ID = "other-car-image"
         
+        // Emergency vehicle marker
+        private const val EV_SOURCE_ID = "ev-source"
+        private const val EV_LAYER_ID = "ev-layer"
+        private const val EV_IMAGE_ID = "ev-image"
+        
         // Route line constants
         private const val ROUTE_SOURCE_ID = "route-source"
         private const val ROUTE_LAYER_ID = "route-layer"
@@ -71,6 +82,12 @@ class MapController(
         private const val DESTINATION_SOURCE_ID = "destination-source"
         private const val DESTINATION_LAYER_ID = "destination-layer"
         private const val DESTINATION_IMAGE_ID = "destination-flag-image"
+        
+        // Accident marker constants
+        private const val ACCIDENT_SOURCE_ID = "accident-source"
+        private const val ACCIDENT_LAYER_ID = "accident-layer"
+        private const val ACCIDENT_IMAGE_ID = "accident-marker-image"
+        private const val ACCIDENT_MARKER_ICON_SIZE = 1.2f  // Size for visibility on road
     }
 
     // simulation state
@@ -88,11 +105,15 @@ class MapController(
     private var userCarVisualLon: Double = 0.0
     private var userCarVisualBearing: Float = 0.0f
     
-    // Track other car position for smooth animation
-    private var otherCarLat: Double = 0.0
-    private var otherCarLon: Double = 0.0
-    private var otherCarBearing: Float = 0.0f
-    private var otherCarAnimationRunnable: Runnable? = null
+    // Track multiple other cars for smooth batch animation
+    data class OtherCarVisualState(var lat: Double, var lon: Double, var heading: Float)
+    private val otherCarsVisualState = mutableMapOf<String, OtherCarVisualState>()
+    private var otherCarsAnimationRunnable: Runnable? = null
+    
+    // Track emergency vehicle positions for smooth batch animation (same efficient pattern as other cars)
+    data class EVVisualState(var lat: Double, var lon: Double, var heading: Float)
+    private val evVisualState = mutableMapOf<String, EVVisualState>()
+    private var evAnimationRunnable: Runnable? = null
     
     // Navigation route tracking for traveled/remaining display
     private var fullRoutePoints: List<NavLatLng> = emptyList()
@@ -101,6 +122,16 @@ class MapController(
     
     // Camera update throttling for performance
     private var lastCameraUpdateTime: Long = 0L
+    
+    // Accident markers tracking
+    data class AccidentMarker(
+        val eventId: String, 
+        val latitude: Double, 
+        val longitude: Double,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    private val activeAccidents = mutableMapOf<String, AccidentMarker>()
+    private var accidentCleanupRunnable: Runnable? = null
 
     fun init(onReady: () -> Unit) {
         this.styleLoadedCallback = onReady
@@ -112,7 +143,14 @@ class MapController(
     fun onResume() { mapView.onResume() }
     fun onPause() { mapView.onPause() }
     fun onStop() { mapView.onStop() }
-    fun onDestroy() { stopRouteSimulation(); mapView.onDestroy() }
+    fun onDestroy() { 
+        stopRouteSimulation()
+        stopAccidentCleanupTimer()
+        // Cancel vehicle animations
+        otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        mapView.onDestroy() 
+    }
 
     override fun onMapReady(map: MapLibreMap) {
         this.mapLibreMap = map
@@ -153,6 +191,13 @@ class MapController(
             // 2b) add other car image, source, and symbol layer
             addOtherCarImageToStyle(style)
             addOtherCarSourceAndLayer(style)
+            
+            // Add accident marker layer (above all other markers for visibility)
+            addAccidentSourceAndLayer(style)
+            
+            // 2c) add emergency vehicle image, source, and symbol layer
+            addEVImageToStyle(style)
+            addEVSourceAndLayer(style)
 
             // 3) try to brighten common road layers (best-effort)
             brightenRoads(style)
@@ -175,17 +220,16 @@ class MapController(
 
     // --- arrow symbol setup ---
     private fun addArrowImageToStyle(style: Style) {
-        // load drawable (navigation_arrow.png in res/drawable)
         try {
             val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.navigation_arrow)
             if (bmp != null) {
                 style.addImage(ARROW_IMAGE_ID, bmp)
-                android.util.Log.d("MapController", "User car arrow image loaded successfully")
+                Log.d(TAG, "User car arrow image loaded")
             } else {
-                android.util.Log.e("MapController", "Failed to load user car arrow image - bitmap is null")
+                Log.e(TAG, "Failed to load user car arrow image")
             }
         } catch (t: Throwable) {
-            android.util.Log.e("MapController", "Error loading user car arrow image: ${t.message}")
+            Log.e(TAG, "Error loading user car arrow: ${t.message}")
         }
     }
 
@@ -219,17 +263,16 @@ class MapController(
     
     // --- other car symbol setup ---
     private fun addOtherCarImageToStyle(style: Style) {
-        // load drawable for the other car (other_navigation_arrow.png)
         try {
             val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.other_navigation_arrow)
             if (bmp != null) {
                 style.addImage(OTHER_CAR_IMAGE_ID, bmp)
-                android.util.Log.d("MapController", "Other car arrow image loaded successfully")
+                Log.d(TAG, "Other car arrow image loaded")
             } else {
-                android.util.Log.e("MapController", "Failed to load other car arrow image - bitmap is null")
+                Log.e(TAG, "Failed to load other car arrow image")
             }
         } catch (t: Throwable) {
-            android.util.Log.e("MapController", "Error loading other car arrow image: ${t.message}")
+            Log.e(TAG, "Error loading other car arrow: ${t.message}")
         }
     }
 
@@ -255,6 +298,227 @@ class MapController(
         }
 
         style.addLayer(symbolLayer)
+    }
+
+
+    // --- emergency vehicle symbol setup ---
+    private fun addEVImageToStyle(style: Style) {
+        try {
+            // Try to load the dedicated EV navigation arrow PNG first
+            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ev_navigation_arrow)
+            if (bmp != null) {
+                style.addImage(EV_IMAGE_ID, bmp)
+                Log.d(TAG, "EV navigation arrow image loaded (PNG)")
+            } else {
+                // Fallback to vector drawable
+                val vectorBmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_ev_arrow)
+                if (vectorBmp != null) {
+                    style.addImage(EV_IMAGE_ID, vectorBmp)
+                    Log.d(TAG, "EV navigation arrow image loaded (vector fallback)")
+                } else {
+                    Log.e(TAG, "Failed to load EV arrow image")
+                }
+            }
+        } catch (t: Throwable) {
+            // Fallback: use the vector drawable
+            try {
+                val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_ev_arrow)
+                if (drawable != null) {
+                    val bitmap = android.graphics.Bitmap.createBitmap(
+                        drawable.intrinsicWidth.coerceAtLeast(1),
+                        drawable.intrinsicHeight.coerceAtLeast(1),
+                        android.graphics.Bitmap.Config.ARGB_8888
+                    )
+                    val canvas = android.graphics.Canvas(bitmap)
+                    drawable.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable.draw(canvas)
+                    style.addImage(EV_IMAGE_ID, bitmap)
+                    Log.d(TAG, "EV arrow loaded via drawable conversion")
+                }
+            } catch (e: Throwable) {
+                Log.e(TAG, "Error loading EV arrow image: ${e.message}")
+            }
+        }
+    }
+
+    private fun addEVSourceAndLayer(style: Style) {
+        val src = GeoJsonSource(
+            EV_SOURCE_ID,
+            FeatureCollection.fromFeatures(emptyArray())
+        )
+        style.addSource(src)
+
+        val symbolLayer = SymbolLayer(EV_LAYER_ID, EV_SOURCE_ID).apply {
+            setProperties(
+                iconImage(EV_IMAGE_ID),
+                iconSize(0.06f),
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_CENTER),
+                iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
+                iconRotate(0.0f),
+                iconOpacity(0.95f)
+            )
+        }
+        style.addLayer(symbolLayer)
+    }
+
+    /**
+     * Update an emergency vehicle position on the map.
+     * Delegates to batch method for consistency.
+     */
+    fun updateEmergencyVehicle(evId: String, lat: Double, lon: Double, bearing: Float) {
+        updateEmergencyVehicles(listOf(EVCarData(evId, lat, lon, bearing)))
+    }
+    
+    // Data class for emergency vehicle positions
+    data class EVCarData(val carId: String, val lat: Double, val lon: Double, val heading: Float)
+    
+    /**
+     * Update multiple emergency vehicles at once with smooth animation.
+     * Uses the same efficient batch pattern as updateOtherCars().
+     */
+    fun updateEmergencyVehicles(cars: List<EVCarData>) {
+        val map = mapLibreMap ?: return
+        val style = map.style ?: return
+        
+        if (cars.isEmpty()) {
+            // Clear all EVs
+            (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+                ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+            evVisualState.clear()
+            return
+        }
+        
+        // Cancel any existing animation
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        
+        // Initialize visual state for new EVs (set to target position, no animation on first appearance)
+        cars.forEach { ev ->
+            if (!evVisualState.containsKey(ev.carId)) {
+                evVisualState[ev.carId] = EVVisualState(ev.lat, ev.lon, ev.heading)
+            }
+        }
+        
+        // Remove EVs that are no longer in the list
+        val currentIds = cars.map { it.carId }.toSet()
+        evVisualState.keys.retainAll(currentIds)
+        
+        // Store start positions and target positions
+        val startStates = cars.associate { ev ->
+            val current = evVisualState[ev.carId] ?: EVVisualState(ev.lat, ev.lon, ev.heading)
+            ev.carId to Triple(current.lat, current.lon, current.heading)
+        }
+        
+        // Animation parameters (same as other cars for consistency)
+        val animationDuration = 400L
+        val frameRate = 16L // ~60fps
+        val startTime = System.currentTimeMillis()
+        
+        evAnimationRunnable = object : Runnable {
+            override fun run() {
+                val elapsed = System.currentTimeMillis() - startTime
+                val progress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
+                
+                // Ease-out interpolation for smooth deceleration
+                val easedProgress = 1 - (1 - progress) * (1 - progress)
+                
+                // Interpolate all EVs
+                val features = cars.mapNotNull { ev ->
+                    val (startLat, startLon, startHeading) = startStates[ev.carId] ?: return@mapNotNull null
+                    
+                    // Interpolate position
+                    val currentLat = startLat + (ev.lat - startLat) * easedProgress
+                    val currentLon = startLon + (ev.lon - startLon) * easedProgress
+                    
+                    // Smooth heading interpolation (handle 360° wraparound)
+                    var headingDiff = ev.heading - startHeading
+                    if (headingDiff > 180f) headingDiff -= 360f
+                    if (headingDiff < -180f) headingDiff += 360f
+                    val currentHeading = startHeading + headingDiff * easedProgress
+                    
+                    // Update visual state
+                    evVisualState[ev.carId] = EVVisualState(currentLat, currentLon, currentHeading)
+                    
+                    // Create feature with bearing property
+                    Feature.fromGeometry(Point.fromLngLat(currentLon, currentLat)).apply {
+                        addStringProperty("carId", ev.carId)
+                        addNumberProperty("bearing", currentHeading.toDouble())
+                    }
+                }
+                
+                // Update the map source with all EVs
+                (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
+                
+                // Update rotation (use average heading since single layer)
+                if (features.isNotEmpty()) {
+                    val avgHeading = evVisualState.values
+                        .map { it.heading.toDouble() }
+                        .average()
+                        .toFloat()
+                    val layer = style.getLayerAs<SymbolLayer>(EV_LAYER_ID)
+                    layer?.setProperties(iconRotate(avgHeading))
+                }
+                
+                // Continue animation or finish
+                if (progress < 1.0f) {
+                    mainHandler.postDelayed(this, frameRate)
+                } else {
+                    // Ensure final positions are exact
+                    cars.forEach { ev ->
+                        evVisualState[ev.carId] = EVVisualState(ev.lat, ev.lon, ev.heading)
+                    }
+                    evAnimationRunnable = null
+                }
+            }
+        }
+        
+        evAnimationRunnable?.run()
+    }
+
+    /**
+     * Build FeatureCollection from all tracked EV positions and push to the source.
+     * Used for static updates (no animation).
+     */
+    private fun updateAllEVFeatures(style: Style) {
+        val features = evVisualState.entries.filter { it.value.lat != 0.0 }.map { (id, state) ->
+            Feature.fromGeometry(Point.fromLngLat(state.lon, state.lat)).apply {
+                addStringProperty("carId", id)
+                addNumberProperty("bearing", state.heading.toDouble())
+            }
+        }
+        
+        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
+    }
+
+    /**
+     * Remove a specific emergency vehicle marker from the map.
+     */
+    fun clearEmergencyVehicle(evId: String) {
+        evVisualState.remove(evId) ?: return
+
+        val style = mapLibreMap?.style ?: return
+        // Rebuild features without the removed EV
+        updateAllEVFeatures(style)
+
+        Log.d(TAG, "Emergency vehicle $evId cleared")
+    }
+
+    /**
+     * Clear all emergency vehicle markers from the map.
+     */
+    fun clearAllEmergencyVehicles() {
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable = null
+        evVisualState.clear()
+
+        val style = mapLibreMap?.style ?: return
+        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+            ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+
+        Log.d(TAG, "All emergency vehicles cleared")
     }
 
 
@@ -358,78 +622,115 @@ class MapController(
     
     // Update the user's car position (main car that camera follows)
     fun updateUserCar(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
-        android.util.Log.d("MapController", "updateUserCar: lat=$lat, lon=$lon, bearing=$bearing")
         userCarLat = lat
         userCarLon = lon
         userCarBearing = bearing
         updateArrowPosition(lat, lon, bearing, animateMs)
     }
     
-    // Update the other car position with smooth animation (doesn't move camera)
-    fun updateOtherCar(lat: Double, lon: Double, bearing: Float) {
-        android.util.Log.d("MapController", "updateOtherCar: lat=$lat, lon=$lon, bearing=$bearing")
+    // Data class for other car positions
+    data class OtherCarData(val carId: String, val lat: Double, val lon: Double, val heading: Float)
+    
+    /**
+     * Update multiple other cars at once with smooth animation.
+     * Animates from current visual positions to new target positions.
+     */
+    fun updateOtherCars(cars: List<OtherCarData>) {
         val map = mapLibreMap ?: return
         val style = map.style ?: return
         
-        // Store the previous position
-        val startLat = if (otherCarLat == 0.0) lat else otherCarLat
-        val startLon = if (otherCarLon == 0.0) lon else otherCarLon
-        val startBearing = if (otherCarBearing == 0.0f) bearing else otherCarBearing
+        if (cars.isEmpty()) {
+            // Clear all cars
+            (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
+                ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+            otherCarsVisualState.clear()
+            return
+        }
         
         // Cancel any existing animation
-        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
         
-        // Animate over 800ms with 60fps
-        val animationDuration = 800L
+        // Initialize visual state for new cars (set to target position, no animation on first appearance)
+        cars.forEach { car ->
+            if (!otherCarsVisualState.containsKey(car.carId)) {
+                otherCarsVisualState[car.carId] = OtherCarVisualState(car.lat, car.lon, car.heading)
+            }
+        }
+        
+        // Store start positions and target positions
+        val startStates = cars.associate { car ->
+            val current = otherCarsVisualState[car.carId] ?: OtherCarVisualState(car.lat, car.lon, car.heading)
+            car.carId to Triple(current.lat, current.lon, current.heading)
+        }
+        
+        // Animation parameters
+        val animationDuration = 400L // Shorter for multiple cars (smoother)
         val frameRate = 16L // ~60fps
-        val totalFrames = (animationDuration / frameRate).toInt()
-        var currentFrame = 0
         val startTime = System.currentTimeMillis()
         
-        otherCarAnimationRunnable = object : Runnable {
+        otherCarsAnimationRunnable = object : Runnable {
             override fun run() {
                 val elapsed = System.currentTimeMillis() - startTime
                 val progress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
                 
-                // Ease-in-out interpolation for smooth movement
-                val easedProgress = if (progress < 0.5f) {
-                    2 * progress * progress
-                } else {
-                    1 - Math.pow((-2.0 * progress + 2.0), 2.0).toFloat() / 2
+                // Ease-out interpolation for smooth deceleration
+                val easedProgress = 1 - (1 - progress) * (1 - progress)
+                
+                // Interpolate all cars
+                val features = cars.mapNotNull { car ->
+                    val (startLat, startLon, startHeading) = startStates[car.carId] ?: return@mapNotNull null
+                    
+                    // Interpolate position
+                    val currentLat = startLat + (car.lat - startLat) * easedProgress
+                    val currentLon = startLon + (car.lon - startLon) * easedProgress
+                    
+                    // Smooth heading interpolation (handle 360° wraparound)
+                    var headingDiff = car.heading - startHeading
+                    if (headingDiff > 180f) headingDiff -= 360f
+                    if (headingDiff < -180f) headingDiff += 360f
+                    val currentHeading = startHeading + headingDiff * easedProgress
+                    
+                    // Update visual state
+                    otherCarsVisualState[car.carId] = OtherCarVisualState(currentLat, currentLon, currentHeading)
+                    
+                    // Create feature
+                    val pt = Point.fromLngLat(currentLon, currentLat)
+                    Feature.fromGeometry(pt).apply {
+                        addStringProperty("carId", car.carId)
+                        addNumberProperty("bearing", currentHeading.toDouble())
+                    }
                 }
                 
-                // Interpolate position
-                val currentLat = startLat + (lat - startLat) * easedProgress
-                val currentLon = startLon + (lon - startLon) * easedProgress
-                val currentBearing = startBearing + (bearing - startBearing) * easedProgress
-                
-                // Update the map
-                val pt = Point.fromLngLat(currentLon, currentLat)
-                val feature = Feature.fromGeometry(pt)
-                
+                // Update the map source
                 (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
-                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+                    ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
                 
-                val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
-                layer?.setProperties(iconRotate(currentBearing))
+                // Update rotation (use average heading for now since single layer)
+                if (features.isNotEmpty()) {
+                    val avgHeading = otherCarsVisualState.values
+                        .map { it.heading.toDouble() }
+                        .average()
+                        .toFloat()
+                    val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
+                    layer?.setProperties(iconRotate(avgHeading))
+                }
                 
                 // Continue animation or finish
                 if (progress < 1.0f) {
                     mainHandler.postDelayed(this, frameRate)
                 } else {
-                    // Store final position
-                    otherCarLat = lat
-                    otherCarLon = lon
-                    otherCarBearing = bearing
-                    otherCarAnimationRunnable = null
-                    android.util.Log.d("MapController", "Other car animation completed")
+                    // Ensure final positions are exact
+                    cars.forEach { car ->
+                        otherCarsVisualState[car.carId] = OtherCarVisualState(car.lat, car.lon, car.heading)
+                    }
+                    otherCarsAnimationRunnable = null
                 }
             }
         }
         
-        otherCarAnimationRunnable?.run()
+        otherCarsAnimationRunnable?.run()
     }
-
+    
 
     // --- single location helper ---
     fun setSingleLocation(lat: Double, lon: Double, bearing: Float) {
@@ -474,26 +775,24 @@ class MapController(
     }
     
     /**
-     * Clear/hide the other car marker (used when switching to speed test)
+     * Clear/hide all other car markers (used when resetting state)
      */
     fun clearOtherCar() {
         val map = mapLibreMap ?: return
         val style = map.style ?: return
         
-        // Cancel any animation
-        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
-        otherCarAnimationRunnable = null
+        // Cancel animations
+        otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        otherCarsAnimationRunnable = null
         
         // Clear the source (empty feature collection)
         (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
             ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
         
-        // Reset tracking variables
-        otherCarLat = 0.0
-        otherCarLon = 0.0
-        otherCarBearing = 0.0f
+        // Clear visual state
+        otherCarsVisualState.clear()
         
-        android.util.Log.d("MapController", "Other car cleared")
+        Log.d(TAG, "Other cars cleared")
     }
 
     // compute bearing from point a to b (bearing in degrees)
@@ -833,12 +1132,9 @@ class MapController(
      * PERFORMANCE OPTIMIZED: Real-time updates for maximum responsiveness.
      */
     fun updateVehiclePosition(lat: Double, lon: Double, bearing: Float) {
-        Log.d(TAG, "updateVehiclePosition called: lat=$lat, lon=$lon, bearing=$bearing")
-        
         updateArrowPosition(lat, lon, bearing)
         
         if (fullRoutePoints.isEmpty()) {
-            Log.d(TAG, "No route points to update")
             return
         }
         
@@ -885,7 +1181,7 @@ class MapController(
                     FeatureCollection.fromFeatures(arrayOf(Feature.fromGeometry(remainingLine)))
                 )
             }
-            if (traveledPath.size < 2) Log.d(TAG, "Not enough traveled points yet (${traveledPath.size})")
+            if (traveledPath.size < 2) return
         }
     }
     
@@ -920,6 +1216,9 @@ class MapController(
             addArrowSourceAndLayer(style)
             addOtherCarImageToStyle(style)
             addOtherCarSourceAndLayer(style)
+            addAccidentSourceAndLayer(style)
+            addEVImageToStyle(style)
+            addEVSourceAndLayer(style)
             brightenRoads(style)
             
             // Restore current position if available
@@ -927,7 +1226,225 @@ class MapController(
                 updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
             }
             
+            // Restore other cars positions if any
+            if (otherCarsVisualState.isNotEmpty()) {
+                val features = otherCarsVisualState.map { (id, state) ->
+                    Feature.fromGeometry(Point.fromLngLat(state.lon, state.lat)).apply {
+                        addStringProperty("carId", id)
+                        addNumberProperty("bearing", state.heading.toDouble())
+                    }
+                }
+                (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
+            }
+            
+            // Restore emergency vehicle positions if any
+            if (evVisualState.isNotEmpty()) {
+                updateAllEVFeatures(style)
+            }
+            
+            // Restore accident markers if any
+            refreshAccidentMarkers()
+            
             onStyleLoaded?.invoke()
         }
+    }
+    
+    // ========== Accident Marker Methods ==========
+    
+    /**
+     * Add accident marker source and layer to the map style.
+     */
+    private fun addAccidentSourceAndLayer(style: Style) {
+        // Load accident marker image from VectorDrawable XML
+        try {
+            val drawable = ContextCompat.getDrawable(context, R.drawable.ic_accident_marker)
+            if (drawable != null) {
+                val bmp = getBitmapFromDrawable(drawable)
+                if (bmp != null) {
+                    style.addImage(ACCIDENT_IMAGE_ID, bmp)
+                    Log.d(TAG, "Accident marker image loaded successfully (${bmp.width}x${bmp.height})")
+                } else {
+                    Log.e(TAG, "Failed to convert accident marker drawable to bitmap")
+                }
+            } else {
+                Log.e(TAG, "Accident marker drawable is null")
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "Error loading accident marker image: ${t.message}", t)
+        }
+        
+        // Add accident source
+        val accidentSource = GeoJsonSource(ACCIDENT_SOURCE_ID)
+        style.addSource(accidentSource)
+        
+        // Add accident marker layer (above all other markers for visibility)
+        val accidentLayer = SymbolLayer(ACCIDENT_LAYER_ID, ACCIDENT_SOURCE_ID).apply {
+            setProperties(
+                iconImage(ACCIDENT_IMAGE_ID),
+                iconSize(0.5f),  // Increased size for better visibility
+                iconAllowOverlap(true),
+                iconIgnorePlacement(true),
+                iconAnchor(Property.ICON_ANCHOR_CENTER)  // Center anchor for circular icon
+            )
+        }
+        style.addLayerAbove(accidentLayer, OTHER_CAR_LAYER_ID)
+        Log.d(TAG, "Accident layer added above other car layer")
+    }
+    
+    /**
+     * Convert a Drawable (including VectorDrawable) to Bitmap
+     */
+    private fun getBitmapFromDrawable(drawable: Drawable): Bitmap? {
+        if (drawable is BitmapDrawable) {
+            return drawable.bitmap
+        }
+        
+        try {
+            val bitmap = Bitmap.createBitmap(
+                drawable.intrinsicWidth.coerceAtLeast(1),
+                drawable.intrinsicHeight.coerceAtLeast(1),
+                Bitmap.Config.ARGB_8888
+            )
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            return bitmap
+        } catch (e: Exception) {
+            Log.e(TAG, "Error converting drawable to bitmap: ${e.message}", e)
+            return null
+        }
+    }
+    
+    /**
+     * Add an accident marker to the map.
+     */
+    fun addAccidentMarker(eventId: String, latitude: Double, longitude: Double) {
+        Log.d(TAG, "Adding accident marker: $eventId at ($latitude, $longitude)")
+        
+        // Check if this accident already exists
+        if (activeAccidents.containsKey(eventId)) {
+            Log.d(TAG, "Accident $eventId already exists, updating timestamp")
+            activeAccidents[eventId] = AccidentMarker(eventId, latitude, longitude)
+        } else {
+            // Store the accident with current timestamp
+            activeAccidents[eventId] = AccidentMarker(eventId, latitude, longitude)
+            Log.d(TAG, "New accident added: $eventId")
+        }
+        
+        // Refresh the map markers
+        refreshAccidentMarkers()
+        
+        // Start cleanup timer if not already running
+        startAccidentCleanupTimer()
+    }
+    
+    /**
+     * Remove an accident marker from the map.
+     */
+    fun removeAccidentMarker(eventId: String) {
+        Log.d(TAG, "Removing accident marker: $eventId")
+        activeAccidents.remove(eventId)
+        refreshAccidentMarkers()
+    }
+    
+    /**
+     * Clear all accident markers from the map.
+     */
+    fun clearAllAccidentMarkers() {
+        Log.d(TAG, "Clearing all accident markers")
+        activeAccidents.clear()
+        refreshAccidentMarkers()
+    }
+    
+    /**
+     * Refresh all accident markers on the map.
+     */
+    private fun refreshAccidentMarkers() {
+        val style = mapLibreMap?.style ?: return
+        
+        val features = activeAccidents.values.map { accident ->
+            Feature.fromGeometry(
+                Point.fromLngLat(accident.longitude, accident.latitude)
+            )
+        }
+        
+        (style.getSourceAs(ACCIDENT_SOURCE_ID) as? GeoJsonSource)?.setGeoJson(
+            FeatureCollection.fromFeatures(features)
+        )
+        
+        Log.d(TAG, "Refreshed ${activeAccidents.size} accident markers on map")
+    }
+    
+    /**
+     * Check if an accident marker exists for the given event ID.
+     */
+    fun hasAccidentMarker(eventId: String): Boolean {
+        return activeAccidents.containsKey(eventId)
+    }
+    
+    /**
+     * Start periodic cleanup timer to remove expired accidents.
+     * Checks every 30 seconds for accidents older than ACCIDENT_AUTO_CLEAR_TIMEOUT_MS.
+     */
+    private fun startAccidentCleanupTimer() {
+        // Don't start multiple timers
+        if (accidentCleanupRunnable != null) return
+        
+        val checkIntervalMs = 30000L // Check every 30 seconds
+        
+        accidentCleanupRunnable = object : Runnable {
+            override fun run() {
+                cleanupExpiredAccidents()
+                
+                // Schedule next check if there are still accidents
+                if (activeAccidents.isNotEmpty()) {
+                    mainHandler.postDelayed(this, checkIntervalMs)
+                } else {
+                    // No more accidents, stop the timer
+                    accidentCleanupRunnable = null
+                    Log.d(TAG, "Accident cleanup timer stopped - no active accidents")
+                }
+            }
+        }
+        
+        accidentCleanupRunnable?.let { mainHandler.postDelayed(it, checkIntervalMs) }
+        Log.d(TAG, "Accident cleanup timer started")
+    }
+    
+    /**
+     * Stop the accident cleanup timer.
+     */
+    private fun stopAccidentCleanupTimer() {
+        accidentCleanupRunnable?.let { mainHandler.removeCallbacks(it) }
+        accidentCleanupRunnable = null
+        Log.d(TAG, "Accident cleanup timer stopped")
+    }
+    
+    /**
+     * Remove accidents that have exceeded the auto-clear timeout.
+     */
+    private fun cleanupExpiredAccidents() {
+        val currentTime = System.currentTimeMillis()
+        val expiredAccidents = activeAccidents.filter { (_, marker) ->
+            (currentTime - marker.timestamp) > AppConfig.ACCIDENT_AUTO_CLEAR_TIMEOUT_MS
+        }
+        
+        if (expiredAccidents.isNotEmpty()) {
+            Log.d(TAG, "Removing ${expiredAccidents.size} expired accidents")
+            expiredAccidents.keys.forEach { eventId ->
+                activeAccidents.remove(eventId)
+                Log.d(TAG, "Expired accident removed: $eventId")
+            }
+            refreshAccidentMarkers()
+        }
+    }
+    
+    /**
+     * Get the current count of active accidents.
+     * Used for rate limiting in MainActivity.
+     */
+    fun getActiveAccidentCount(): Int {
+        return activeAccidents.size
     }
 }

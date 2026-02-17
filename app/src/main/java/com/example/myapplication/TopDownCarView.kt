@@ -30,6 +30,9 @@ class TopDownCarView @JvmOverloads constructor(
     // Other car positions (relative to user car in meters)
     private val otherCars = mutableListOf<CarPosition>()
     
+    // Emergency vehicle positions (relative to user car in meters)
+    private val evCars = mutableListOf<CarPosition>()
+    
     // Paint objects
     private val backgroundPaint = Paint().apply {
         color = Color.parseColor("#040404ff")  // Dark grass
@@ -78,6 +81,20 @@ class TopDownCarView @JvmOverloads constructor(
         setShadowLayer(6f, 0f, 0f, Color.parseColor("#AA000000"))
     }
     
+    private val evCarPaint = Paint().apply {
+        color = Color.parseColor("#2196F3")  // Blue for emergency vehicle
+        style = Paint.Style.FILL
+        isAntiAlias = true
+        setShadowLayer(8f, 0f, 0f, Color.parseColor("#AA0000FF"))
+    }
+    
+    private val evCarStrokePaint = Paint().apply {
+        color = Color.parseColor("#FF4444")  // Red stroke ring
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        isAntiAlias = true
+    }
+    
     private val textPaint = Paint().apply {
         color = Color.parseColor("#9E9E9E")
         textSize = 24f
@@ -95,9 +112,17 @@ class TopDownCarView @JvmOverloads constructor(
      * @param cars List of car positions in meters relative to user (x: lateral, y: longitudinal)
      */
     fun updateOtherCars(cars: List<CarPosition>) {
-        android.util.Log.d("TOP_DOWN_VIEW", "Received ${cars.size} cars to draw")
         otherCars.clear()
         otherCars.addAll(cars)
+        invalidate()
+    }
+    
+    /**
+     * Update positions of emergency vehicles relative to user
+     */
+    fun updateEVCars(cars: List<CarPosition>) {
+        evCars.clear()
+        evCars.addAll(cars)
         invalidate()
     }
     
@@ -157,6 +182,18 @@ class TopDownCarView @JvmOverloads constructor(
             if (gridX >= gridMinX && gridX <= gridMaxX && gridY >= gridMinY && gridY <= gridMaxY) {
                 val (screenX, screenY) = gridToScreen(gridX, gridY)
                 canvas.drawCircle(screenX, screenY, carRadius * scale, otherCarPaint)
+            }
+        }
+        
+        // Draw emergency vehicles (blue with red ring)
+        for (car in evCars) {
+            val gridX = userCarGridX + (car.x / 0.25f)
+            val gridY = userCarGridY + (car.y / 1f)
+            
+            if (gridX >= gridMinX && gridX <= gridMaxX && gridY >= gridMinY && gridY <= gridMaxY) {
+                val (screenX, screenY) = gridToScreen(gridX, gridY)
+                canvas.drawCircle(screenX, screenY, carRadius * scale, evCarPaint)
+                canvas.drawCircle(screenX, screenY, carRadius * scale + 3f, evCarStrokePaint)
             }
         }
         

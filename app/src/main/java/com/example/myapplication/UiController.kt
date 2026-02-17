@@ -26,6 +26,25 @@ import java.util.*
  */
 class UiController(private val activity: Activity) {
 
+    companion object {
+        private const val ACCIDENT_ALERT_DISPLAY_DURATION_MS = 15_000L
+        
+        /**
+         * Format distance for display (meters to human-readable).
+         * @param distanceMeters Distance in meters
+         * @param suffix Optional suffix (e.g., "ahead")
+         * @return Formatted string like "1.5 km ahead" or "500 m ahead"
+         */
+        fun formatDistance(distanceMeters: Double, suffix: String = ""): String {
+            val distanceText = if (distanceMeters >= 1000) {
+                String.format("%.1f km", distanceMeters / 1000)
+            } else {
+                String.format("%.0f m", distanceMeters)
+            }
+            return if (suffix.isNotEmpty()) "$distanceText $suffix" else distanceText
+        }
+    }
+
     private val speedLimitContainer: View? = activity.findViewById(R.id.speedLimitContainer)
     private val txtSpeedLimit: TextView? = activity.findViewById(R.id.txtSpeedLimit)
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
@@ -52,6 +71,12 @@ class UiController(private val activity: Activity) {
     private val btnStopNavigation: ImageView? = activity.findViewById(R.id.btnStopNavigation)
     private val txtNavArrival: TextView? = activity.findViewById(R.id.txtNavArrival)
     private val txtNavDistance: TextView? = activity.findViewById(R.id.txtNavDistance)
+    
+    // Accident alert UI elements
+    private val accidentAlertBanner: LinearLayout? = activity.findViewById(R.id.accidentAlertBanner)
+    private val txtAccidentDistance: TextView? = activity.findViewById(R.id.txtAccidentDistance)
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var accidentAlertHideRunnable: Runnable? = null
     
     // Time formatter for arrival time
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -297,6 +322,57 @@ class UiController(private val activity: Activity) {
         speedAlertIcon?.clearAnimation()
         speedAlertBlur?.clearAnimation()
         speedAlertBlur?.visibility = View.GONE
+    }
+    
+    // ========== Accident Alert UI Methods ==========
+    
+    /**
+     * Show accident alert banner with distance information.
+     */
+    fun showAccidentAlert(distanceMeters: Double) {
+        Log.d("UI_ALERT", "showAccidentAlert called, distance: $distanceMeters m")
+        
+        val distanceText = formatDistance(distanceMeters, "ahead")
+        
+        txtAccidentDistance?.text = distanceText
+        accidentAlertBanner?.visibility = View.VISIBLE
+        
+        // Start pulse animation
+        try {
+            val pulse = AnimationUtils.loadAnimation(activity, R.anim.accident_pulse)
+            accidentAlertBanner?.startAnimation(pulse)
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting accident pulse animation: ${e.message}")
+        }
+        
+        // Cancel any pending hide runnable
+        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
+        
+        // Auto-hide after configured duration
+        accidentAlertHideRunnable = Runnable { hideAccidentAlert() }
+        handler.postDelayed(accidentAlertHideRunnable!!, ACCIDENT_ALERT_DISPLAY_DURATION_MS)
+        
+        Log.d("UI_ALERT", "Accident alert banner shown: $distanceText")
+    }
+    
+    /**
+     * Hide the accident alert banner.
+     */
+    fun hideAccidentAlert() {
+        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
+        accidentAlertHideRunnable = null
+        accidentAlertBanner?.clearAnimation()
+        accidentAlertBanner?.visibility = View.GONE
+        Log.d("UI_ALERT", "Accident alert banner hidden")
+    }
+    
+    /**
+     * Cleanup resources. Call from Activity onDestroy.
+     */
+    fun cleanup() {
+        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
+        accidentAlertHideRunnable = null
+        Log.d("UiController", "Cleanup completed")
     }
     
     // ========== Navigation UI Methods ==========

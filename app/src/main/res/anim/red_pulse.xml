@@ -28,6 +28,3 @@
         android:duration="300"
         android:startOffset="900" />
 </set>
-```
-
-Now let me update the UiController to handle the speed alert animation:

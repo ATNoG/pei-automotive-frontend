@@ -95,6 +95,57 @@
 
     </FrameLayout>
 
+    <!-- ACCIDENT ALERT BANNER (shown when accident detected ahead) -->
+    <LinearLayout
+        android:id="@+id/accidentAlertBanner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@drawable/accident_alert_bg"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="14dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="16dp"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/weatherCard"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Warning icon -->
+        <ImageView
+            android:id="@+id/imgAccidentIcon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_accident_marker"
+            android:scaleType="fitCenter"/>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <!-- Alert title -->
+            <TextView
+                android:id="@+id/txtAccidentTitle"
+                android:text="Accident Alert"
+                android:textColor="#FF4444"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <!-- Distance text -->
+            <TextView
+                android:id="@+id/txtAccidentDistance"
+                android:text="500 m ahead"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </LinearLayout>
+
     <!-- NAVIGATION INSTRUCTION BANNER (shown during navigation, ABOVE nav panel) -->
     <LinearLayout
         android:id="@+id/navigationBanner"
@@ -495,6 +546,17 @@
         android:layout_height="match_parent"
         android:background="#44FF0000"
         android:visibility="gone"/>
+
+    <!-- EMERGENCY VEHICLE NOTIFICATION (bottom-right of map area) -->
+    <com.example.myapplication.EmergencyVehicleOverlay
+        android:id="@+id/evOverlay"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/speedPanel"
+        app:layout_constraintEnd_toStartOf="@id/overtakingAnimationContainer" />
 
     <!-- SPEED ALERT ICON (hidden) -->
     <ImageView

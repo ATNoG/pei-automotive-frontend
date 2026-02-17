@@ -112,7 +112,6 @@ class TopDownCarView @JvmOverloads constructor(
      * @param cars List of car positions in meters relative to user (x: lateral, y: longitudinal)
      */
     fun updateOtherCars(cars: List<CarPosition>) {
-        android.util.Log.d("TOP_DOWN_VIEW", "Received ${cars.size} cars to draw")
         otherCars.clear()
         otherCars.addAll(cars)
         invalidate()
@@ -122,7 +121,6 @@ class TopDownCarView @JvmOverloads constructor(
      * Update positions of emergency vehicles relative to user
      */
     fun updateEVCars(cars: List<CarPosition>) {
-        android.util.Log.d("TOP_DOWN_VIEW", "Received ${cars.size} EV cars to draw")
         evCars.clear()
         evCars.addAll(cars)
         invalidate()

@@ -75,11 +75,17 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     private var otherCarUpdateRunnable: Runnable? = null
     private val OTHER_CAR_UPDATE_THROTTLE_MS = 100L // Update map at most every 100ms
     
+    // Throttling for emergency vehicle map updates (same efficient pattern)
+    private val evUpdateHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var evUpdateRunnable: Runnable? = null
+    private val EV_UPDATE_THROTTLE_MS = 100L // Update map at most every 100ms
+    
     // Security: Rate limiting timestamps (thread-safe)
     private val alertTimestamps = java.util.Collections.synchronizedList(mutableListOf<Long>())
     
-    // Track emergency vehicle positions for top-down view (evId -> lat,lon)
-    private val evCarPositions = mutableMapOf<String, Pair<Double, Double>>()
+    // Track emergency vehicle positions for top-down view and map (evId -> position with heading)
+    data class EVCarPosition(val carId: String, val lat: Double, val lon: Double, val heading: Float)
+    private val evCarPositions = mutableMapOf<String, EVCarPosition>()
 
     // Track if we've seen both cars (to detect overtaking start)
     private var hasSeenUserCar = false
@@ -829,8 +835,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
      * Updates map, navigation, speed display, and triggers relevant UI updates.
      */
     private fun handleUserCarUpdate(lat: Double, lon: Double, heading: Float, speedKmh: Double) {
-        Log.d(TAG, "Updating user car position")
-        
         // Update current location and bearing
         currentLat = lat
         currentLon = lon
@@ -862,7 +866,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         // Handle overtaking animation state
         if (!hasSeenUserCar) {
             hasSeenUserCar = true
-            Log.d(TAG, "User car detected for animation")
         }
         updateTopDownView()
         
@@ -876,14 +879,11 @@ class MainActivity : AppCompatActivity(), NavigationListener {
      * but map is updated in batches at most every 100ms.
      */
     private fun handleOtherCarUpdate(carId: String, lat: Double, lon: Double, heading: Float) {
-        Log.d(TAG, "Updating other car position: $carId")
-        
         // Track other car position (update or add without clearing others)
         otherCarPositions[carId] = OtherCarPosition(carId, lat, lon, heading)
         
         if (!hasSeenOtherCar) {
             hasSeenOtherCar = true
-            Log.d(TAG, "Other car detected for animation")
         }
         
         // Schedule throttled map update
@@ -909,7 +909,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                 MapController.OtherCarData(it.carId, it.lat, it.lon, it.heading) 
             }
             mapController.updateOtherCars(carDataList)
-            Log.d(TAG, "Batch map update: ${carDataList.size} other cars")
         }
         
         // Schedule update after throttle delay
@@ -1003,11 +1002,19 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             // Track as active EV
             activeEmergencyVehicles[evId] = System.currentTimeMillis()
             
-            // Update EV marker on map
+            // Update EV marker on map and tracking
             runOnUiThread {
                 if (evLat != 0.0 && evLon != 0.0) {
                     val bearing = calculateBearingFromCoords(evLat, evLon, currentLat, currentLon)
-                    mapController.updateEmergencyVehicle(evId, evLat, evLon, bearing)
+                    
+                    // Track EV position for top-down view and map (consistent with handleEVCarUpdate)
+                    evCarPositions[evId] = EVCarPosition(evId, evLat, evLon, bearing)
+                    
+                    // Schedule throttled map update
+                    scheduleEVMapUpdate()
+                    
+                    // Update top-down view
+                    updateTopDownView()
                 }
                 
                 // Show/expand the EV notification overlay (only triggers expand on first time)
@@ -1026,13 +1033,17 @@ class MainActivity : AppCompatActivity(), NavigationListener {
     
     /**
      * Handle position updates from an emergency vehicle (shows unique arrow on map).
+     * Uses throttling to prevent map overload - same efficient pattern as other cars.
+     * Supports multiple emergency vehicles simultaneously.
      */
     private fun handleEVCarUpdate(carId: String, lat: Double, lon: Double, heading: Float) {
-        Log.d(TAG, "Updating EV car position: $carId")
-        mapController.updateEmergencyVehicle(carId, lat, lon, heading)
+        // Track EV position (update or add without clearing others)
+        evCarPositions[carId] = EVCarPosition(carId, lat, lon, heading)
         
-        // Track EV position for top-down view
-        evCarPositions[carId] = Pair(lat, lon)
+        // Schedule throttled map update (batches multiple EV updates together)
+        scheduleEVMapUpdate()
+        
+        // Update top-down view immediately (lightweight)
         updateTopDownView()
         
         // If this EV is actively tracked (in range), refresh timestamp and update live distance
@@ -1042,6 +1053,30 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             // Compute live distance and update overlay in real-time
             val liveDistanceM = haversineDistanceM(currentLat, currentLon, lat, lon)
             evOverlay.updateDistance(liveDistanceM)
+        }
+    }
+    
+    /**
+     * Schedule a throttled update of emergency vehicles on the map.
+     * Uses the same efficient batch pattern as other cars.
+     * Supports multiple EVs and coexists with non-emergency vehicles.
+     */
+    private fun scheduleEVMapUpdate() {
+        // Cancel any pending update
+        evUpdateRunnable?.let { evUpdateHandler.removeCallbacks(it) }
+        
+        // Create new update runnable
+        evUpdateRunnable = Runnable {
+            // Update map with all current EV positions in a single batch
+            val evDataList = evCarPositions.values.map { 
+                MapController.EVCarData(it.carId, it.lat, it.lon, it.heading) 
+            }
+            mapController.updateEmergencyVehicles(evDataList)
+        }
+        
+        // Schedule update after throttle delay
+        evUpdateRunnable?.let { 
+            evUpdateHandler.postDelayed(it, EV_UPDATE_THROTTLE_MS) 
         }
     }
     
@@ -1056,8 +1091,10 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         if (elapsed >= 9500) {
             Log.d(TAG, "EV $evId appears out of range, cleaning up")
             activeEmergencyVehicles.remove(evId)
-            mapController.clearEmergencyVehicle(evId)
             evCarPositions.remove(evId)
+            
+            // Schedule map update to reflect removal
+            scheduleEVMapUpdate()
             updateTopDownView()
             
             // If no more active EVs, dismiss the overlay entirely
@@ -1155,8 +1192,6 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             return // User position not set yet
         }
 
-        Log.d("TOP_DOWN", "Updating view with ${otherCarPositions.size} other cars")
-
         // Convert other car positions to relative coordinates
         val relativePositions = otherCarPositions.values.map { otherCar ->
             val (x, y) = calculateRelativePosition(otherCar.lat, otherCar.lon)
@@ -1166,9 +1201,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         topDownCarView.updateOtherCars(relativePositions)
         
         // Convert EV positions to relative coordinates
-        val evRelativePositions = evCarPositions.values.map { (lat, lon) ->
-            val (x, y) = calculateRelativePosition(lat, lon)
-            Log.d("TOP_DOWN", "EV car relative position: x=$x m, y=$y m")
+        val evRelativePositions = evCarPositions.values.map { ev ->
+            val (x, y) = calculateRelativePosition(ev.lat, ev.lon)
             TopDownCarView.CarPosition(x, y)
         }
 

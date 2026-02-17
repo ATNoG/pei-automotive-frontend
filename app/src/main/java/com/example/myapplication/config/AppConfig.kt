@@ -164,6 +164,7 @@ object AppConfig {
      * Should match the backend EVDetector.PROXIMITY_M value (500m).
      */
     const val EV_PROXIMITY_RADIUS_M = 500
+    /**
      * MQTT topic for accident alerts.
      */
     const val MQTT_TOPIC_ACCIDENT_ALERT = "alerts/accident"

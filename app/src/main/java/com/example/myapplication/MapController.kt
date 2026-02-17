@@ -105,26 +105,15 @@ class MapController(
     private var userCarVisualLon: Double = 0.0
     private var userCarVisualBearing: Float = 0.0f
     
-    // Track other car position for smooth animation (legacy single car)
-    private var otherCarLat: Double = 0.0
-    private var otherCarLon: Double = 0.0
-    private var otherCarBearing: Float = 0.0f
-    private var otherCarAnimationRunnable: Runnable? = null
-    
-    // Track multiple other cars for smooth animation
+    // Track multiple other cars for smooth batch animation
     data class OtherCarVisualState(var lat: Double, var lon: Double, var heading: Float)
     private val otherCarsVisualState = mutableMapOf<String, OtherCarVisualState>()
     private var otherCarsAnimationRunnable: Runnable? = null
     
-    // Track emergency vehicle positions for smooth animation
-    private val evPositions = mutableMapOf<String, EVMarkerState>()
-    
-    data class EVMarkerState(
-        var lat: Double = 0.0,
-        var lon: Double = 0.0,
-        var bearing: Float = 0f,
-        var animationRunnable: Runnable? = null
-    )
+    // Track emergency vehicle positions for smooth batch animation (same efficient pattern as other cars)
+    data class EVVisualState(var lat: Double, var lon: Double, var heading: Float)
+    private val evVisualState = mutableMapOf<String, EVVisualState>()
+    private var evAnimationRunnable: Runnable? = null
     
     // Navigation route tracking for traveled/remaining display
     private var fullRoutePoints: List<NavLatLng> = emptyList()
@@ -157,9 +146,9 @@ class MapController(
     fun onDestroy() { 
         stopRouteSimulation()
         stopAccidentCleanupTimer()
-        // Cancel other car animations
-        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        // Cancel vehicle animations
         otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
         mapView.onDestroy() 
     }
 
@@ -231,17 +220,16 @@ class MapController(
 
     // --- arrow symbol setup ---
     private fun addArrowImageToStyle(style: Style) {
-        // load drawable (navigation_arrow.png in res/drawable)
         try {
             val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.navigation_arrow)
             if (bmp != null) {
                 style.addImage(ARROW_IMAGE_ID, bmp)
-                android.util.Log.d("MapController", "User car arrow image loaded successfully")
+                Log.d(TAG, "User car arrow image loaded")
             } else {
-                android.util.Log.e("MapController", "Failed to load user car arrow image - bitmap is null")
+                Log.e(TAG, "Failed to load user car arrow image")
             }
         } catch (t: Throwable) {
-            android.util.Log.e("MapController", "Error loading user car arrow image: ${t.message}")
+            Log.e(TAG, "Error loading user car arrow: ${t.message}")
         }
     }
 
@@ -275,17 +263,16 @@ class MapController(
     
     // --- other car symbol setup ---
     private fun addOtherCarImageToStyle(style: Style) {
-        // load drawable for the other car (other_navigation_arrow.png)
         try {
             val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.other_navigation_arrow)
             if (bmp != null) {
                 style.addImage(OTHER_CAR_IMAGE_ID, bmp)
-                android.util.Log.d("MapController", "Other car arrow image loaded successfully")
+                Log.d(TAG, "Other car arrow image loaded")
             } else {
-                android.util.Log.e("MapController", "Failed to load other car arrow image - bitmap is null")
+                Log.e(TAG, "Failed to load other car arrow image")
             }
         } catch (t: Throwable) {
-            android.util.Log.e("MapController", "Error loading other car arrow image: ${t.message}")
+            Log.e(TAG, "Error loading other car arrow: ${t.message}")
         }
     }
 
@@ -377,103 +364,144 @@ class MapController(
     }
 
     /**
-     * Update an emergency vehicle position on the map with smooth animation.
-     * Uses a distinct arrow icon to differentiate from regular vehicles.
+     * Update an emergency vehicle position on the map.
+     * Delegates to batch method for consistency.
      */
     fun updateEmergencyVehicle(evId: String, lat: Double, lon: Double, bearing: Float) {
-        Log.d(TAG, "updateEmergencyVehicle: $evId lat=$lat, lon=$lon, bearing=$bearing")
+        updateEmergencyVehicles(listOf(EVCarData(evId, lat, lon, bearing)))
+    }
+    
+    // Data class for emergency vehicle positions
+    data class EVCarData(val carId: String, val lat: Double, val lon: Double, val heading: Float)
+    
+    /**
+     * Update multiple emergency vehicles at once with smooth animation.
+     * Uses the same efficient batch pattern as updateOtherCars().
+     */
+    fun updateEmergencyVehicles(cars: List<EVCarData>) {
         val map = mapLibreMap ?: return
         val style = map.style ?: return
-
-        val state = evPositions.getOrPut(evId) { EVMarkerState() }
-
-        val startLat = if (state.lat == 0.0) lat else state.lat
-        val startLon = if (state.lon == 0.0) lon else state.lon
-        val startBearing = if (state.bearing == 0f) bearing else state.bearing
-
+        
+        if (cars.isEmpty()) {
+            // Clear all EVs
+            (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+                ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
+            evVisualState.clear()
+            return
+        }
+        
         // Cancel any existing animation
-        state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
-
-        val animDuration = 800L
-        val frameRate = 16L
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        
+        // Initialize visual state for new EVs (set to target position, no animation on first appearance)
+        cars.forEach { ev ->
+            if (!evVisualState.containsKey(ev.carId)) {
+                evVisualState[ev.carId] = EVVisualState(ev.lat, ev.lon, ev.heading)
+            }
+        }
+        
+        // Remove EVs that are no longer in the list
+        val currentIds = cars.map { it.carId }.toSet()
+        evVisualState.keys.retainAll(currentIds)
+        
+        // Store start positions and target positions
+        val startStates = cars.associate { ev ->
+            val current = evVisualState[ev.carId] ?: EVVisualState(ev.lat, ev.lon, ev.heading)
+            ev.carId to Triple(current.lat, current.lon, current.heading)
+        }
+        
+        // Animation parameters (same as other cars for consistency)
+        val animationDuration = 400L
+        val frameRate = 16L // ~60fps
         val startTime = System.currentTimeMillis()
-
-        state.animationRunnable = object : Runnable {
+        
+        evAnimationRunnable = object : Runnable {
             override fun run() {
                 val elapsed = System.currentTimeMillis() - startTime
-                val progress = (elapsed.toFloat() / animDuration).coerceIn(0f, 1f)
-
-                val curLat = startLat + (lat - startLat) * progress
-                val curLon = startLon + (lon - startLon) * progress
-                var bearingDiff = bearing - startBearing
-                if (bearingDiff > 180f) bearingDiff -= 360f
-                if (bearingDiff < -180f) bearingDiff += 360f
-                val curBearing = startBearing + bearingDiff * progress
-
-                // Rebuild full feature collection with all EV markers
-                updateAllEVFeatures(style, evId, curLat, curLon, curBearing)
-
+                val progress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
+                
+                // Ease-out interpolation for smooth deceleration
+                val easedProgress = 1 - (1 - progress) * (1 - progress)
+                
+                // Interpolate all EVs
+                val features = cars.mapNotNull { ev ->
+                    val (startLat, startLon, startHeading) = startStates[ev.carId] ?: return@mapNotNull null
+                    
+                    // Interpolate position
+                    val currentLat = startLat + (ev.lat - startLat) * easedProgress
+                    val currentLon = startLon + (ev.lon - startLon) * easedProgress
+                    
+                    // Smooth heading interpolation (handle 360° wraparound)
+                    var headingDiff = ev.heading - startHeading
+                    if (headingDiff > 180f) headingDiff -= 360f
+                    if (headingDiff < -180f) headingDiff += 360f
+                    val currentHeading = startHeading + headingDiff * easedProgress
+                    
+                    // Update visual state
+                    evVisualState[ev.carId] = EVVisualState(currentLat, currentLon, currentHeading)
+                    
+                    // Create feature with bearing property
+                    Feature.fromGeometry(Point.fromLngLat(currentLon, currentLat)).apply {
+                        addStringProperty("carId", ev.carId)
+                        addNumberProperty("bearing", currentHeading.toDouble())
+                    }
+                }
+                
+                // Update the map source with all EVs
+                (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
+                    ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
+                
+                // Update rotation (use average heading since single layer)
+                if (features.isNotEmpty()) {
+                    val avgHeading = evVisualState.values
+                        .map { it.heading.toDouble() }
+                        .average()
+                        .toFloat()
+                    val layer = style.getLayerAs<SymbolLayer>(EV_LAYER_ID)
+                    layer?.setProperties(iconRotate(avgHeading))
+                }
+                
+                // Continue animation or finish
                 if (progress < 1.0f) {
                     mainHandler.postDelayed(this, frameRate)
                 } else {
-                    state.lat = lat
-                    state.lon = lon
-                    state.bearing = bearing
-                    state.animationRunnable = null
+                    // Ensure final positions are exact
+                    cars.forEach { ev ->
+                        evVisualState[ev.carId] = EVVisualState(ev.lat, ev.lon, ev.heading)
+                    }
+                    evAnimationRunnable = null
                 }
             }
         }
-        state.animationRunnable?.run()
+        
+        evAnimationRunnable?.run()
     }
 
     /**
      * Build FeatureCollection from all tracked EV positions and push to the source.
-     * During animation of one EV, we use the animated position for that EV and stored positions for others.
+     * Used for static updates (no animation).
      */
-    private fun updateAllEVFeatures(
-        style: Style,
-        animatingId: String,
-        animLat: Double,
-        animLon: Double,
-        animBearing: Float
-    ) {
-        val features = mutableListOf<Feature>()
-
-        for ((id, state) in evPositions) {
-            val lat = if (id == animatingId) animLat else state.lat
-            val lon = if (id == animatingId) animLon else state.lon
-            val bearing = if (id == animatingId) animBearing else state.bearing
-
-            if (lat == 0.0 && lon == 0.0) continue
-
-            val feature = Feature.fromGeometry(Point.fromLngLat(lon, lat))
-            feature.addNumberProperty("bearing", bearing.toDouble())
-            features.add(feature)
+    private fun updateAllEVFeatures(style: Style) {
+        val features = evVisualState.entries.filter { it.value.lat != 0.0 }.map { (id, state) ->
+            Feature.fromGeometry(Point.fromLngLat(state.lon, state.lat)).apply {
+                addStringProperty("carId", id)
+                addNumberProperty("bearing", state.heading.toDouble())
+            }
         }
-
+        
         (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
-            ?.setGeoJson(FeatureCollection.fromFeatures(features))
-
-        // Note: SymbolLayer uses data-driven rotation when we have multiple features;
-        // for simplicity with single EV, we just set the layer rotation to the last animated value.
-        val layer = style.getLayerAs<SymbolLayer>(EV_LAYER_ID)
-        layer?.setProperties(iconRotate(animBearing))
+            ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
     }
 
     /**
      * Remove a specific emergency vehicle marker from the map.
      */
     fun clearEmergencyVehicle(evId: String) {
-        val state = evPositions.remove(evId) ?: return
-        state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evVisualState.remove(evId) ?: return
 
         val style = mapLibreMap?.style ?: return
         // Rebuild features without the removed EV
-        val features = evPositions.entries.filter { it.value.lat != 0.0 }.map { (_, s) ->
-            Feature.fromGeometry(Point.fromLngLat(s.lon, s.lat))
-        }
-        (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
-            ?.setGeoJson(FeatureCollection.fromFeatures(features))
+        updateAllEVFeatures(style)
 
         Log.d(TAG, "Emergency vehicle $evId cleared")
     }
@@ -482,10 +510,9 @@ class MapController(
      * Clear all emergency vehicle markers from the map.
      */
     fun clearAllEmergencyVehicles() {
-        evPositions.values.forEach { state ->
-            state.animationRunnable?.let { mainHandler.removeCallbacks(it) }
-        }
-        evPositions.clear()
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable = null
+        evVisualState.clear()
 
         val style = mapLibreMap?.style ?: return
         (style.getSourceAs(EV_SOURCE_ID) as? GeoJsonSource)
@@ -595,76 +622,10 @@ class MapController(
     
     // Update the user's car position (main car that camera follows)
     fun updateUserCar(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
-        android.util.Log.d("MapController", "updateUserCar: lat=$lat, lon=$lon, bearing=$bearing")
         userCarLat = lat
         userCarLon = lon
         userCarBearing = bearing
         updateArrowPosition(lat, lon, bearing, animateMs)
-    }
-    
-    // Update the other car position with smooth animation (doesn't move camera)
-    fun updateOtherCar(lat: Double, lon: Double, bearing: Float) {
-        android.util.Log.d("MapController", "updateOtherCar: lat=$lat, lon=$lon, bearing=$bearing")
-        val map = mapLibreMap ?: return
-        val style = map.style ?: return
-        
-        // Store the previous position
-        val startLat = if (otherCarLat == 0.0) lat else otherCarLat
-        val startLon = if (otherCarLon == 0.0) lon else otherCarLon
-        val startBearing = if (otherCarBearing == 0.0f) bearing else otherCarBearing
-        
-        // Cancel any existing animation
-        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
-        
-        // Animate over 800ms with 60fps
-        val animationDuration = 800L
-        val frameRate = 16L // ~60fps
-        val totalFrames = (animationDuration / frameRate).toInt()
-        var currentFrame = 0
-        val startTime = System.currentTimeMillis()
-        
-        otherCarAnimationRunnable = object : Runnable {
-            override fun run() {
-                val elapsed = System.currentTimeMillis() - startTime
-                val progress = (elapsed.toFloat() / animationDuration).coerceIn(0f, 1f)
-                
-                // Ease-in-out interpolation for smooth movement
-                val easedProgress = if (progress < 0.5f) {
-                    2 * progress * progress
-                } else {
-                    1 - Math.pow((-2.0 * progress + 2.0), 2.0).toFloat() / 2
-                }
-                
-                // Interpolate position
-                val currentLat = startLat + (lat - startLat) * easedProgress
-                val currentLon = startLon + (lon - startLon) * easedProgress
-                val currentBearing = startBearing + (bearing - startBearing) * easedProgress
-                
-                // Update the map
-                val pt = Point.fromLngLat(currentLon, currentLat)
-                val feature = Feature.fromGeometry(pt)
-                
-                (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
-                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
-                
-                val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
-                layer?.setProperties(iconRotate(currentBearing))
-                
-                // Continue animation or finish
-                if (progress < 1.0f) {
-                    mainHandler.postDelayed(this, frameRate)
-                } else {
-                    // Store final position
-                    otherCarLat = lat
-                    otherCarLon = lon
-                    otherCarBearing = bearing
-                    otherCarAnimationRunnable = null
-                    android.util.Log.d("MapController", "Other car animation completed")
-                }
-            }
-        }
-        
-        otherCarAnimationRunnable?.run()
     }
     
     // Data class for other car positions
@@ -675,7 +636,6 @@ class MapController(
      * Animates from current visual positions to new target positions.
      */
     fun updateOtherCars(cars: List<OtherCarData>) {
-        android.util.Log.d("MapController", "updateOtherCars: ${cars.size} cars (with animation)")
         val map = mapLibreMap ?: return
         val style = map.style ?: return
         
@@ -764,7 +724,6 @@ class MapController(
                         otherCarsVisualState[car.carId] = OtherCarVisualState(car.lat, car.lon, car.heading)
                     }
                     otherCarsAnimationRunnable = null
-                    android.util.Log.d("MapController", "Other cars animation completed")
                 }
             }
         }
@@ -816,15 +775,13 @@ class MapController(
     }
     
     /**
-     * Clear/hide the other car marker (used when switching to speed test)
+     * Clear/hide all other car markers (used when resetting state)
      */
     fun clearOtherCar() {
         val map = mapLibreMap ?: return
         val style = map.style ?: return
         
-        // Cancel any animations
-        otherCarAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
-        otherCarAnimationRunnable = null
+        // Cancel animations
         otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
         otherCarsAnimationRunnable = null
         
@@ -832,15 +789,10 @@ class MapController(
         (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
             ?.setGeoJson(FeatureCollection.fromFeatures(emptyArray()))
         
-        // Reset tracking variables (legacy single car)
-        otherCarLat = 0.0
-        otherCarLon = 0.0
-        otherCarBearing = 0.0f
-        
-        // Clear multiple cars visual state
+        // Clear visual state
         otherCarsVisualState.clear()
         
-        android.util.Log.d("MapController", "Other cars cleared")
+        Log.d(TAG, "Other cars cleared")
     }
 
     // compute bearing from point a to b (bearing in degrees)
@@ -1180,12 +1132,9 @@ class MapController(
      * PERFORMANCE OPTIMIZED: Real-time updates for maximum responsiveness.
      */
     fun updateVehiclePosition(lat: Double, lon: Double, bearing: Float) {
-        Log.d(TAG, "updateVehiclePosition called: lat=$lat, lon=$lon, bearing=$bearing")
-        
         updateArrowPosition(lat, lon, bearing)
         
         if (fullRoutePoints.isEmpty()) {
-            Log.d(TAG, "No route points to update")
             return
         }
         
@@ -1232,7 +1181,7 @@ class MapController(
                     FeatureCollection.fromFeatures(arrayOf(Feature.fromGeometry(remainingLine)))
                 )
             }
-            if (traveledPath.size < 2) Log.d(TAG, "Not enough traveled points yet (${traveledPath.size})")
+            if (traveledPath.size < 2) return
         }
     }
     
@@ -1277,14 +1226,21 @@ class MapController(
                 updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
             }
             
-            // Restore other car position and accident state
-            if (otherCarLat != 0.0 && otherCarLon != 0.0) {
-                val pt = Point.fromLngLat(otherCarLon, otherCarLat)
-                val feature = Feature.fromGeometry(pt)
+            // Restore other cars positions if any
+            if (otherCarsVisualState.isNotEmpty()) {
+                val features = otherCarsVisualState.map { (id, state) ->
+                    Feature.fromGeometry(Point.fromLngLat(state.lon, state.lat)).apply {
+                        addStringProperty("carId", id)
+                        addNumberProperty("bearing", state.heading.toDouble())
+                    }
+                }
                 (style.getSourceAs(OTHER_CAR_SOURCE_ID) as? GeoJsonSource)
-                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
-                val layer = style.getLayerAs<SymbolLayer>(OTHER_CAR_LAYER_ID)
-                layer?.setProperties(iconRotate(otherCarBearing))
+                    ?.setGeoJson(FeatureCollection.fromFeatures(features.toTypedArray()))
+            }
+            
+            // Restore emergency vehicle positions if any
+            if (evVisualState.isNotEmpty()) {
+                updateAllEVFeatures(style)
             }
             
             // Restore accident markers if any

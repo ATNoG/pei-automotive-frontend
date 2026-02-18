@@ -16,11 +16,15 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import com.example.myapplication.config.AlertPreferenceManager
 import java.util.LinkedList
 import java.util.Locale
 import java.util.Queue
 
-class AlertNotificationManager(private val activity: Activity) {
+class AlertNotificationManager(
+    private val activity: Activity,
+    private val alertPreferenceManager: AlertPreferenceManager
+) {
 
     companion object {
         private const val TAG = "AlertNotificationManager"
@@ -37,6 +41,9 @@ class AlertNotificationManager(private val activity: Activity) {
 
         // Delay between notifications (heads-up notifications auto-dismiss after ~8 seconds)
         private const val NOTIFICATION_DELAY_MS = 9000L
+
+        // Cooldown between repeated TTS for the same alert type (prevents spam)
+        private const val SPEAK_COOLDOWN_MS = 10_000L
     }
 
     private val displayedAlerts = mutableSetOf<String>()
@@ -49,6 +56,9 @@ class AlertNotificationManager(private val activity: Activity) {
     // Text-to-Speech for alerts
     private var tts: TextToSpeech? = null
     private var ttsInitialized = false
+
+    // Cooldown tracking per alert type to prevent TTS spam
+    private val lastSpokenTimestamps = mutableMapOf<AlertPreferenceManager.AlertType, Long>()
 
     init {
         createNotificationChannel()
@@ -73,9 +83,10 @@ class AlertNotificationManager(private val activity: Activity) {
         }
     }
     
-    private fun speakText(text: String) {
+    private fun speakText(text: String, flush: Boolean = true) {
         if (ttsInitialized) {
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "accident_alert")
+            val queueMode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            tts?.speak(text, queueMode, null, "alert_${System.currentTimeMillis()}")
             Log.d(TAG, "TTS speaking: $text")
         } else {
             Log.w(TAG, "TTS not initialized, cannot speak: $text")
@@ -87,6 +98,42 @@ class AlertNotificationManager(private val activity: Activity) {
         tts?.shutdown()
         tts = null
         ttsInitialized = false
+    }
+
+    /**
+     * Check if a given alert type should be processed (enabled by the user).
+     * Centralizes the preference gating so callers don't need direct access
+     * to AlertPreferenceManager.
+     */
+    fun shouldProcessAlert(alertType: AlertPreferenceManager.AlertType): Boolean =
+        alertPreferenceManager.isEnabled(alertType)
+
+    /**
+     * Speak an alert message if the event type is enabled, audio is on,
+     * and the cooldown period has elapsed.
+     * Thread-safe: all work is posted to the main looper.
+     *
+     * @param alertType The alert category.
+     * @param text      The text to speak.
+     * @param flush     If true, interrupts current speech (for critical alerts).
+     *                  If false, queues after current speech.
+     */
+    fun speakForAlert(
+        alertType: AlertPreferenceManager.AlertType,
+        text: String,
+        flush: Boolean = true
+    ) {
+        handler.post {
+            if (!alertPreferenceManager.isEnabled(alertType) ||
+                !alertPreferenceManager.isAudioEnabled(alertType)) return@post
+
+            val now = System.currentTimeMillis()
+            val lastSpoken = lastSpokenTimestamps[alertType] ?: 0L
+            if (now - lastSpoken < SPEAK_COOLDOWN_MS) return@post
+            lastSpokenTimestamps[alertType] = now
+
+            speakText(text, flush)
+        }
     }
 
     private fun createNotificationChannel() {
@@ -157,6 +204,8 @@ class AlertNotificationManager(private val activity: Activity) {
                 alertQueue.add(alert)
                 displayedAlerts.add(alertKey)
                 Log.d(TAG, "Added alert to queue: ${alert.event}")
+                // Speak first new weather alert (cooldown prevents spam)
+                speakForAlert(AlertPreferenceManager.AlertType.WEATHER, "Weather alert: ${alert.event}")
             }
         }
 
@@ -323,9 +372,11 @@ class AlertNotificationManager(private val activity: Activity) {
         // Use shared distance formatting utility
         val distanceText = UiController.formatDistance(accidentData.distanceMeters)
         
-        // Speak the alert using TTS
-        val ttsMessage = "Warning! Accident ahead in $distanceText."
-        speakText(ttsMessage)
+        // Speak the alert using TTS (respects audio preference)
+        speakForAlert(
+            AlertPreferenceManager.AlertType.ACCIDENT,
+            "Warning! Accident ahead in $distanceText."
+        )
         
         // Invoke callback for UI updates
         onAccidentDisplayed?.invoke(accidentData)

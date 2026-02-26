@@ -972,6 +972,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             val regularCarId = json.optString("regular_car_id", "")
             val evLat = json.optDouble("ev_latitude", 0.0)
             val evLon = json.optDouble("ev_longitude", 0.0)
+            val evHeading = json.optDouble("ev_heading_deg", Double.NaN).toFloat()
+            val direction = json.optString("direction", "nearby")
             
             // Only process if this alert is for one of our user cars
             if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) {
@@ -982,7 +984,7 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             // Compute live distance from current user position
             val liveDistanceM = haversineDistanceM(currentLat, currentLon, evLat, evLon)
             
-            Log.d(TAG, "EV alert: $evId is ${liveDistanceM.toInt()}m away (live)")
+            Log.d(TAG, "EV alert: $evId is ${liveDistanceM.toInt()}m away ($direction) (live)")
             
             // Track as active EV
             activeEmergencyVehicles[evId] = System.currentTimeMillis()
@@ -990,10 +992,11 @@ class MainActivity : AppCompatActivity(), NavigationListener {
             // Update EV marker on map and tracking
             runOnUiThread {
                 if (evLat != 0.0 && evLon != 0.0) {
-                    val bearing = calculateBearingFromCoords(evLat, evLon, currentLat, currentLon)
+                    // Use the EV's own travel heading so the arrow points in its direction of movement
+                    val heading = if (evHeading.isNaN()) 0f else evHeading
                     
                     // Track EV position for top-down view and map (consistent with handleEVCarUpdate)
-                    evCarPositions[evId] = EVCarPosition(evId, evLat, evLon, bearing)
+                    evCarPositions[evId] = EVCarPosition(evId, evLat, evLon, heading)
                     
                     // Schedule throttled map update
                     scheduleEVMapUpdate()
@@ -1002,8 +1005,8 @@ class MainActivity : AppCompatActivity(), NavigationListener {
                     updateTopDownView()
                 }
                 
-                // Show/expand the EV notification overlay (only triggers expand on first time)
-                evOverlay.showAlert(evId, liveDistanceM)
+                // Show/expand the EV notification overlay with direction info
+                evOverlay.showAlert(evId, liveDistanceM, direction)
             }
             
             // Schedule EV cleanup check - if no new alert within 10s, EV likely out of range
@@ -1031,14 +1034,29 @@ class MainActivity : AppCompatActivity(), NavigationListener {
         // Update top-down view immediately (lightweight)
         updateTopDownView()
         
-        // If this EV is actively tracked (in range), refresh timestamp and update live distance
+        // If this EV is actively tracked (in range), refresh timestamp and update live distance + direction
         if (activeEmergencyVehicles.containsKey(carId)) {
             activeEmergencyVehicles[carId] = System.currentTimeMillis()
             
-            // Compute live distance and update overlay in real-time
+            // Compute live distance and direction, then update overlay in real-time
             val liveDistanceM = haversineDistanceM(currentLat, currentLon, lat, lon)
-            evOverlay.updateDistance(liveDistanceM)
+            val direction = computeDirection(currentLat, currentLon, currentBearing, lat, lon)
+            evOverlay.updateDistance(liveDistanceM, direction)
         }
+    }
+    
+    /**
+     * Compute whether a target point is ahead of or behind the user based on
+     * the user's current heading.  Returns "ahead", "behind", or "nearby".
+     */
+    private fun computeDirection(
+        userLat: Double, userLon: Double, userHeading: Float,
+        targetLat: Double, targetLon: Double
+    ): String {
+        if (userHeading == 0f && userLat == 0.0) return "nearby"
+        val bearing = calculateBearingFromCoords(userLat, userLon, targetLat, targetLon)
+        val diff = ((bearing - userHeading) + 360f) % 360f
+        return if (diff <= 90f || diff >= 270f) "ahead" else "behind"
     }
     
     /**

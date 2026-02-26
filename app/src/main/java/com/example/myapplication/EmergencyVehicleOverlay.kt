@@ -61,6 +61,7 @@ class EmergencyVehicleOverlay @JvmOverloads constructor(
     // Store last alert data for re-expanding on click
     private var lastMessage: String = "Emergency vehicle nearby"
     private var lastDistStr: String = ""
+    private var lastDirection: String = "nearby"
     
     // Child views
     private val iconView: ImageView
@@ -162,19 +163,24 @@ class EmergencyVehicleOverlay @JvmOverloads constructor(
      * If already visible (collapsed), expand with new message.
      * If hidden, appear collapsed first then expand.
      */
-    fun showAlert(evId: String, distanceM: Double) {
+    fun showAlert(evId: String, distanceM: Double, direction: String = "nearby") {
         val distStr = if (distanceM < 1000) {
             "${distanceM.toInt()}m"
         } else {
             String.format("%.1f km", distanceM / 1000)
         }
 
-        val msg = "Emergency vehicle nearby"
-        Log.d(TAG, "showAlert: evId=$evId dist=$distStr state=$currentState")
+        val msg = when (direction) {
+            "ahead"  -> "Emergency vehicle ahead"
+            "behind" -> "Emergency vehicle behind"
+            else     -> "Emergency vehicle nearby"
+        }
+        Log.d(TAG, "showAlert: evId=$evId dist=$distStr direction=$direction state=$currentState")
 
         // Always store latest data for click-to-toggle
         lastMessage = msg
         lastDistStr = distStr
+        lastDirection = direction
 
         when (currentState) {
             State.HIDDEN -> {
@@ -202,13 +208,27 @@ class EmergencyVehicleOverlay @JvmOverloads constructor(
      * Update only the distance text without triggering any expand/collapse.
      * Called from live position updates for real-time distance.
      */
-    fun updateDistance(distanceM: Double) {
+    fun updateDistance(distanceM: Double, direction: String? = null) {
         val distStr = if (distanceM < 1000) {
             "${distanceM.toInt()}m"
         } else {
             String.format("%.1f km", distanceM / 1000)
         }
         lastDistStr = distStr
+
+        // Update direction text if a new value is provided
+        if (direction != null && direction != lastDirection) {
+            lastDirection = direction
+            lastMessage = when (direction) {
+                "ahead"  -> "Emergency vehicle ahead"
+                "behind" -> "Emergency vehicle behind"
+                else     -> "Emergency vehicle nearby"
+            }
+            if (currentState == State.EXPANDED) {
+                messageText.text = lastMessage
+            }
+        }
+
         if (currentState == State.EXPANDED) {
             distanceText.text = "$distStr away"
         }

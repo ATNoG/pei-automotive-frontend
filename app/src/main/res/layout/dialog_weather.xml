@@ -32,12 +32,12 @@
                 android:padding="14dp"
                 android:background="#252525">
 
-                <ImageView
-                    android:id="@+id/imgWeatherDialogIcon"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:src="@drawable/ic_weather_sun"
-                    app:tint="#9EC8F5"/>
+                <TextView
+                    android:id="@+id/txtWeatherDialogEmoji"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🌡️"
+                    android:textSize="36sp"/>
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -50,7 +50,7 @@
                         android:id="@+id/txtWeatherDialogTemp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="22°"
+                        android:text="22°C"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:textColor="#FFFFFF" />
@@ -88,7 +88,7 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
-                    <!-- Weather Details Section -->
+                    <!-- Weather Details Section header -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -96,6 +96,14 @@
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="#FFFFFF"
+                        android:layout_marginBottom="4dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Toggle a card to pin it to the weather card."
+                        android:textSize="12sp"
+                        android:textColor="#AAAAAA"
                         android:layout_marginBottom="12dp"/>
 
                     <!-- Row 1: Feels Like + Wind -->
@@ -105,27 +113,45 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="8dp">
 
+                        <!-- Feels Like card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginEnd="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <!-- Label row with switch -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="🌡️ Feels Like"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="🌡️ Feels Like"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardFeelsLike"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtFeelsLike"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="24°"
+                                android:text="24°C"
                                 android:textSize="22sp"
                                 android:textStyle="bold"
                                 android:textColor="#FFFFFF"
@@ -133,21 +159,38 @@
 
                         </LinearLayout>
 
+                        <!-- Wind card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginStart="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="💨 Wind"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="💨 Wind"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardWind"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtWindSpeed"
@@ -170,21 +213,38 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="8dp">
 
+                        <!-- Humidity card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginEnd="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="💧 Humidity"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="💧 Humidity"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardHumidity"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtHumidity"
@@ -198,21 +258,38 @@
 
                         </LinearLayout>
 
+                        <!-- Pressure card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginStart="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="🔵 Pressure"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="🔵 Pressure"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardPressure"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtPressure"
@@ -235,21 +312,38 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="20dp">
 
+                        <!-- Visibility card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginEnd="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="👁️ Visibility"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="👁️ Visibility"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardVisibility"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtVisibility"
@@ -263,21 +357,38 @@
 
                         </LinearLayout>
 
+                        <!-- UV Index card -->
                         <LinearLayout
                             android:layout_width="0dp"
-                            android:layout_height="wrap_content"
+                            android:layout_height="match_parent"
                             android:layout_weight="1"
                             android:orientation="vertical"
                             android:background="@drawable/card_background_with_stroke"
                             android:padding="14dp"
                             android:layout_marginStart="4dp">
 
-                            <TextView
-                                android:layout_width="wrap_content"
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:text="☀️ UV Index"
-                                android:textSize="12sp"
-                                android:textColor="#AAAAAA"/>
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="☀️ UV Index"
+                                    android:textSize="12sp"
+                                    android:textColor="#AAAAAA"/>
+
+                                <androidx.appcompat.widget.SwitchCompat
+                                    android:id="@+id/switchCardUvIndex"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:scaleX="0.75"
+                                    android:scaleY="0.75"/>
+
+                            </LinearLayout>
 
                             <TextView
                                 android:id="@+id/txtUvIndex"
@@ -293,7 +404,7 @@
 
                     </LinearLayout>
 
-                    <!-- Alerts Section (at the end) -->
+                    <!-- Alerts Section -->
                     <LinearLayout
                         android:id="@+id/alertsSection"
                         android:layout_width="match_parent"
@@ -322,8 +433,6 @@
                 </LinearLayout>
 
             </ScrollView>
-
-
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

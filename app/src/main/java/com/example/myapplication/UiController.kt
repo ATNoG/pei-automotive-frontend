@@ -1,7 +1,6 @@
 package com.example.myapplication
 
 import android.app.Activity
-
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +10,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.example.myapplication.config.WeatherCardPreferenceManager
 import com.example.myapplication.navigation.models.ManeuverType
 import com.example.myapplication.navigation.models.NavigationState
 import com.example.myapplication.navigation.models.NavigationStep
@@ -61,12 +61,13 @@ class UiController(private val activity: Activity) {
     // ── Weather widgets ──────────────────────────────────────────────────
 
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
-    private val txtWindSpeed: TextView? = activity.findViewById(R.id.txtWindSpeed)
     private val weatherCard: View? =
         activity.findViewById(R.id.weatherCard) ?: activity.findViewById(R.id.weatherBadge)
+    private val weatherCardExtras: LinearLayout? = activity.findViewById(R.id.weatherCardExtras)
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
-    private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
+    private val txtWeatherEmoji: TextView? = activity.findViewById(R.id.txtWeatherEmoji)
+    private val weatherCardPrefs = WeatherCardPreferenceManager(activity)
 
     // ── Navigation banner ────────────────────────────────────────────────
 
@@ -155,29 +156,114 @@ class UiController(private val activity: Activity) {
     //  Weather
     // ====================================================================
 
-    fun updateTemperature(tempC: Int) {
-        txtTemperature?.text = "$tempC°"
-    }
-
-    fun updateWindSpeed(windKmh: Int) {
-        txtWindSpeed?.text = "$windKmh"
-    }
-
-    fun updateWeatherIcon(isRain: Boolean) {
-        weatherIcon?.setImageResource(
-            if (isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun
-        )
-    }
-
     fun updateFullWeatherData(
         weatherData: OpenWeatherMapClient.WeatherData,
         alerts: List<OpenWeatherMapClient.WeatherAlert>
     ) {
         cachedWeatherData = weatherData
         cachedAlerts = alerts
-        updateTemperature(weatherData.temperature)
-        updateWindSpeed(weatherData.windSpeed)
-        updateWeatherIcon(weatherData.isRain)
+        txtTemperature?.text = "${weatherData.temperature}°C"
+        txtWeatherEmoji?.text = getWeatherEmoji(weatherData.weatherCondition, weatherData.weatherDescription)
+        rebuildWeatherCardExtras(weatherData)
+    }
+
+    /**
+     * Rebuild the dynamic extras section of the weather card based on saved preferences.
+     * Called after data is updated and also after the user changes field selections.
+     */
+    fun rebuildWeatherCardExtras(weatherData: OpenWeatherMapClient.WeatherData? = cachedWeatherData) {
+        val container = weatherCardExtras ?: return
+        container.removeAllViews()
+
+        val enabledFields = weatherCardPrefs.enabledFields()
+        if (enabledFields.isEmpty() || weatherData == null) {
+            container.visibility = View.GONE
+            return
+        }
+
+        val density = activity.resources.displayMetrics.density
+        val dividerMarginPx = (10 * density).toInt()
+
+        enabledFields.forEach { field ->
+            // Vertical divider
+            val divider = View(activity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    (1 * density).toInt(), (24 * density).toInt()
+                ).also { it.marginStart = dividerMarginPx; it.marginEnd = dividerMarginPx }
+                setBackgroundColor(android.graphics.Color.parseColor("#44FFFFFF"))
+            }
+            container.addView(divider)
+
+            // Emoji label
+            val emoji = TextView(activity).apply {
+                text = field.emoji
+                textSize = 20f
+            }
+            container.addView(emoji)
+
+            // Value
+            val value = getFieldValue(field, weatherData)
+            val valueTv = TextView(activity).apply {
+                text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
+                textSize = 20f
+                setTextColor(android.graphics.Color.WHITE)
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.marginStart = (4 * density).toInt() }
+            }
+            container.addView(valueTv)
+        }
+
+        container.visibility = View.VISIBLE
+    }
+
+    private fun getFieldValue(
+        field: WeatherCardPreferenceManager.Field,
+        data: OpenWeatherMapClient.WeatherData
+    ): String = when (field) {
+        WeatherCardPreferenceManager.Field.WIND      -> "${data.windSpeed}"
+        WeatherCardPreferenceManager.Field.HUMIDITY  -> "${data.humidity}"
+        WeatherCardPreferenceManager.Field.FEELS_LIKE -> "${data.feelsLike}"
+        WeatherCardPreferenceManager.Field.PRESSURE  -> "${data.pressure}"
+        WeatherCardPreferenceManager.Field.VISIBILITY -> "${data.visibility}"
+        WeatherCardPreferenceManager.Field.UV_INDEX  -> String.format("%.1f", data.uvIndex)
+    }
+
+    /**
+     * Returns an emoji that best represents the current weather condition.
+     * Uses the OpenWeatherMap "main" condition group and the description for fine-grained mapping.
+     */
+    private fun getWeatherEmoji(condition: String, description: String = ""): String = when {
+        condition.equals("Thunderstorm", ignoreCase = true) -> "⛈️"
+        condition.equals("Drizzle", ignoreCase = true) -> "🌦️"
+        condition.equals("Rain", ignoreCase = true) -> when {
+            description.contains("heavy", ignoreCase = true) -> "🌧️"
+            description.contains("light", ignoreCase = true) -> "🌦️"
+            else -> "🌧️"
+        }
+        condition.equals("Snow", ignoreCase = true) -> when {
+            description.contains("sleet", ignoreCase = true) -> "🌨️"
+            else -> "❄️"
+        }
+        condition.equals("Clear", ignoreCase = true) -> "☀️"
+        condition.equals("Clouds", ignoreCase = true) -> when {
+            description.contains("few", ignoreCase = true) -> "🌤️"
+            description.contains("scattered", ignoreCase = true) -> "⛅"
+            else -> "☁️"
+        }
+        // Atmosphere group: Mist, Smoke, Haze, Dust, Fog, Sand, Ash, Squall, Tornado
+        condition.equals("Mist", ignoreCase = true) -> "🌫️"
+        condition.equals("Fog", ignoreCase = true) -> "🌫️"
+        condition.equals("Haze", ignoreCase = true) -> "🌫️"
+        condition.equals("Smoke", ignoreCase = true) -> "💨"
+        condition.equals("Dust", ignoreCase = true) -> "💨"
+        condition.equals("Sand", ignoreCase = true) -> "💨"
+        condition.equals("Ash", ignoreCase = true) -> "🌋"
+        condition.equals("Squall", ignoreCase = true) -> "💨"
+        condition.equals("Tornado", ignoreCase = true) -> "🌪️"
+        else -> "🌡️"
     }
 
     fun setupWeatherCardClick() {
@@ -191,92 +277,95 @@ class UiController(private val activity: Activity) {
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
 
-        // Populate header
+        // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
-            "${weatherData.temperature}°"
+            "${weatherData.temperature}°C"
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text =
             weatherData.weatherDescription.replaceFirstChar { it.uppercase() }
-        dialogView.findViewById<ImageView>(R.id.imgWeatherDialogIcon)?.setImageResource(
-            if (weatherData.isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun
-        )
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogEmoji)?.text =
+            getWeatherEmoji(weatherData.weatherCondition, weatherData.weatherDescription)
 
-        // Populate detail rows
-        dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "${weatherData.feelsLike}°"
-        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text =
-            "${weatherData.windSpeed} km/h"
+        // ── Detail rows ───────────────────────────────────────────────────
+        dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "${weatherData.feelsLike}°C"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text = "${weatherData.windSpeed} km/h"
         dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${weatherData.humidity}%"
-        dialogView.findViewById<TextView>(R.id.txtPressure)?.text =
-            "${weatherData.pressure} hPa"
-        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text =
-            "${weatherData.visibility} km"
+        dialogView.findViewById<TextView>(R.id.txtPressure)?.text = "${weatherData.pressure} hPa"
+        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "${weatherData.visibility} km"
         dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text =
             String.format("%.1f", weatherData.uvIndex)
 
-        // Populate alerts
+        // ── In-card toggles ───────────────────────────────────────────────
+        // Map each card's SwitchCompat to its WeatherCardPreferenceManager.Field.
+        // Toggling saves the pref and immediately rebuilds the weather card HUD.
+        val cardSwitches = listOf(
+            R.id.switchCardFeelsLike  to WeatherCardPreferenceManager.Field.FEELS_LIKE,
+            R.id.switchCardWind       to WeatherCardPreferenceManager.Field.WIND,
+            R.id.switchCardHumidity   to WeatherCardPreferenceManager.Field.HUMIDITY,
+            R.id.switchCardPressure   to WeatherCardPreferenceManager.Field.PRESSURE,
+            R.id.switchCardVisibility to WeatherCardPreferenceManager.Field.VISIBILITY,
+            R.id.switchCardUvIndex    to WeatherCardPreferenceManager.Field.UV_INDEX
+        )
+        cardSwitches.forEach { (viewId, field) ->
+            dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
+                isChecked = weatherCardPrefs.isEnabled(field)
+                setOnCheckedChangeListener { _, checked ->
+                    weatherCardPrefs.setEnabled(field, checked)
+                    rebuildWeatherCardExtras(weatherData)
+                }
+            }
+        }
+
+
+        // ── Alerts ────────────────────────────────────────────────────────
         val alertsSection = dialogView.findViewById<LinearLayout>(R.id.alertsSection)
         val alertsContainer = dialogView.findViewById<LinearLayout>(R.id.alertsContainer)
         if (cachedAlerts.isNotEmpty()) {
             alertsSection?.visibility = View.VISIBLE
             alertsContainer?.removeAllViews()
-
             cachedAlerts.forEach { alert ->
                 val alertCard = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
                     setBackgroundResource(R.drawable.card_background_with_stroke)
                     setPadding(32, 24, 32, 24)
-                    val params = LinearLayout.LayoutParams(
+                    layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
-                    )
-                    params.bottomMargin = 16
-                    layoutParams = params
+                    ).also { it.bottomMargin = 16 }
                 }
-
-                val titleText = TextView(activity).apply {
+                alertCard.addView(TextView(activity).apply {
                     text = "⚠️ ${alert.event}"
                     setTextColor(android.graphics.Color.parseColor("#FFD54F"))
                     textSize = 16f
                     setTypeface(null, android.graphics.Typeface.BOLD)
-                }
-                alertCard.addView(titleText)
-
-                val dateFormat =
-                    java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
-                val startTime = dateFormat.format(java.util.Date(alert.start * 1000))
-                val endTime = dateFormat.format(java.util.Date(alert.end * 1000))
-                val timeText = TextView(activity).apply {
-                    text = "🕐 $startTime – $endTime"
+                })
+                val fmt = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+                alertCard.addView(TextView(activity).apply {
+                    text = "🕐 ${fmt.format(java.util.Date(alert.start * 1000))} – ${fmt.format(java.util.Date(alert.end * 1000))}"
                     setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
                     textSize = 13f
                     setPadding(0, 12, 0, 0)
-                }
-                alertCard.addView(timeText)
-
+                })
                 if (alert.senderName.isNotEmpty()) {
-                    val senderText = TextView(activity).apply {
+                    alertCard.addView(TextView(activity).apply {
                         text = "📢 ${alert.senderName}"
                         setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
                         textSize = 13f
                         setPadding(0, 8, 0, 0)
-                    }
-                    alertCard.addView(senderText)
+                    })
                 }
-
-                val descText = TextView(activity).apply {
+                alertCard.addView(TextView(activity).apply {
                     text = alert.description
                     setTextColor(android.graphics.Color.parseColor("#DDDDDD"))
                     textSize = 14f
                     setPadding(0, 16, 0, 0)
-                }
-                alertCard.addView(descText)
-
+                })
                 alertsContainer?.addView(alertCard)
             }
         } else {
             alertsSection?.visibility = View.GONE
         }
 
-        // Close / dismiss
+        // ── Dismiss ───────────────────────────────────────────────────────
         dialogView.findViewById<ImageButton>(R.id.btnCloseWeatherDialog)?.setOnClickListener {
             rootView.removeView(dialogView)
         }
@@ -285,6 +374,8 @@ class UiController(private val activity: Activity) {
         }
         dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { /* consume */ }
     }
+
+
 
     // ====================================================================
     //  ETA / Distance (bottom dashboard)

@@ -32,6 +32,7 @@ import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
 import org.maplibre.geojson.LineString
+import android.view.Choreographer
 
 /**
  * MapController - encapsulates MapLibre map handling.
@@ -529,84 +530,76 @@ class MapController(
     // update arrow feature & rotation with smooth animation, move camera to it
     fun updateArrowPosition(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
         val map = mapLibreMap ?: return
-        val style = map.style ?: return
-        
-        // Cancel previous animation if still running
+
+        // 1. Cancel previous animation
         currentAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
-        
-        // Calculate adaptive animation duration based on update frequency
+        // If you switch to Choreographer, you'd use: Choreographer.getInstance().removeFrameCallback(frameCallback)
+
         val currentTime = System.currentTimeMillis()
         val timeSinceLastUpdate = currentTime - lastUpdateTime
         lastUpdateTime = currentTime
-        
-        // Use shorter animation for frequent updates (smoother), longer for infrequent ones
-        val adaptiveAnimateMs = if (timeSinceLastUpdate > 0 && timeSinceLastUpdate < 2000) {
-            // Frequent updates: use 70% of time since last update, min 400ms, max 800ms
+
+        val adaptiveAnimateMs = if (timeSinceLastUpdate in 1..1999) {
             (timeSinceLastUpdate * 0.7f).toLong().coerceIn(400, 800)
         } else {
-            animateMs // Use default for first update or very infrequent updates
+            animateMs
         }
-        
-        // Use current VISUAL position as start (where arrow currently is), not target position
+
         val startLat = if (userCarVisualLat == 0.0) lat else userCarVisualLat
         val startLon = if (userCarVisualLon == 0.0) lon else userCarVisualLon
         val startBearing = if (userCarVisualBearing == 0.0f) bearing else userCarVisualBearing
-        
-        // Animate both camera and icon smoothly
+
         val startTime = System.currentTimeMillis()
-        val frameRate = 16L // ~60fps
-        
-        val animationRunnable = object : Runnable {
-            override fun run() {
+
+        // Using Choreographer for buttery-smooth 60fps+ sync
+        val frameCallback = object : Choreographer.FrameCallback {
+            override fun doFrame(frameTimeNanos: Long) {
                 val elapsed = System.currentTimeMillis() - startTime
                 val progress = (elapsed.toFloat() / adaptiveAnimateMs).coerceIn(0f, 1f)
-                
-                // Use linear interpolation for smoother, more predictable movement
-                val easedProgress = progress
-                
-                // Interpolate position
-                val currentLat = startLat + (lat - startLat) * easedProgress
-                val currentLon = startLon + (lon - startLon) * easedProgress
-                
-                // Smooth bearing interpolation (handle 360° wraparound)
+
+                // Interpolation Logic (Unchanged)
+                val currentLat = startLat + (lat - startLat) * progress
+                val currentLon = startLon + (lon - startLon) * progress
+
                 var bearingDiff = bearing - startBearing
                 if (bearingDiff > 180f) bearingDiff -= 360f
                 if (bearingDiff < -180f) bearingDiff += 360f
-                val currentBearing = startBearing + bearingDiff * easedProgress
-                
-                // Update visual position tracking
+                val currentBearing = startBearing + bearingDiff * progress
+
                 userCarVisualLat = currentLat
                 userCarVisualLon = currentLon
                 userCarVisualBearing = currentBearing
-                
-                // Update icon position
-                val pt = Point.fromLngLat(currentLon, currentLat)
-                val feature = Feature.fromGeometry(pt)
-                (style.getSourceAs(ARROW_SOURCE_ID) as? GeoJsonSource)
-                    ?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
-                
-                val layer = style.getLayerAs<SymbolLayer>(ARROW_LAYER_ID)
-                layer?.setProperties(iconRotate(currentBearing))
-                
-                // Continue animation
+
+                // --- FIX: SAFE STYLE ACCESS ---
+                // We fetch the current style every single frame.
+                // If the style is being reloaded, map.style returns null or the NEW style,
+                // preventing the "newer style is loading" IllegalStateException.
+                mapLibreMap?.getStyle { currentStyle ->
+                    if (currentStyle.isFullyLoaded) {
+                        val pt = Point.fromLngLat(currentLon, currentLat)
+                        val feature = Feature.fromGeometry(pt)
+
+                        val source = currentStyle.getSourceAs<GeoJsonSource>(ARROW_SOURCE_ID)
+                        source?.setGeoJson(FeatureCollection.fromFeatures(arrayOf(feature)))
+
+                        val layer = currentStyle.getLayerAs<SymbolLayer>(ARROW_LAYER_ID)
+                        layer?.setProperties(iconRotate(currentBearing))
+                    }
+                }
+
                 if (progress < 1.0f) {
-                    mainHandler.postDelayed(this, frameRate)
+                    Choreographer.getInstance().postFrameCallback(this)
                 } else {
-                    // Ensure final position is exact
                     userCarVisualLat = lat
                     userCarVisualLon = lon
                     userCarVisualBearing = bearing
-                    currentAnimationRunnable = null
                 }
             }
         }
-        
-        currentAnimationRunnable = animationRunnable
-        
-        // Start icon animation
-        animationRunnable.run()
-        
-        // Animate camera separately (smoother, slightly longer duration)
+
+        Choreographer.getInstance().postFrameCallback(frameCallback)
+
+        // Camera Animation (Unchanged)
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))
             .zoom(19.0)

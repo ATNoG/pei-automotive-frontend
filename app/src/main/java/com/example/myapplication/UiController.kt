@@ -2,7 +2,6 @@ package com.example.myapplication
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.Context
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -12,7 +11,6 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.example.myapplication.navigation.models.ManeuverType
 import com.example.myapplication.navigation.models.NavigationState
 import com.example.myapplication.navigation.models.NavigationStep
@@ -20,117 +18,142 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * UiController - small helper to update right-panel widgets.
+ * UiController - manages persistent HUD widgets in the main activity.
  *
- * Exposes clear methods: updateSpeedLimit, updateCurrentSpeed, updateTemperature, updateWeatherIcon, updateEtaAndDistance
+ * Responsibilities:
+ *   - Speed limit / current speed display and speeding indicator
+ *   - Weather card data (temperature, wind, icon) and weather detail dialog
+ *   - Navigation banner (maneuver icon + instruction + distance)
+ *   - Navigation panel state switching (start route ↔ nav info ↔ stop button)
+ *
+ * Transient notifications (accidents, connection status, weather alerts, etc.) are
+ * handled exclusively by [InAppNotificationManager] and are NOT part of this class.
  */
 class UiController(private val activity: Activity) {
 
     companion object {
-        private const val ACCIDENT_ALERT_DISPLAY_DURATION_MS = 15_000L
-        
         /**
-         * Format distance for display (meters to human-readable).
-         * @param distanceMeters Distance in meters
-         * @param suffix Optional suffix (e.g., "ahead")
-         * @return Formatted string like "1.5 km ahead" or "500 m ahead"
+         * Format a distance in meters to a human-readable string.
+         * @param distanceMeters Distance in metres.
+         * @param suffix         Optional suffix appended after the value (e.g. "ahead").
          */
         fun formatDistance(distanceMeters: Double, suffix: String = ""): String {
-            val distanceText = if (distanceMeters >= 1000) {
+            val text = if (distanceMeters >= 1000) {
                 String.format("%.1f km", distanceMeters / 1000)
             } else {
                 String.format("%.0f m", distanceMeters)
             }
-            return if (suffix.isNotEmpty()) "$distanceText $suffix" else distanceText
+            return if (suffix.isNotEmpty()) "$text $suffix" else text
         }
     }
+
+    // ── Speed widgets ────────────────────────────────────────────────────
 
     private val speedLimitContainer: View? = activity.findViewById(R.id.speedLimitContainer)
     private val txtSpeedLimit: TextView? = activity.findViewById(R.id.txtSpeedLimit)
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
+
+    @Suppress("unused")
     private val txtSpeedUnit: TextView? = activity.findViewById(R.id.txtSpeedUnit)
+    private val speedAlertIcon: ImageView? = activity.findViewById(R.id.speedAlertIcon)
+    private val speedAlertBlur: View? = activity.findViewById(R.id.speedAlertBlur)
+
+    // ── Weather widgets ──────────────────────────────────────────────────
+
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
     private val txtWindSpeed: TextView? = activity.findViewById(R.id.txtWindSpeed)
-    private val weatherCard: View? = activity.findViewById(R.id.weatherCard) ?: activity.findViewById(R.id.weatherBadge)
+    private val weatherCard: View? =
+        activity.findViewById(R.id.weatherCard) ?: activity.findViewById(R.id.weatherBadge)
     private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
     private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
     private val weatherIcon: ImageView? = activity.findViewById(R.id.weatherIcon)
-    private val speedAlertIcon: ImageView? = activity.findViewById(R.id.speedAlertIcon)
-    private val speedAlertBlur: View? = activity.findViewById(R.id.speedAlertBlur)
-    
-    // Navigation UI elements
+
+    // ── Navigation banner ────────────────────────────────────────────────
+
     private val navigationBanner: LinearLayout? = activity.findViewById(R.id.navigationBanner)
     private val imgManeuverIcon: ImageView? = activity.findViewById(R.id.imgManeuverIcon)
-    private val txtNextManeuverDistance: TextView? = activity.findViewById(R.id.txtNextManeuverDistance)
-    private val txtManeuverInstruction: TextView? = activity.findViewById(R.id.txtManeuverInstruction)
-    
-    // Navigation panel (top right) elements
-    private val startRouteContainer: LinearLayout? = activity.findViewById(R.id.startRouteContainer)
+    private val txtNextManeuverDistance: TextView? =
+        activity.findViewById(R.id.txtNextManeuverDistance)
+    private val txtManeuverInstruction: TextView? =
+        activity.findViewById(R.id.txtManeuverInstruction)
+
+    // ── Navigation panel (top-right) ─────────────────────────────────────
+
+    private val startRouteContainer: LinearLayout? =
+        activity.findViewById(R.id.startRouteContainer)
     private val navInfoContainer: LinearLayout? = activity.findViewById(R.id.navInfoContainer)
     private val stopNavContainer: View? = activity.findViewById(R.id.stopNavContainer)
+
+    @Suppress("unused")
     private val btnStopNavigation: ImageView? = activity.findViewById(R.id.btnStopNavigation)
     private val txtNavArrival: TextView? = activity.findViewById(R.id.txtNavArrival)
     private val txtNavDistance: TextView? = activity.findViewById(R.id.txtNavDistance)
-    
-    // Accident alert UI elements
-    private val accidentAlertBanner: LinearLayout? = activity.findViewById(R.id.accidentAlertBanner)
-    private val txtAccidentDistance: TextView? = activity.findViewById(R.id.txtAccidentDistance)
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
-    private var accidentAlertHideRunnable: Runnable? = null
-    
-    // Time formatter for arrival time
+
+    // ── Misc ─────────────────────────────────────────────────────────────
+
     private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    
-    // Cached weather data for dialog
+
+    // Cached for the weather detail dialog
     private var cachedWeatherData: OpenWeatherMapClient.WeatherData? = null
     private var cachedAlerts: List<OpenWeatherMapClient.WeatherAlert> = emptyList()
+
+    // ====================================================================
+    //  Speed
+    // ====================================================================
 
     fun updateSpeedLimit(limit: Int?) {
         val displayText = limit?.toString() ?: "--"
         txtSpeedLimit?.text = displayText
-        // Also update right panel speed limit if it exists
         activity.findViewById<TextView>(R.id.txtSpeedLimitRight)?.text = displayText
     }
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
         txtCurrentSpeed?.text = speedKmh.toString()
-        
-        // Only check speeding if we have a valid speed limit
+        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
+
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
-        
-        // Change current speed color to red if speeding, otherwise white
         val speedColor = if (isSpeeding) {
-            android.graphics.Color.RED
+            android.graphics.Color.parseColor("#FF4444")
         } else {
             android.graphics.Color.WHITE
         }
         txtCurrentSpeed?.setTextColor(speedColor)
-        txtSpeedUnit?.setTextColor(speedColor)
-        
-        // Change speed limit sign appearance when speeding
-        if (isSpeeding) {
-            // Make speed limit text red
-            txtSpeedLimit?.setTextColor(android.graphics.Color.RED)
-            // Scale up the speed limit sign
-            speedLimitContainer?.animate()
-                ?.scaleX(1.2f)
-                ?.scaleY(1.2f)
-                ?.setDuration(300)
-                ?.start()
-        } else {
-            // Reset speed limit text to black
-            txtSpeedLimit?.setTextColor(android.graphics.Color.BLACK)
-            // Scale back to normal
-            speedLimitContainer?.animate()
-                ?.scaleX(1.0f)
-                ?.scaleY(1.0f)
-                ?.setDuration(300)
-                ?.start()
-        }
-        
-        // Also update right panel speed if it exists
-        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
+        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.setTextColor(speedColor)
     }
+
+    fun showSpeedAlert() {
+        Log.d("UI_ALERT", "showSpeedAlert called")
+
+        speedAlertBlur?.visibility = View.VISIBLE
+
+        try {
+            val heartbeat = AnimationUtils.loadAnimation(activity, R.anim.heartbeat)
+            heartbeat.repeatMode = android.view.animation.Animation.RESTART
+            heartbeat.repeatCount = android.view.animation.Animation.INFINITE
+            speedAlertIcon?.startAnimation(heartbeat)
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting heartbeat: ${e.message}")
+        }
+
+        try {
+            val pulse = AnimationUtils.loadAnimation(activity, R.anim.red_pulse)
+            pulse.repeatMode = android.view.animation.Animation.RESTART
+            pulse.repeatCount = android.view.animation.Animation.INFINITE
+            speedAlertBlur?.startAnimation(pulse)
+        } catch (e: Exception) {
+            Log.e("UI_ALERT", "Error starting pulse: ${e.message}")
+        }
+    }
+
+    fun hideSpeedAlert() {
+        speedAlertIcon?.clearAnimation()
+        speedAlertBlur?.clearAnimation()
+        speedAlertBlur?.visibility = View.GONE
+    }
+
+    // ====================================================================
+    //  Weather
+    // ====================================================================
 
     fun updateTemperature(tempC: Int) {
         txtTemperature?.text = "$tempC°"
@@ -139,56 +162,64 @@ class UiController(private val activity: Activity) {
     fun updateWindSpeed(windKmh: Int) {
         txtWindSpeed?.text = "$windKmh"
     }
-    
 
     fun updateWeatherIcon(isRain: Boolean) {
-        weatherIcon?.setImageResource(if (isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun)
+        weatherIcon?.setImageResource(
+            if (isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun
+        )
     }
-    
-    fun updateFullWeatherData(weatherData: OpenWeatherMapClient.WeatherData, alerts: List<OpenWeatherMapClient.WeatherAlert>) {
+
+    fun updateFullWeatherData(
+        weatherData: OpenWeatherMapClient.WeatherData,
+        alerts: List<OpenWeatherMapClient.WeatherAlert>
+    ) {
         cachedWeatherData = weatherData
         cachedAlerts = alerts
-        
         updateTemperature(weatherData.temperature)
         updateWindSpeed(weatherData.windSpeed)
         updateWeatherIcon(weatherData.isRain)
     }
-    
+
     fun setupWeatherCardClick() {
-        weatherCard?.setOnClickListener {
-            showWeatherDialog()
-        }
+        weatherCard?.setOnClickListener { showWeatherDialog() }
     }
-    
+
     private fun showWeatherDialog() {
         val weatherData = cachedWeatherData ?: return
-        
+
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
-        
-        // Populate weather data
-        dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text = "${weatherData.temperature}°"
-        dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text = weatherData.weatherDescription.replaceFirstChar { it.uppercase() }
+
+        // Populate header
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
+            "${weatherData.temperature}°"
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text =
+            weatherData.weatherDescription.replaceFirstChar { it.uppercase() }
         dialogView.findViewById<ImageView>(R.id.imgWeatherDialogIcon)?.setImageResource(
             if (weatherData.isRain) R.drawable.ic_weather_rain else R.drawable.ic_weather_sun
         )
+
+        // Populate detail rows
         dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "${weatherData.feelsLike}°"
-        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text = "${weatherData.windSpeed} km/h"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text =
+            "${weatherData.windSpeed} km/h"
         dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${weatherData.humidity}%"
-        dialogView.findViewById<TextView>(R.id.txtPressure)?.text = "${weatherData.pressure} hPa"
-        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "${weatherData.visibility} km"
-        dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text = String.format("%.1f", weatherData.uvIndex)
-        
-        // Populate alerts if any
+        dialogView.findViewById<TextView>(R.id.txtPressure)?.text =
+            "${weatherData.pressure} hPa"
+        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text =
+            "${weatherData.visibility} km"
+        dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text =
+            String.format("%.1f", weatherData.uvIndex)
+
+        // Populate alerts
         val alertsSection = dialogView.findViewById<LinearLayout>(R.id.alertsSection)
         val alertsContainer = dialogView.findViewById<LinearLayout>(R.id.alertsContainer)
         if (cachedAlerts.isNotEmpty()) {
             alertsSection?.visibility = View.VISIBLE
             alertsContainer?.removeAllViews()
-            
+
             cachedAlerts.forEach { alert ->
-                // Create alert card
                 val alertCard = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
                     setBackgroundResource(R.drawable.card_background_with_stroke)
@@ -200,8 +231,7 @@ class UiController(private val activity: Activity) {
                     params.bottomMargin = 16
                     layoutParams = params
                 }
-                
-                // Alert title with emoji
+
                 val titleText = TextView(activity).apply {
                     text = "⚠️ ${alert.event}"
                     setTextColor(android.graphics.Color.parseColor("#FFD54F"))
@@ -209,20 +239,19 @@ class UiController(private val activity: Activity) {
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 }
                 alertCard.addView(titleText)
-                
-                // Time period
-                val dateFormat = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+
+                val dateFormat =
+                    java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                 val startTime = dateFormat.format(java.util.Date(alert.start * 1000))
                 val endTime = dateFormat.format(java.util.Date(alert.end * 1000))
                 val timeText = TextView(activity).apply {
-                    text = "🕐 $startTime - $endTime"
+                    text = "🕐 $startTime – $endTime"
                     setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
                     textSize = 13f
                     setPadding(0, 12, 0, 0)
                 }
                 alertCard.addView(timeText)
-                
-                // Sender/Source
+
                 if (alert.senderName.isNotEmpty()) {
                     val senderText = TextView(activity).apply {
                         text = "📢 ${alert.senderName}"
@@ -232,8 +261,7 @@ class UiController(private val activity: Activity) {
                     }
                     alertCard.addView(senderText)
                 }
-                
-                // Description
+
                 val descText = TextView(activity).apply {
                     text = alert.description
                     setTextColor(android.graphics.Color.parseColor("#DDDDDD"))
@@ -241,36 +269,37 @@ class UiController(private val activity: Activity) {
                     setPadding(0, 16, 0, 0)
                 }
                 alertCard.addView(descText)
-                
+
                 alertsContainer?.addView(alertCard)
             }
         } else {
             alertsSection?.visibility = View.GONE
         }
-        
-        // Close button
+
+        // Close / dismiss
         dialogView.findViewById<ImageButton>(R.id.btnCloseWeatherDialog)?.setOnClickListener {
             rootView.removeView(dialogView)
         }
-        
-
-        // Overlay click to close
         dialogView.findViewById<View>(R.id.weatherDialogOverlay)?.setOnClickListener {
             rootView.removeView(dialogView)
         }
-        
-        // Prevent clicks on card from closing
-        dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { }
+        dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { /* consume */ }
     }
 
+    // ====================================================================
+    //  ETA / Distance (bottom dashboard)
+    // ====================================================================
 
     fun updateEtaAndDistance(etaText: String, distanceText: String) {
         txtEta?.text = etaText
         txtDistance?.text = distanceText
-        // Also update phone layout navigation panel if it exists
         activity.findViewById<TextView>(R.id.txtNavDistance)?.text = distanceText
         activity.findViewById<TextView>(R.id.txtNavArrival)?.text = etaText
     }
+
+    // ====================================================================
+    //  Generic popup (AlertDialog — for exceptional cases only)
+    // ====================================================================
 
     fun showPopup(title: String, message: String) {
         AlertDialog.Builder(activity)
@@ -280,136 +309,27 @@ class UiController(private val activity: Activity) {
             .show()
     }
 
-    fun showConnectionStatus(message: String) {
-        Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
-    }
+    // ====================================================================
+    //  Navigation mode
+    // ====================================================================
 
-    fun showSpeedAlert() {
-        Log.d("UI_ALERT", "showSpeedAlert called")
-        Log.d("UI_ALERT", "speedAlertIcon: $speedAlertIcon")
-        Log.d("UI_ALERT", "speedAlertBlur: $speedAlertBlur")
-        
-        // Show the red blur background
-        speedAlertBlur?.visibility = View.VISIBLE
-        Log.d("UI_ALERT", "Blur visibility set to VISIBLE")
-        
-        // Start heartbeat animation on icon
-        try {
-            val heartbeat = AnimationUtils.loadAnimation(activity, R.anim.heartbeat)
-            Log.d("UI_ALERT", "Heartbeat animation loaded: $heartbeat")
-            heartbeat.repeatMode = android.view.animation.Animation.RESTART
-            heartbeat.repeatCount = android.view.animation.Animation.INFINITE
-            speedAlertIcon?.startAnimation(heartbeat)
-            Log.d("UI_ALERT", "Heartbeat animation started")
-        } catch (e: Exception) {
-            Log.e("UI_ALERT", "Error starting heartbeat: ${e.message}")
-        }
-        
-        // Start pulse animation on blur
-        try {
-            val pulse = AnimationUtils.loadAnimation(activity, R.anim.red_pulse)
-            Log.d("UI_ALERT", "Pulse animation loaded: $pulse")
-            pulse.repeatMode = android.view.animation.Animation.RESTART
-            pulse.repeatCount = android.view.animation.Animation.INFINITE
-            speedAlertBlur?.startAnimation(pulse)
-            Log.d("UI_ALERT", "Pulse animation started")
-        } catch (e: Exception) {
-            Log.e("UI_ALERT", "Error starting pulse: ${e.message}")
-        }
-    }
-
-    fun hideSpeedAlert() {
-        speedAlertIcon?.clearAnimation()
-        speedAlertBlur?.clearAnimation()
-        speedAlertBlur?.visibility = View.GONE
-    }
-    
-    // ========== Accident Alert UI Methods ==========
-    
-    /**
-     * Show accident alert banner with distance information.
-     */
-    fun showAccidentAlert(distanceMeters: Double) {
-        Log.d("UI_ALERT", "showAccidentAlert called, distance: $distanceMeters m")
-        
-        val distanceText = formatDistance(distanceMeters, "ahead")
-        
-        txtAccidentDistance?.text = distanceText
-        accidentAlertBanner?.visibility = View.VISIBLE
-        
-        // Start pulse animation
-        try {
-            val pulse = AnimationUtils.loadAnimation(activity, R.anim.accident_pulse)
-            accidentAlertBanner?.startAnimation(pulse)
-        } catch (e: Exception) {
-            Log.e("UI_ALERT", "Error starting accident pulse animation: ${e.message}")
-        }
-        
-        // Cancel any pending hide runnable
-        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
-        
-        // Auto-hide after configured duration
-        accidentAlertHideRunnable = Runnable { hideAccidentAlert() }
-        handler.postDelayed(accidentAlertHideRunnable!!, ACCIDENT_ALERT_DISPLAY_DURATION_MS)
-        
-        Log.d("UI_ALERT", "Accident alert banner shown: $distanceText")
-    }
-    
-    /**
-     * Hide the accident alert banner.
-     */
-    fun hideAccidentAlert() {
-        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
-        accidentAlertHideRunnable = null
-        accidentAlertBanner?.clearAnimation()
-        accidentAlertBanner?.visibility = View.GONE
-        Log.d("UI_ALERT", "Accident alert banner hidden")
-    }
-    
-    /**
-     * Cleanup resources. Call from Activity onDestroy.
-     */
-    fun cleanup() {
-        accidentAlertHideRunnable?.let { handler.removeCallbacks(it) }
-        accidentAlertHideRunnable = null
-        Log.d("UiController", "Cleanup completed")
-    }
-    
-    // ========== Navigation UI Methods ==========
-    
-    /**
-     * Show navigation mode UI (banner, stop button, etc.)
-     */
     fun showNavigationMode() {
         navigationBanner?.visibility = View.VISIBLE
-        
-        // Switch navigation panel from "Start Route" to navigation info
         startRouteContainer?.visibility = View.GONE
         navInfoContainer?.visibility = View.VISIBLE
         stopNavContainer?.visibility = View.VISIBLE
     }
-    
-    /**
-     * Hide navigation mode UI and return to normal state.
-     */
+
     fun hideNavigationMode() {
         navigationBanner?.visibility = View.GONE
-        
-        // Switch navigation panel back to "Start Route" button
         startRouteContainer?.visibility = View.VISIBLE
         navInfoContainer?.visibility = View.GONE
         stopNavContainer?.visibility = View.GONE
-        
-        // Reset navigation info display
         txtNavArrival?.text = "--:--"
         txtNavDistance?.text = "--"
     }
-    
-    /**
-     * Update navigation state UI (distance, ETA, current instruction).
-     */
+
     fun updateNavigationState(state: NavigationState) {
-        // Update distance in km
         val distanceKm = state.remainingDistance / 1000.0
         val distanceText = if (distanceKm >= 1.0) {
             String.format("%.1f", distanceKm)
@@ -417,162 +337,115 @@ class UiController(private val activity: Activity) {
             String.format("%.0f m", state.remainingDistance)
         }
         txtNavDistance?.text = distanceText
-        
-        // Calculate arrival time (current time + remaining duration)
-        val arrivalTimeMillis = System.currentTimeMillis() + (state.remainingDuration * 1000).toLong()
+
+        val arrivalTimeMillis =
+            System.currentTimeMillis() + (state.remainingDuration * 1000).toLong()
         val arrivalTime = timeFormat.format(Date(arrivalTimeMillis))
         txtNavArrival?.text = arrivalTime
-        
-        // Update next maneuver distance
+
         txtNextManeuverDistance?.text = state.formatDistanceToNextStep()
-        
+
         Log.d("UiController", "Navigation: $distanceText km, arrival: $arrivalTime")
     }
-    
-    /**
-     * Update the current navigation instruction/step.
-     */
+
     fun updateNavigationStep(step: NavigationStep) {
         txtManeuverInstruction?.text = step.instruction
-        
-        // Update maneuver icon based on type
-        val iconRes = getManeuverIcon(step.maneuverType)
-        imgManeuverIcon?.setImageResource(iconRes)
+        imgManeuverIcon?.setImageResource(getManeuverIcon(step.maneuverType))
     }
-    
-    /**
-     * Show a loading indicator while calculating route.
-     */
+
+    /** Show a loading indicator while calculating route. */
     fun showRouteCalculating() {
-        Toast.makeText(activity, "Calculating route...", Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(activity, "Calculating route...", android.widget.Toast.LENGTH_SHORT).show()
     }
-    
-    /**
-     * Show destination reached message.
-     */
-    fun showDestinationReached() {
-        // Inflate popup layout
-        val popupView = LayoutInflater.from(activity).inflate(R.layout.popup_arrival, null)
-        
-        // Add popup to root layout with specific positioning
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
-        
-        // Get weather card position for alignment
-        val weatherCard = activity.findViewById<View>(R.id.weatherCard)
-        val weatherCardLocation = IntArray(2)
-        weatherCard?.getLocationOnScreen(weatherCardLocation)
-        
-        val layoutParams = android.widget.FrameLayout.LayoutParams(
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            // Position at same height as weather card, to its right
-            gravity = android.view.Gravity.TOP or android.view.Gravity.START
-            topMargin = weatherCardLocation[1] - activity.window.decorView.top
-            leftMargin = (weatherCard?.width ?: 0) + 32 + 16  // weather card width + margin
-        }
-        rootView.addView(popupView, layoutParams)
-        
-        // Function to clean up and stop navigation
-        val closeAndStopNavigation = {
-            if (popupView.parent != null) {
-                rootView.removeView(popupView)
-            }
-            // Call MainActivity to stop navigation
-            if (activity is MainActivity) {
-                activity.runOnUiThread {
-                    (activity as MainActivity).stopNavigationAfterArrival()
-                }
-            }
-        }
-        
-        // Close button stops navigation
-        popupView.findViewById<ImageButton>(R.id.btnCloseArrival)?.setOnClickListener {
-            closeAndStopNavigation()
-        }
-        
-        // Auto-dismiss after 5 seconds and stop navigation
-        popupView.postDelayed({
-            closeAndStopNavigation()
-        }, 5000)
-    }
-    
-    /**
-     * Show navigation error.
-     */
+
+    /** Show a navigation error. */
     fun showNavigationError(error: String) {
-        Toast.makeText(activity, "Error: $error", Toast.LENGTH_LONG).show()
+        android.widget.Toast.makeText(activity, "Error: $error", android.widget.Toast.LENGTH_LONG).show()
     }
-    
-    /**
-     * Get the drawable resource for a maneuver type.
-     * Comprehensive mapping for all OSRM maneuver types.
-     */
-    private fun getManeuverIcon(type: ManeuverType): Int {
-        return when (type) {
-            // Left turns
-            ManeuverType.TURN_LEFT -> R.drawable.ic_turn_left
-            ManeuverType.TURN_SLIGHT_LEFT -> R.drawable.ic_turn_slight_left
-            ManeuverType.TURN_SHARP_LEFT -> R.drawable.ic_turn_left
-            ManeuverType.FORK_LEFT -> R.drawable.ic_fork_left
-            ManeuverType.FORK_SLIGHT_LEFT -> R.drawable.ic_fork_left
-            ManeuverType.END_OF_ROAD_LEFT -> R.drawable.ic_turn_left
-            ManeuverType.CONTINUE_LEFT -> R.drawable.ic_turn_slight_left
-            ManeuverType.CONTINUE_SLIGHT_LEFT -> R.drawable.ic_turn_slight_left
-            ManeuverType.MERGE_LEFT -> R.drawable.ic_merge
-            ManeuverType.MERGE_SLIGHT_LEFT -> R.drawable.ic_merge
-            ManeuverType.NEW_NAME_LEFT -> R.drawable.ic_turn_slight_left
-            ManeuverType.NOTIFICATION_LEFT -> R.drawable.ic_turn_left
-            
-            // Right turns
-            ManeuverType.TURN_RIGHT -> R.drawable.ic_turn_right
-            ManeuverType.TURN_SLIGHT_RIGHT -> R.drawable.ic_turn_slight_right
-            ManeuverType.TURN_SHARP_RIGHT -> R.drawable.ic_turn_right
-            ManeuverType.FORK_RIGHT -> R.drawable.ic_fork_right
-            ManeuverType.FORK_SLIGHT_RIGHT -> R.drawable.ic_fork_right
-            ManeuverType.END_OF_ROAD_RIGHT -> R.drawable.ic_turn_right
-            ManeuverType.CONTINUE_RIGHT -> R.drawable.ic_turn_slight_right
-            ManeuverType.CONTINUE_SLIGHT_RIGHT -> R.drawable.ic_turn_slight_right
-            ManeuverType.MERGE_RIGHT -> R.drawable.ic_merge
-            ManeuverType.MERGE_SLIGHT_RIGHT -> R.drawable.ic_merge
-            ManeuverType.NEW_NAME_RIGHT -> R.drawable.ic_turn_slight_right
-            ManeuverType.NOTIFICATION_RIGHT -> R.drawable.ic_turn_right
-            
-            // U-turn
-            ManeuverType.UTURN -> R.drawable.ic_uturn
-            ManeuverType.CONTINUE_UTURN -> R.drawable.ic_uturn
-            
-            // Roundabouts
-            ManeuverType.ROUNDABOUT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_LEFT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_RIGHT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_STRAIGHT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_SHARP_LEFT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_SHARP_RIGHT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_SLIGHT_LEFT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_SLIGHT_RIGHT -> R.drawable.ic_roundabout
-            ManeuverType.ROUNDABOUT_EXIT -> R.drawable.ic_roundabout
-            
-            // Merge
-            ManeuverType.MERGE -> R.drawable.ic_merge
-            
-            // Ramps
-            ManeuverType.ON_RAMP -> R.drawable.ic_ramp
-            ManeuverType.OFF_RAMP -> R.drawable.ic_ramp
-            
-            // Straight/Continue
-            ManeuverType.STRAIGHT -> R.drawable.ic_straight
-            ManeuverType.CONTINUE -> R.drawable.ic_continue
-            ManeuverType.CONTINUE_STRAIGHT -> R.drawable.ic_straight
-            ManeuverType.NEW_NAME_STRAIGHT -> R.drawable.ic_straight
-            ManeuverType.NOTIFICATION_STRAIGHT -> R.drawable.ic_straight
-            
-            // Start/End
-            ManeuverType.DEPART -> R.drawable.ic_straight
-            ManeuverType.ARRIVE -> R.drawable.check_flag
-            
-            // Unknown
-            ManeuverType.UNKNOWN -> R.drawable.ic_straight
-        }
+
+    // ====================================================================
+    //  Lifecycle
+    // ====================================================================
+
+    /** Release pending callbacks. Call from Activity.onDestroy. */
+    fun cleanup() {
+        // No pending runnables left after accident-banner removal.
+        Log.d("UiController", "cleanup()")
+    }
+
+    // ====================================================================
+    //  Maneuver icon mapping
+    // ====================================================================
+
+    private fun getManeuverIcon(type: ManeuverType): Int = when (type) {
+        // Left
+        ManeuverType.TURN_LEFT,
+        ManeuverType.TURN_SHARP_LEFT,
+        ManeuverType.END_OF_ROAD_LEFT,
+        ManeuverType.NOTIFICATION_LEFT -> R.drawable.ic_turn_left
+
+        ManeuverType.TURN_SLIGHT_LEFT,
+        ManeuverType.CONTINUE_LEFT,
+        ManeuverType.CONTINUE_SLIGHT_LEFT,
+        ManeuverType.NEW_NAME_LEFT -> R.drawable.ic_turn_slight_left
+
+        ManeuverType.FORK_LEFT,
+        ManeuverType.FORK_SLIGHT_LEFT -> R.drawable.ic_fork_left
+
+        ManeuverType.MERGE_LEFT,
+        ManeuverType.MERGE_SLIGHT_LEFT -> R.drawable.ic_merge
+
+        // Right
+        ManeuverType.TURN_RIGHT,
+        ManeuverType.TURN_SHARP_RIGHT,
+        ManeuverType.END_OF_ROAD_RIGHT,
+        ManeuverType.NOTIFICATION_RIGHT -> R.drawable.ic_turn_right
+
+        ManeuverType.TURN_SLIGHT_RIGHT,
+        ManeuverType.CONTINUE_RIGHT,
+        ManeuverType.CONTINUE_SLIGHT_RIGHT,
+        ManeuverType.NEW_NAME_RIGHT -> R.drawable.ic_turn_slight_right
+
+        ManeuverType.FORK_RIGHT,
+        ManeuverType.FORK_SLIGHT_RIGHT -> R.drawable.ic_fork_right
+
+        ManeuverType.MERGE_RIGHT,
+        ManeuverType.MERGE_SLIGHT_RIGHT -> R.drawable.ic_merge
+
+        // U-turn
+        ManeuverType.UTURN,
+        ManeuverType.CONTINUE_UTURN -> R.drawable.ic_uturn
+
+        // Roundabout
+        ManeuverType.ROUNDABOUT,
+        ManeuverType.ROUNDABOUT_LEFT,
+        ManeuverType.ROUNDABOUT_RIGHT,
+        ManeuverType.ROUNDABOUT_STRAIGHT,
+        ManeuverType.ROUNDABOUT_SHARP_LEFT,
+        ManeuverType.ROUNDABOUT_SHARP_RIGHT,
+        ManeuverType.ROUNDABOUT_SLIGHT_LEFT,
+        ManeuverType.ROUNDABOUT_SLIGHT_RIGHT,
+        ManeuverType.ROUNDABOUT_EXIT -> R.drawable.ic_roundabout
+
+        // Merge
+        ManeuverType.MERGE -> R.drawable.ic_merge
+
+        // Ramps
+        ManeuverType.ON_RAMP,
+        ManeuverType.OFF_RAMP -> R.drawable.ic_ramp
+
+        // Straight / continue
+        ManeuverType.STRAIGHT,
+        ManeuverType.CONTINUE_STRAIGHT,
+        ManeuverType.NEW_NAME_STRAIGHT,
+        ManeuverType.NOTIFICATION_STRAIGHT -> R.drawable.ic_straight
+
+        ManeuverType.CONTINUE -> R.drawable.ic_continue
+
+        // Start / end
+        ManeuverType.DEPART -> R.drawable.ic_straight
+        ManeuverType.ARRIVE -> R.drawable.check_flag
+
+        ManeuverType.UNKNOWN -> R.drawable.ic_straight
     }
 }

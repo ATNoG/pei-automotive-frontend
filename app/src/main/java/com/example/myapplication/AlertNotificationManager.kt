@@ -6,93 +6,93 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.example.myapplication.config.AlertPreferenceManager
-import java.util.LinkedList
 import java.util.Locale
-import java.util.Queue
 
 class AlertNotificationManager(
     private val activity: Activity,
-    private val alertPreferenceManager: AlertPreferenceManager
+    private val alertPreferenceManager: AlertPreferenceManager,
+    private val inAppNotificationManager: InAppNotificationManager
 ) {
 
     companion object {
         private const val TAG = "AlertNotificationManager"
+
+        // Notification channels are kept so that any previously granted
+        // permissions / channel settings remain valid, but we no longer
+        // post native heads-up notifications — everything goes through
+        // InAppNotificationManager instead.
         private const val CHANNEL_ID = "weather_alerts"
         private const val CHANNEL_NAME = "Weather Alerts"
         private const val CHANNEL_DESCRIPTION = "Notifications for weather alerts and warnings"
-        
-        // Accident alerts channel
+
         private const val ACCIDENT_CHANNEL_ID = "accident_alerts"
         private const val ACCIDENT_CHANNEL_NAME = "Accident Alerts"
-        private const val ACCIDENT_CHANNEL_DESCRIPTION = "Critical notifications for accident alerts ahead"
-        
+        private const val ACCIDENT_CHANNEL_DESCRIPTION =
+            "Critical notifications for accident alerts ahead"
+
         const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
-        // Delay between notifications (heads-up notifications auto-dismiss after ~8 seconds)
-        private const val NOTIFICATION_DELAY_MS = 9000L
-
-        // Cooldown between repeated TTS for the same alert type (prevents spam)
+        /** Cooldown between repeated TTS for the same alert type (prevents spam). */
         private const val SPEAK_COOLDOWN_MS = 10_000L
     }
 
+    // ── Deduplication sets ───────────────────────────────────────────────
+
     private val displayedAlerts = mutableSetOf<String>()
     private val displayedAccidentAlerts = mutableSetOf<String>()
-    private var notificationId = 1000
-    private val alertQueue: Queue<OpenWeatherMapClient.WeatherAlert> = LinkedList()
-    private var isProcessingQueue = false
-    private val handler = Handler(Looper.getMainLooper())
-    
-    // Text-to-Speech for alerts
+
+    // ── TTS ──────────────────────────────────────────────────────────────
+
     private var tts: TextToSpeech? = null
     private var ttsInitialized = false
+    private val handler = Handler(Looper.getMainLooper())
 
-    // Cooldown tracking per alert type to prevent TTS spam
+    /** Cooldown tracking per alert type to prevent TTS spam. */
     private val lastSpokenTimestamps = mutableMapOf<AlertPreferenceManager.AlertType, Long>()
 
     init {
-        createNotificationChannel()
-        createAccidentNotificationChannel()
+        createNotificationChannels()
         initTextToSpeech()
     }
-    
+
+    // ── TTS lifecycle ────────────────────────────────────────────────────
+
     private fun initTextToSpeech() {
         tts = TextToSpeech(activity) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val result = tts?.setLanguage(Locale.US)
-                ttsInitialized = result != TextToSpeech.LANG_MISSING_DATA && 
-                                 result != TextToSpeech.LANG_NOT_SUPPORTED
+                ttsInitialized =
+                    result != TextToSpeech.LANG_MISSING_DATA &&
+                            result != TextToSpeech.LANG_NOT_SUPPORTED
                 if (ttsInitialized) {
-                    Log.d(TAG, "Text-to-Speech initialized successfully")
+                    Log.d(TAG, "TTS initialised successfully")
                 } else {
-                    Log.w(TAG, "Text-to-Speech language not supported")
+                    Log.w(TAG, "TTS language not supported")
                 }
             } else {
-                Log.e(TAG, "Text-to-Speech initialization failed")
+                Log.e(TAG, "TTS initialisation failed")
             }
         }
     }
-    
+
     private fun speakText(text: String, flush: Boolean = true) {
         if (ttsInitialized) {
-            val queueMode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
-            tts?.speak(text, queueMode, null, "alert_${System.currentTimeMillis()}")
-            Log.d(TAG, "TTS speaking: $text")
+            val mode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+            tts?.speak(text, mode, null, "alert_${System.currentTimeMillis()}")
+            Log.d(TAG, "TTS: $text")
         } else {
-            Log.w(TAG, "TTS not initialized, cannot speak: $text")
+            Log.w(TAG, "TTS not ready: $text")
         }
     }
-    
+
     fun shutdown() {
         tts?.stop()
         tts?.shutdown()
@@ -100,10 +100,10 @@ class AlertNotificationManager(
         ttsInitialized = false
     }
 
+    // ── Public preference helpers ────────────────────────────────────────
+
     /**
      * Check if a given alert type should be processed (enabled by the user).
-     * Centralizes the preference gating so callers don't need direct access
-     * to AlertPreferenceManager.
      */
     fun shouldProcessAlert(alertType: AlertPreferenceManager.AlertType): Boolean =
         alertPreferenceManager.isEnabled(alertType)
@@ -111,12 +111,6 @@ class AlertNotificationManager(
     /**
      * Speak an alert message if the event type is enabled, audio is on,
      * and the cooldown period has elapsed.
-     * Thread-safe: all work is posted to the main looper.
-     *
-     * @param alertType The alert category.
-     * @param text      The text to speak.
-     * @param flush     If true, interrupts current speech (for critical alerts).
-     *                  If false, queues after current speech.
      */
     fun speakForAlert(
         alertType: AlertPreferenceManager.AlertType,
@@ -125,7 +119,8 @@ class AlertNotificationManager(
     ) {
         handler.post {
             if (!alertPreferenceManager.isEnabled(alertType) ||
-                !alertPreferenceManager.isAudioEnabled(alertType)) return@post
+                !alertPreferenceManager.isAudioEnabled(alertType)
+            ) return@post
 
             val now = System.currentTimeMillis()
             val lastSpoken = lastSpokenTimestamps[alertType] ?: 0L
@@ -136,41 +131,47 @@ class AlertNotificationManager(
         }
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                description = CHANNEL_DESCRIPTION
-                enableVibration(false)
-                setShowBadge(true)
-            }
+    // ── Notification channels (kept for backwards compatibility) ─────────
 
-            val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-            Log.d(TAG, "Notification channel created: $CHANNEL_ID")
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm =
+                activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
+                    .apply {
+                        description = CHANNEL_DESCRIPTION
+                        enableVibration(false)
+                        setShowBadge(true)
+                    }
+            )
+
+            nm.createNotificationChannel(
+                NotificationChannel(
+                    ACCIDENT_CHANNEL_ID,
+                    ACCIDENT_CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = ACCIDENT_CHANNEL_DESCRIPTION
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 500, 200, 500)
+                    setShowBadge(true)
+                }
+            )
+
+            Log.d(TAG, "Notification channels ensured")
         }
     }
-    
-    private fun createAccidentNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(ACCIDENT_CHANNEL_ID, ACCIDENT_CHANNEL_NAME, importance).apply {
-                description = ACCIDENT_CHANNEL_DESCRIPTION
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 200, 500)
-                setShowBadge(true)
-            }
 
-            val notificationManager = activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-            Log.d(TAG, "Accident notification channel created: $ACCIDENT_CHANNEL_ID")
-        }
-    }
+    // ── Permission helpers ───────────────────────────────────────────────
 
     fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(
+                    activity, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 ActivityCompat.requestPermissions(
                     activity,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
@@ -180,149 +181,54 @@ class AlertNotificationManager(
         }
     }
 
-    fun hasNotificationPermission(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED
+    fun hasNotificationPermission(): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                activity, Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
-    }
 
+    // ── Weather alerts ───────────────────────────────────────────────────
+
+    /**
+     * Show in-app banner notifications for new weather alerts.
+     * Already-shown alerts (keyed by event + start time) are skipped.
+     * TTS is spoken for the first new alert (subject to cooldown).
+     */
     fun showWeatherAlerts(alerts: List<OpenWeatherMapClient.WeatherAlert>) {
-        if (alerts.isEmpty()) {
-            Log.d(TAG, "No alerts to display")
-            return
-        }
+        if (alerts.isEmpty()) return
+        Log.d(TAG, "Processing ${alerts.size} weather alert(s)")
 
-        Log.d(TAG, "Processing ${alerts.size} weather alerts")
-
-        // Filter out already displayed alerts and add new ones to queue
+        var firstNewAlert = true
         alerts.forEach { alert ->
-            val alertKey = "${alert.event}_${alert.start}"
-            if (!displayedAlerts.contains(alertKey)) {
-                alertQueue.add(alert)
-                displayedAlerts.add(alertKey)
-                Log.d(TAG, "Added alert to queue: ${alert.event}")
-                // Speak first new weather alert (cooldown prevents spam)
-                speakForAlert(AlertPreferenceManager.AlertType.WEATHER, "Weather alert: ${alert.event}")
-            }
-        }
+            val key = "${alert.event}_${alert.start}"
+            if (displayedAlerts.contains(key)) return@forEach
 
-        // Start processing queue if not already processing
-        if (!isProcessingQueue && alertQueue.isNotEmpty()) {
-            processNextAlert()
-        }
-    }
+            displayedAlerts.add(key)
+            Log.d(TAG, "Queuing weather alert: ${alert.event}")
 
-    private fun processNextAlert() {
-        if (alertQueue.isEmpty()) {
-            isProcessingQueue = false
-            Log.d(TAG, "Alert queue empty, finished processing")
-            return
-        }
-
-        isProcessingQueue = true
-        val alert = alertQueue.poll()
-
-        if (alert != null) {
-            showNotification(alert)
-
-            // Schedule next alert after delay (to allow current heads-up to auto-dismiss)
-            if (alertQueue.isNotEmpty()) {
-                handler.postDelayed({
-                    processNextAlert()
-                }, NOTIFICATION_DELAY_MS)
-            } else {
-                isProcessingQueue = false
-            }
-        } else {
-            isProcessingQueue = false
-        }
-    }
-
-    private fun showNotification(alert: OpenWeatherMapClient.WeatherAlert) {
-        if (!hasNotificationPermission()) {
-            Log.w(TAG, "Notification permission not granted")
-            requestNotificationPermission()
-            return
-        }
-
-        try {
-            val iconRes = getAlertIcon(alert.event)
             val emoji = getAlertEmoji(alert.event)
-            val title = "$emoji ${alert.event}"
-            
-            // Create large icon bitmap for right side of notification
-            val largeIcon = BitmapFactory.decodeResource(activity.resources, iconRes)
-
-            val builder = NotificationCompat.Builder(activity, CHANNEL_ID)
-                .setSmallIcon(iconRes)
-                .setLargeIcon(largeIcon)
-                .setContentTitle(title)
-                .setContentText(alert.description.take(150))
-                .setSubText("Weather Alert")
-                .setCategory(NotificationCompat.CATEGORY_NAVIGATION)
-                .setAutoCancel(true)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setOnlyAlertOnce(false)
-
-            val currentNotificationId = notificationId++
-
-            with(NotificationManagerCompat.from(activity)) {
-                if (ActivityCompat.checkSelfPermission(
-                        activity,
-                        Manifest.permission.POST_NOTIFICATIONS
-                    ) == PackageManager.PERMISSION_GRANTED || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-                ) {
-                    notify(currentNotificationId, builder.build())
-                    Log.d(TAG, "Notification shown: ${alert.event} with ID: $currentNotificationId (${alertQueue.size} remaining in queue)")
-                }
+            val message = alert.description.take(120).let {
+                if (it.length == 120) "$it…" else it
             }
 
-        } catch (e: Exception) {
-            Log.e(TAG, "Error showing notification: ${e.message}", e)
-        }
-    }
+            inAppNotificationManager.show(
+                type = InAppNotificationManager.Type.WEATHER,
+                title = "$emoji ${alert.event}",
+                message = message,
+                duration = InAppNotificationManager.LONG_DURATION_MS
+            )
 
-    private fun getAlertEmoji(event: String): String {
-        return when {
-            event.contains("Tornado", ignoreCase = true) -> "🌪️"
-            event.contains("Thunderstorm", ignoreCase = true) -> "⛈️"
-            event.contains("Rain", ignoreCase = true) -> "🌧️"
-            event.contains("Snow", ignoreCase = true) -> "❄️"
-            event.contains("Wind", ignoreCase = true) -> "💨"
-            event.contains("Fog", ignoreCase = true) -> "🌫️"
-            event.contains("Heat", ignoreCase = true) -> "🔥"
-            event.contains("Cold", ignoreCase = true) -> "🥶"
-            event.contains("Flood", ignoreCase = true) -> "🌊"
-            event.contains("Hurricane", ignoreCase = true) -> "🌀"
-            event.contains("Hail", ignoreCase = true) -> "🧊"
-            event.contains("Dust", ignoreCase = true) -> "🏜️"
-            event.contains("Ice", ignoreCase = true) -> "🧊"
-            event.contains("Frost", ignoreCase = true) -> "❄️"
-            event.contains("Fire", ignoreCase = true) -> "🔥"
-            event.contains("Smoke", ignoreCase = true) -> "💨"
-            event.contains("Storm", ignoreCase = true) -> "🌩️"
-            else -> "⚠️"
-        }
-    }
-
-    private fun getAlertIcon(event: String): Int {
-        return when {
-            event.contains("Tornado", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Thunderstorm", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Rain", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Snow", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Wind", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Fog", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Heat", ignoreCase = true) -> R.drawable.ic_weather_sun
-            event.contains("Cold", ignoreCase = true) -> R.drawable.ic_weather_sun
-            event.contains("Flood", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Hurricane", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Hail", ignoreCase = true) -> R.drawable.ic_weather_rain
-            event.contains("Dust", ignoreCase = true) -> R.drawable.ic_weather_sun
-            else -> R.drawable.ic_weather_rain
+            // Speak only the first new alert to avoid TTS overload
+            if (firstNewAlert) {
+                firstNewAlert = false
+                speakForAlert(
+                    AlertPreferenceManager.AlertType.WEATHER,
+                    "Weather alert: ${alert.event}"
+                )
+            }
         }
     }
 
@@ -331,17 +237,17 @@ class AlertNotificationManager(
         return currentTime >= alert.start && currentTime <= alert.end
     }
 
-    fun getActiveAlerts(alerts: List<OpenWeatherMapClient.WeatherAlert>): List<OpenWeatherMapClient.WeatherAlert> {
-        return alerts.filter { isAlertActive(it) }
-    }
+    fun getActiveAlerts(
+        alerts: List<OpenWeatherMapClient.WeatherAlert>
+    ): List<OpenWeatherMapClient.WeatherAlert> = alerts.filter { isAlertActive(it) }
 
     fun clearDisplayedAlerts() {
         displayedAlerts.clear()
-        Log.d(TAG, "Cleared all displayed alerts tracking")
+        Log.d(TAG, "Cleared displayed weather alert keys")
     }
-    
-    // ========== Accident Alert Methods ==========
-    
+
+    // ── Accident alerts ──────────────────────────────────────────────────
+
     /**
      * Data class representing an accident alert event.
      */
@@ -352,49 +258,62 @@ class AlertNotificationManager(
         val distanceMeters: Double,
         val timestamp: Long
     )
-    
+
     /**
-     * Show an accident alert notification with text-to-speech.
+     * Process an accident alert: deduplicate, speak via TTS, and invoke
+     * [onAccidentDisplayed] so the caller can update the map and show
+     * the in-app notification with the distance.
      */
     fun showAccidentAlert(
         accidentData: AccidentAlertData,
         onAccidentDisplayed: ((AccidentAlertData) -> Unit)? = null
     ) {
-        // Check if we already displayed this accident
         if (displayedAccidentAlerts.contains(accidentData.eventId)) {
-            Log.d(TAG, "Accident ${accidentData.eventId} already displayed, skipping")
+            Log.d(TAG, "Accident ${accidentData.eventId} already shown, skipping")
             return
         }
-        
+
         displayedAccidentAlerts.add(accidentData.eventId)
-        Log.d(TAG, "Showing accident alert: ${accidentData.eventId}")
-        
-        // Use shared distance formatting utility
+        Log.d(TAG, "Processing accident alert: ${accidentData.eventId}")
+
         val distanceText = UiController.formatDistance(accidentData.distanceMeters)
-        
-        // Speak the alert using TTS (respects audio preference)
+
         speakForAlert(
             AlertPreferenceManager.AlertType.ACCIDENT,
             "Warning! Accident ahead in $distanceText."
         )
-        
-        // Invoke callback for UI updates
+
         onAccidentDisplayed?.invoke(accidentData)
     }
-    
-    
-    /**
-     * Check if an accident alert has been displayed.
-     */
-    fun isAccidentAlertDisplayed(eventId: String): Boolean {
-        return displayedAccidentAlerts.contains(eventId)
-    }
-    
-    /**
-     * Clear displayed accident alerts.
-     */
+
+    fun isAccidentAlertDisplayed(eventId: String): Boolean =
+        displayedAccidentAlerts.contains(eventId)
+
     fun clearDisplayedAccidentAlerts() {
         displayedAccidentAlerts.clear()
-        Log.d(TAG, "Cleared all displayed accident alerts tracking")
+        Log.d(TAG, "Cleared displayed accident alert keys")
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────
+
+    private fun getAlertEmoji(event: String): String = when {
+        event.contains("Tornado", ignoreCase = true) -> "🌪️"
+        event.contains("Thunderstorm", ignoreCase = true) -> "⛈️"
+        event.contains("Rain", ignoreCase = true) -> "🌧️"
+        event.contains("Snow", ignoreCase = true) -> "❄️"
+        event.contains("Wind", ignoreCase = true) -> "💨"
+        event.contains("Fog", ignoreCase = true) -> "🌫️"
+        event.contains("Heat", ignoreCase = true) -> "🔥"
+        event.contains("Cold", ignoreCase = true) -> "🥶"
+        event.contains("Flood", ignoreCase = true) -> "🌊"
+        event.contains("Hurricane", ignoreCase = true) -> "🌀"
+        event.contains("Hail", ignoreCase = true) -> "🧊"
+        event.contains("Dust", ignoreCase = true) -> "🏜️"
+        event.contains("Ice", ignoreCase = true) -> "🧊"
+        event.contains("Frost", ignoreCase = true) -> "❄️"
+        event.contains("Fire", ignoreCase = true) -> "🔥"
+        event.contains("Smoke", ignoreCase = true) -> "💨"
+        event.contains("Storm", ignoreCase = true) -> "🌩️"
+        else -> "⚠️"
     }
 }

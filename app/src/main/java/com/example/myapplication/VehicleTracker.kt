@@ -24,8 +24,7 @@ import kotlin.math.sin
 class VehicleTracker(
     private val mapController: MapController,
     private val topDownCarView: TopDownCarView,
-    private val overtakingWarningIcon: ImageView,
-    private val evOverlay: EmergencyVehicleOverlay
+    private val overtakingWarningIcon: ImageView
 ) {
 
     companion object {
@@ -152,8 +151,6 @@ class VehicleTracker(
 
         if (activeEmergencyVehicles.containsKey(carId)) {
             activeEmergencyVehicles[carId] = System.currentTimeMillis()
-            val distance = haversineDistanceM(userLat, userLon, lat, lon)
-            evOverlay.updateDistance(distance)
         }
     }
 
@@ -174,8 +171,6 @@ class VehicleTracker(
             refreshTopDownView()
         }
 
-        evOverlay.showAlert(evId, liveDistance)
-
         // Schedule cleanup in case no further alerts arrive
         mainHandler.postDelayed({ cleanupEV(evId) }, EV_CLEANUP_DELAY_MS)
     }
@@ -193,7 +188,7 @@ class VehicleTracker(
             scheduleEVMapUpdate()
             refreshTopDownView()
 
-            if (activeEmergencyVehicles.isEmpty()) evOverlay.dismiss()
+
         }
     }
 

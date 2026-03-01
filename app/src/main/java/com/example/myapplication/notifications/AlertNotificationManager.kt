@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.example.myapplication.notifications
 
 import android.Manifest
 import android.app.Activity
@@ -13,6 +13,8 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.myapplication.OpenWeatherMapClient
+import com.example.myapplication.UiController
 import com.example.myapplication.config.AlertPreferenceManager
 import java.util.Locale
 

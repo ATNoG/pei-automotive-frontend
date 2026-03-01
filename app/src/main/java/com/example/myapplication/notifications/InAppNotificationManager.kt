@@ -1,4 +1,6 @@
-package com.example.myapplication
+package com.example.myapplication.notifications
+
+import com.example.myapplication.R
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter

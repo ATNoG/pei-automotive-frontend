@@ -1201,8 +1201,19 @@ class MapController(
      * Change map style to light or dark mode
      */
     fun setMapStyle(lightMode: Boolean, onStyleLoaded: (() -> Unit)? = null) {
+        // Cancel all in-flight animations before swapping styles.
+        // Each animation runnable captures a reference to the current Style object.
+        // When setStyle() is called, MapLibre tears down the old style and any access
+        // to its sources/layers from a running runnable throws a native exception.
+        currentAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        currentAnimationRunnable = null
+        otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        otherCarsAnimationRunnable = null
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable = null
+
         val styleUrl = if (lightMode) STYLE_URL_LIGHT else STYLE_URL_DARK
-        
+
         mapLibreMap?.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
             // Reapply all configurations
             optimizeMapLayers(style)

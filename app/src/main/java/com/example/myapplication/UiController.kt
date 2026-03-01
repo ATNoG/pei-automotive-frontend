@@ -1,7 +1,7 @@
 package com.example.myapplication
 
 import android.app.Activity
-import android.app.AlertDialog
+
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -289,25 +289,6 @@ class UiController(private val activity: Activity) {
     // ====================================================================
     //  ETA / Distance (bottom dashboard)
     // ====================================================================
-
-    fun updateEtaAndDistance(etaText: String, distanceText: String) {
-        txtEta?.text = etaText
-        txtDistance?.text = distanceText
-        activity.findViewById<TextView>(R.id.txtNavDistance)?.text = distanceText
-        activity.findViewById<TextView>(R.id.txtNavArrival)?.text = etaText
-    }
-
-    // ====================================================================
-    //  Generic popup (AlertDialog — for exceptional cases only)
-    // ====================================================================
-
-    fun showPopup(title: String, message: String) {
-        AlertDialog.Builder(activity)
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
-            .show()
-    }
 
     // ====================================================================
     //  Navigation mode

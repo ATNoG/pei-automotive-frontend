@@ -18,6 +18,8 @@ import com.example.myapplication.config.AppConfig
 import com.example.myapplication.mqtt.MqttEventListener
 import com.example.myapplication.mqtt.MqttEventRouter
 import com.example.myapplication.navigation.NavigationListener
+import com.example.myapplication.notifications.AlertNotificationManager
+import com.example.myapplication.notifications.InAppNotificationManager
 import com.example.myapplication.navigation.NavigationManager
 import com.example.myapplication.navigation.models.*
 import com.example.myapplication.navigation.routing.OsrmApiClient
@@ -43,6 +45,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private lateinit var navigationManager: NavigationManager
     private lateinit var inAppNotificationManager: InAppNotificationManager
     private lateinit var alertNotificationManager: AlertNotificationManager
+    // Note: both managers live in com.example.myapplication.notifications
     private lateinit var alertPreferenceManager: AlertPreferenceManager
     private lateinit var alertSettingsDialog: AlertSettingsDialog
 

@@ -463,7 +463,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             inAppNotificationManager.show(
                 type = InAppNotificationManager.Type.ERROR,
-                title = "Connection Error",
+                title = "❌ Connection Error",
                 message = error
             )
         }

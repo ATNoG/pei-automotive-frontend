@@ -5,8 +5,6 @@ import com.example.myapplication.R
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.app.Activity
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -17,9 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
-import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.widget.ImageViewCompat
 
 /**
  * InAppNotificationManager — unified in-app notification system.
@@ -42,46 +38,14 @@ class InAppNotificationManager(private val activity: Activity) {
 
     // ── Notification Types ───────────────────────────────────────────────
 
-    enum class Type(
-        val accentColor: Int,
-        val iconRes: Int,
-        val tintIcon: Boolean = true
-    ) {
-        INFO(
-            accentColor = 0xFF4A90D9.toInt(),
-            iconRes = R.drawable.ic_navigation,
-            tintIcon = true
-        ),
-        SUCCESS(
-            accentColor = 0xFF4CAF50.toInt(),
-            iconRes = R.drawable.check_flag,
-            tintIcon = false
-        ),
-        WARNING(
-            accentColor = 0xFFFFD54F.toInt(),
-            iconRes = R.drawable.ic_accident_marker,
-            tintIcon = true
-        ),
-        ERROR(
-            accentColor = 0xFFFF4444.toInt(),
-            iconRes = R.drawable.ic_close,
-            tintIcon = true
-        ),
-        ACCIDENT(
-            accentColor = 0xFFFF6B35.toInt(),
-            iconRes = R.drawable.ic_accident_marker,
-            tintIcon = true
-        ),
-        WEATHER(
-            accentColor = 0xFF9EC8F5.toInt(),
-            iconRes = R.drawable.ic_weather_rain,
-            tintIcon = false
-        ),
-        EMERGENCY(
-            accentColor = 0xFFFF4444.toInt(),
-            iconRes = R.drawable.ic_ev_ambulance,
-            tintIcon = false
-        )
+    enum class Type(val accentColor: Int) {
+        INFO(accentColor = 0xFF4A90D9.toInt()),
+        SUCCESS(accentColor = 0xFF4CAF50.toInt()),
+        WARNING(accentColor = 0xFFFFD54F.toInt()),
+        ERROR(accentColor = 0xFFFF4444.toInt()),
+        ACCIDENT(accentColor = 0xFFFF6B35.toInt()),
+        WEATHER(accentColor = 0xFF9EC8F5.toInt()),
+        EMERGENCY(accentColor = 0xFFFF4444.toInt())
     }
 
     // ── Data ─────────────────────────────────────────────────────────────
@@ -196,7 +160,7 @@ class InAppNotificationManager(private val activity: Activity) {
 
         val density = activity.resources.displayMetrics.density
         val widthPx = (420 * density).toInt()
-        val topMarginPx = (20 * density).toInt()
+        val topMarginPx = (15 * density).toInt()
 
         val lp = android.widget.FrameLayout.LayoutParams(
             widthPx,
@@ -391,21 +355,7 @@ class InAppNotificationManager(private val activity: Activity) {
     private fun inflateNotificationView(notification: AppNotification): View {
         val view = LayoutInflater.from(activity).inflate(R.layout.notification_banner, null)
 
-        // Left accent strip was removed from the layout. No background tint required.
-
-        // Icon
-        val iconView = view.findViewById<ImageView>(R.id.notifIcon)
-        iconView.setImageResource(notification.type.iconRes)
-        if (notification.type.tintIcon) {
-            ImageViewCompat.setImageTintList(
-                iconView,
-                ColorStateList.valueOf(notification.type.accentColor)
-            )
-        } else {
-            ImageViewCompat.setImageTintList(iconView, null)
-        }
-
-        // Title
+        // Title — emoji is embedded directly in the title string at the call site
         view.findViewById<TextView>(R.id.notifTitle).text = notification.title
 
         // Message (optional)

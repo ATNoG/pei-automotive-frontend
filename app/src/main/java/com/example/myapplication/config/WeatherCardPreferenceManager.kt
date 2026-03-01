@@ -19,7 +19,7 @@ class WeatherCardPreferenceManager(context: Context) {
             key = "weather_card_wind",
             label = "Wind",
             emoji = "💨",
-            unit = "km/h",
+            unit = "",
             defaultEnabled = true
         ),
         HUMIDITY(

@@ -53,7 +53,6 @@ class UiController(private val activity: Activity) {
     private val txtSpeedLimit: TextView? = activity.findViewById(R.id.txtSpeedLimit)
     private val txtCurrentSpeed: TextView? = activity.findViewById(R.id.txtCurrentSpeed)
 
-    @Suppress("unused")
     private val txtSpeedUnit: TextView? = activity.findViewById(R.id.txtSpeedUnit)
     private val speedAlertIcon: ImageView? = activity.findViewById(R.id.speedAlertIcon)
     private val speedAlertBlur: View? = activity.findViewById(R.id.speedAlertBlur)
@@ -119,6 +118,7 @@ class UiController(private val activity: Activity) {
             android.graphics.Color.WHITE
         }
         txtCurrentSpeed?.setTextColor(speedColor)
+        txtSpeedUnit?.setTextColor(speedColor)
         activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.setTextColor(speedColor)
     }
 
@@ -223,12 +223,21 @@ class UiController(private val activity: Activity) {
         field: WeatherCardPreferenceManager.Field,
         data: OpenWeatherMapClient.WeatherData
     ): String = when (field) {
-        WeatherCardPreferenceManager.Field.WIND      -> "${data.windSpeed}"
+        WeatherCardPreferenceManager.Field.WIND      -> "${data.windSpeed} km/h ${windDegreesToDirection(data.windDeg)}"
         WeatherCardPreferenceManager.Field.HUMIDITY  -> "${data.humidity}"
         WeatherCardPreferenceManager.Field.FEELS_LIKE -> "${data.feelsLike}"
         WeatherCardPreferenceManager.Field.PRESSURE  -> "${data.pressure}"
         WeatherCardPreferenceManager.Field.VISIBILITY -> "${data.visibility}"
         WeatherCardPreferenceManager.Field.UV_INDEX  -> String.format("%.1f", data.uvIndex)
+    }
+
+    private fun windDegreesToDirection(deg: Int): String {
+        val directions = arrayOf(
+            "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+        )
+        val index = ((deg + 11.25) / 22.5).toInt() % 16
+        return directions[index]
     }
 
     /**
@@ -287,7 +296,8 @@ class UiController(private val activity: Activity) {
 
         // ── Detail rows ───────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "${weatherData.feelsLike}°C"
-        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text = "${weatherData.windSpeed} km/h"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text =
+            "${weatherData.windSpeed} km/h  ${windDegreesToDirection(weatherData.windDeg)}"
         dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${weatherData.humidity}%"
         dialogView.findViewById<TextView>(R.id.txtPressure)?.text = "${weatherData.pressure} hPa"
         dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "${weatherData.visibility} km"

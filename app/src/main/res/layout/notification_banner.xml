@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/notificationRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="64dp"
+    android:background="@drawable/card_background_with_stroke"
+    android:clipToOutline="true"
+    android:clipChildren="true"
+    android:clipToPadding="false"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp">
+
+    <!-- Type icon — vertically centered in the card -->
+    <ImageView
+        android:id="@+id/notifIcon"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:scaleType="fitCenter"
+        android:layout_marginStart="6dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Text container holds title + optional message, centered vertically -->
+    <LinearLayout
+        android:id="@+id/notifTextArea"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:layout_marginStart="12dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="12dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/notifIcon"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/notifTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:lineSpacingMultiplier="1.1"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:text="Notification Title" />
+
+        <TextView
+            android:id="@+id/notifMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AAAAAA"
+            android:textSize="13sp"
+            android:lineSpacingMultiplier="1.15"
+            android:maxLines="3"
+            android:ellipsize="end"
+            android:layout_marginTop="3dp"
+            android:visibility="gone"
+            android:text="Optional message body goes here." />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

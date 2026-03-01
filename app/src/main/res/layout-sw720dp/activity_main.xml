@@ -304,13 +304,12 @@
         android:clickable="true"
         android:focusable="true">
 
-        <ImageView
-            android:id="@+id/weatherIcon"
-            android:src="@drawable/ic_weather_rain"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:adjustViewBounds="true"
-            android:scaleType="fitCenter" />
+        <TextView
+            android:id="@+id/txtWeatherEmoji"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🌡️"
+            android:textSize="36sp"/>
 
         <TextView
             android:id="@+id/txtTemperature"
@@ -323,47 +322,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
-        <!-- Wind Section -->
+        <!-- Dynamic extras (wind, humidity, etc.) – populated by UiController -->
         <LinearLayout
-            android:id="@+id/windSection"
+            android:id="@+id/weatherCardExtras"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:visibility="visible">
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="32dp"
-                android:background="#44FFFFFF"
-                android:layout_marginHorizontal="16dp"/>
-
-            <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_wind"
-                app:tint="#9EC8F5"/>
-
-            <TextView
-                android:id="@+id/txtWindSpeed"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="12"
-                android:textColor="#FFFFFF"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:fontFamily="sans-serif-black"
-                android:layout_marginStart="12dp"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="km/h"
-                android:textColor="#AAAAAA"
-                android:textSize="16sp"
-                android:layout_marginStart="6dp"/>
-
-        </LinearLayout>
+            android:visibility="gone"/>
 
 </LinearLayout>
 

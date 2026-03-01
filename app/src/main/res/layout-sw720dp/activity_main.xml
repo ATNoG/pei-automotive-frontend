@@ -313,7 +313,7 @@
 
         <TextView
             android:id="@+id/txtTemperature"
-            android:text="11º"
+            android:text="11°C"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
             android:textSize="28sp"

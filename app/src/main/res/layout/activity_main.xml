@@ -42,7 +42,7 @@
                 android:id="@+id/txtTemperature"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="13°"
+                android:text="13°C"
                 android:textColor="#FFFFFF"
                 android:textSize="28sp"
                 android:textStyle="bold"
@@ -193,6 +193,7 @@
                 android:fontFamily="sans-serif-black"/>
                 
             <TextView
+                android:id="@+id/txtSpeedUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=" KM/H"

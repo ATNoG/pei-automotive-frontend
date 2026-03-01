@@ -120,6 +120,23 @@ class UiController(private val activity: Activity) {
         txtCurrentSpeed?.setTextColor(speedColor)
         txtSpeedUnit?.setTextColor(speedColor)
         activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.setTextColor(speedColor)
+
+        // Speed limit sign: turn red and scale up when speeding, reset when not
+        if (isSpeeding) {
+            txtSpeedLimit?.setTextColor(android.graphics.Color.RED)
+            speedLimitContainer?.animate()
+                ?.scaleX(1.2f)
+                ?.scaleY(1.2f)
+                ?.setDuration(300)
+                ?.start()
+        } else {
+            txtSpeedLimit?.setTextColor(android.graphics.Color.BLACK)
+            speedLimitContainer?.animate()
+                ?.scaleX(1.0f)
+                ?.scaleY(1.0f)
+                ?.setDuration(300)
+                ?.start()
+        }
     }
 
     fun showSpeedAlert() {

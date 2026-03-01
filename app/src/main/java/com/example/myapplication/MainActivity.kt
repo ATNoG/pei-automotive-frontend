@@ -452,7 +452,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             inAppNotificationManager.show(
                 type = InAppNotificationManager.Type.INFO,
-                title = "Connected",
+                title = "✔️ Connected",
                 message = "Live data feed active",
                 duration = InAppNotificationManager.SHORT_DURATION_MS
             )

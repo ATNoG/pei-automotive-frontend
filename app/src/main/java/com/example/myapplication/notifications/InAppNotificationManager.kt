@@ -5,6 +5,7 @@ import com.example.myapplication.R
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.app.Activity
+import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -366,6 +367,21 @@ class InAppNotificationManager(private val activity: Activity) {
         } else {
             msgView.visibility = View.GONE
         }
+
+        // Apply a colored stroke that matches the notification type's accent color
+        val density = activity.resources.displayMetrics.density
+        val cornerRadiusPx = 20 * density
+        val strokeWidthPx = (1.5f * density).toInt()
+        // Use ~70% opacity of the accent color for the stroke so it reads clearly
+        // without being too harsh against the dark card background
+        val strokeColor = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        val background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(0xF0121212.toInt())
+            cornerRadius = cornerRadiusPx
+            setStroke(strokeWidthPx, strokeColor)
+        }
+        view.background = background
 
         return view
     }

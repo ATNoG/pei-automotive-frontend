@@ -20,6 +20,7 @@ object OpenWeatherMapClient {
         val weatherDescription: String,
         val isRain: Boolean,
         val windSpeed: Int,
+        val windDeg: Int,
         val humidity: Int,
         val pressure: Int,
         val visibility: Int,
@@ -86,6 +87,7 @@ object OpenWeatherMapClient {
             val feelsLike = current.getDouble("feels_like").toInt()
             val windSpeedMs = current.getDouble("wind_speed")
             val windSpeedKmh = (windSpeedMs * 3.6).toInt()
+            val windDeg = current.optInt("wind_deg", 0)
             val humidity = current.getInt("humidity")
             val pressure = current.getInt("pressure")
             val visibility = current.optInt("visibility", 10000) / 1000 // Convert to km
@@ -102,7 +104,7 @@ object OpenWeatherMapClient {
                         condition.equals("Thunderstorm", ignoreCase = true) ||
                         condition.equals("Clouds", ignoreCase = true)
 
-            WeatherData(temp, feelsLike, condition, description, isRain, windSpeedKmh, humidity, pressure, visibility, uvIndex, clouds)
+            WeatherData(temp, feelsLike, condition, description, isRain, windSpeedKmh, windDeg, humidity, pressure, visibility, uvIndex, clouds)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing weather data", e)
             null

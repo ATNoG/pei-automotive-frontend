@@ -1,7 +1,7 @@
 package com.example.myapplication.mqtt
 
 import android.util.Log
-import com.example.myapplication.AlertNotificationManager
+import com.example.myapplication.notifications.AlertNotificationManager
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.MqttManager
 import com.example.myapplication.config.AlertPreferenceManager

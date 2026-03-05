@@ -18,6 +18,8 @@ import com.example.myapplication.config.AppConfig
 import com.example.myapplication.mqtt.MqttEventListener
 import com.example.myapplication.mqtt.MqttEventRouter
 import com.example.myapplication.navigation.NavigationListener
+import com.example.myapplication.notifications.AlertNotificationManager
+import com.example.myapplication.notifications.InAppNotificationManager
 import com.example.myapplication.navigation.NavigationManager
 import com.example.myapplication.navigation.models.*
 import com.example.myapplication.navigation.routing.OsrmApiClient
@@ -41,7 +43,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private lateinit var mqttEventRouter: MqttEventRouter
     private lateinit var vehicleTracker: VehicleTracker
     private lateinit var navigationManager: NavigationManager
+    private lateinit var inAppNotificationManager: InAppNotificationManager
     private lateinit var alertNotificationManager: AlertNotificationManager
+    // Note: both managers live in com.example.myapplication.notifications
     private lateinit var alertPreferenceManager: AlertPreferenceManager
     private lateinit var alertSettingsDialog: AlertSettingsDialog
 
@@ -74,7 +78,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         mapController = MapController(this, findViewById(R.id.mapView))
         uiController = UiController(this)
         alertPreferenceManager = AlertPreferenceManager(this)
-        alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager)
+        inAppNotificationManager = InAppNotificationManager(this)
+        alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
         alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
 
@@ -82,8 +87,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         vehicleTracker = VehicleTracker(
             mapController,
             findViewById(R.id.topDownCarView),
-            findViewById(R.id.overtakingWarningIcon),
-            findViewById(R.id.evOverlay)
+            findViewById(R.id.overtakingWarningIcon)
         )
 
         // Setup Navigation Manager
@@ -113,7 +117,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 initialPosition.longitude,
                 0f
             )
-            
+
             // Apply saved map style preference
             val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
             val isLightMode = prefs.getBoolean("lightMode", false)
@@ -122,50 +126,50 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
         }
     }
-    
+
     private fun setupNavigation() {
         navigationManager = NavigationManager()
         navigationManager.setNavigationListener(this)
     }
-    
+
     private fun setupNavigationButton() {
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.setOnClickListener {
             showNavigationDialog()
         }
-        
+
         // Stop navigation button (below nav panel when active)
         findViewById<ImageView>(R.id.btnStopNavigation)?.setOnClickListener {
             stopNavigation()
         }
     }
-    
+
     @SuppressLint("SetTextI18n", "DefaultLocale")
     private fun showNavigationDialog() {
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
-        
+
         // Add overlay to root layout
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(overlayView)
-        
+
         val routeInfoPreview = overlayView.findViewById<LinearLayout>(R.id.routeInfoPreview)
         val txtRouteInfo = overlayView.findViewById<TextView>(R.id.txtRouteInfo)
         val btnStartNavigation = overlayView.findViewById<Button>(R.id.btnStartNavigation)
-        
+
         // Close button (X)
         overlayView.findViewById<ImageButton>(R.id.btnClose)?.setOnClickListener {
             pendingRoute = null
             rootView.removeView(overlayView)
         }
-        
+
         // Mercado Santiago button - calculate route
         overlayView.findViewById<Button>(R.id.btnDestMercadoSantiago)?.setOnClickListener {
             routeInfoPreview?.visibility = View.VISIBLE
             txtRouteInfo?.text = "Calculating route..."
             btnStartNavigation?.isEnabled = false
             btnStartNavigation?.text = "Calculating..."
-            
+
             // Calculate route to Mercado Santiago
             calculateRouteForDialog(mercadoSantiago) { route ->
                 if (route != null) {
@@ -175,7 +179,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     txtRouteInfo?.text = "$distKm km · $timeMin minutes"
                     btnStartNavigation?.isEnabled = true
                     btnStartNavigation?.text = "Start Navigation"
-                    
+
                     // Auto-start navigation after route calculation
                     rootView.postDelayed({
                         if (pendingRoute != null) {
@@ -190,7 +194,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 }
             }
         }
-        
+
         // Start navigation button
         btnStartNavigation?.setOnClickListener {
             pendingRoute?.let { route ->
@@ -198,25 +202,25 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 startNavigation(route)
             }
         }
-        
+
         // Cancel button
         overlayView.findViewById<Button>(R.id.btnCancel)?.setOnClickListener {
             pendingRoute = null
             rootView.removeView(overlayView)
         }
-        
+
         // Close on background click
         overlayView.setOnClickListener {
             pendingRoute = null
             rootView.removeView(overlayView)
         }
-        
+
         // Prevent clicks on card from closing overlay
         overlayView.findViewById<View>(R.id.dialogCard)?.setOnClickListener {
             // Do nothing - prevent propagation
         }
     }
-    
+
     private fun calculateRouteForDialog(destination: LatLng, callback: (NavigationRoute?) -> Unit) {
         lifecycleScope.launch {
             val origin = LatLng(currentLat, currentLon)
@@ -226,16 +230,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
         }
     }
-    
+
     private fun startNavigation(route: NavigationRoute) {
         Log.d("MainActivity", "Starting navigation: ${route.totalDistance / 1000} km")
         navigationManager.startNavigation(route)
     }
-    
+
     private fun stopNavigation() {
         navigationManager.stopNavigation()
     }
-    
+
     /**
      * Stop navigation after arrival popup is closed.
      * Called by UiController when user closes the arrival popup.
@@ -246,24 +250,21 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         mapController.clearRoute()
         navigationManager.stopNavigation()
     }
-    
+
     // ========== NavigationListener Implementation ==========
-    
+
     override fun onRouteCalculating() {
-        runOnUiThread {
-            uiController.showRouteCalculating()
-        }
+        runOnUiThread { uiController.showRouteCalculating() }
     }
-    
+
     override fun onNavigationStarted(route: NavigationRoute) {
-        Log.d("MainActivity", "Navigation started: ${route.totalDistance / 1000} km")
         runOnUiThread {
             // Show navigation UI
             uiController.showNavigationMode()
-            
+
             // Display route on map - DON'T fit bounds, keep camera following car
             mapController.displayRoute(route, fitBounds = false)
-            
+
             // Update UI with first step (if navigation alerts enabled)
             if (alertNotificationManager.shouldProcessAlert(AlertPreferenceManager.AlertType.NAVIGATION)) {
                 route.steps.firstOrNull()?.let { step ->
@@ -275,7 +276,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
         }
     }
-    
+
     override fun onNavigationStopped() {
         Log.d("MainActivity", "Navigation stopped")
         runOnUiThread {
@@ -283,7 +284,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             mapController.clearRoute()
         }
     }
-    
+
     override fun onPositionUpdated(position: VehiclePosition) {
         runOnUiThread {
             Log.d("MainActivity", "onPositionUpdated: ${position.location.latitude}, ${position.location.longitude}")
@@ -295,13 +296,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             )
         }
     }
-    
+
     override fun onStateUpdated(state: NavigationState) {
         runOnUiThread {
             uiController.updateNavigationState(state)
         }
     }
-    
+
     override fun onStepChanged(step: NavigationStep, stepIndex: Int) {
         Log.d("MainActivity", "Step changed: $stepIndex - ${step.instruction}")
         runOnUiThread {
@@ -316,27 +317,30 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             flush = false
         )
     }
-    
+
     override fun onDestinationReached() {
         Log.d("MainActivity", "Destination reached!")
         runOnUiThread {
-            // Show popup first
-            uiController.showDestinationReached()
+            inAppNotificationManager.show(
+                type = InAppNotificationManager.Type.SUCCESS,
+                title = "You have arrived!",
+                message = "Navigation complete",
+                duration = 5_000L,
+                onDismissed = ::stopNavigationAfterArrival
+            )
         }
     }
-    
+
     override fun onRouteRecalculated(route: NavigationRoute) {
         Log.d("MainActivity", "Route recalculated")
         runOnUiThread {
             mapController.displayRoute(route, fitBounds = false)
         }
     }
-    
+
     override fun onNavigationError(error: String) {
         Log.e("MainActivity", "Navigation error: $error")
-        runOnUiThread {
-            uiController.showNavigationError(error)
-        }
+        runOnUiThread { uiController.showNavigationError(error) }
     }
 
     private fun setupSettingsButton() {
@@ -351,7 +355,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
     }
-    
+
     @SuppressLint("InflateParams")
     private fun showSettingsDialog() {
         alertSettingsDialog.show()
@@ -378,16 +382,19 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         Log.d("WEATHER", "Fetching weather for location: $currentLat, $currentLon")
         val (weatherData, alerts) = OpenWeatherMapClient.getWeatherAndAlerts(currentLat, currentLon, apiKey)
-        
+
         if (weatherData != null) {
             runOnUiThread {
                 uiController.updateFullWeatherData(weatherData, alerts)
-                Log.d("WEATHER", "Updated: ${weatherData.temperature}°C, Wind: ${weatherData.windSpeed}km/h, Humidity: ${weatherData.humidity}%, Condition: ${weatherData.weatherCondition}")
+                Log.d(
+                    "WEATHER",
+                    "Updated: ${weatherData.temperature}°C, Wind: ${weatherData.windSpeed}km/h, Humidity: ${weatherData.humidity}%, Condition: ${weatherData.weatherCondition}"
+                )
             }
         } else {
             Log.e("WEATHER", "Failed to fetch weather data - received null response")
         }
-        
+
         // Handle weather alerts
         if (alerts.isNotEmpty() && alertNotificationManager.shouldProcessAlert(AlertPreferenceManager.AlertType.WEATHER)) {
             Log.d("WEATHER", "Found ${alerts.size} weather alerts")
@@ -442,11 +449,24 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     override fun onMqttConnected() {
-        runOnUiThread { uiController.showConnectionStatus("Connected to broker") }
+        runOnUiThread {
+            inAppNotificationManager.show(
+                type = InAppNotificationManager.Type.INFO,
+                title = "✔️ Connected",
+                message = "Live data feed active",
+                duration = InAppNotificationManager.SHORT_DURATION_MS
+            )
+        }
     }
 
     override fun onMqttError(error: String) {
-        runOnUiThread { uiController.showConnectionStatus(error) }
+        runOnUiThread {
+            inAppNotificationManager.show(
+                type = InAppNotificationManager.Type.ERROR,
+                title = "❌ Connection Error",
+                message = error
+            )
+        }
     }
 
     // ========== Car Update Handlers ==========
@@ -481,7 +501,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun handleEVCarUpdate(data: MqttEventRouter.CarUpdateData) {
         vehicleTracker.updateEVCar(data.carId, data.latitude, data.longitude, data.headingDeg)
     }
-    
+
     // ========== Accident Handling ==========
 
     private fun handleAccidentAlert(topic: String, message: String) {
@@ -519,7 +539,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             runOnUiThread {
                 alertNotificationManager.showAccidentAlert(accidentData) { data ->
                     mapController.addAccidentMarker(data.eventId, data.latitude, data.longitude)
-                    uiController.showAccidentAlert(data.distanceMeters)
+                    val distanceText = UiController.formatDistance(data.distanceMeters, "ahead")
+                    inAppNotificationManager.show(
+                        type = InAppNotificationManager.Type.ACCIDENT,
+                        title = "⚠️ Accident Alert",
+                        message = distanceText,
+                        duration = 15_000L
+                    )
                 }
             }
         } catch (e: Exception) {
@@ -559,7 +585,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             runOnUiThread {
                 vehicleTracker.handleEVProximityAlert(evId, evLat, evLon)
 
-                val liveDistance = vehicleTracker.liveDistanceToUser(evLat, evLon)
+                val distanceText = UiController.formatDistance(
+                    vehicleTracker.liveDistanceToUser(evLat, evLon), "away"
+                )
+                inAppNotificationManager.show(
+                    type = InAppNotificationManager.Type.EMERGENCY,
+                    title = "🚨 Emergency Vehicle",
+                    message = distanceText,
+                    duration = 8_000L
+                )
                 alertNotificationManager.speakForAlert(
                     AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
                     "Warning, emergency vehicle approaching"
@@ -605,12 +639,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
 
-
     override fun onDestroy() {
         vehicleTracker.destroy()
         mqttEventRouter.disconnect()
         navigationManager.destroy()
         alertNotificationManager.shutdown()
+        inAppNotificationManager.destroy()
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()

@@ -158,15 +158,15 @@ class VehicleTracker(
      * Handle an emergency-vehicle proximity alert (parsed by caller).
      * Updates tracking, map marker, top-down view, and the EV overlay.
      */
-    fun handleEVProximityAlert(evId: String, evLat: Double, evLon: Double) {
+    fun handleEVProximityAlert(evId: String, evLat: Double, evLon: Double, evHeading: Float = Float.NaN) {
         val liveDistance = haversineDistanceM(userLat, userLon, evLat, evLon)
         Log.d(TAG, "EV $evId is ${liveDistance.toInt()}m away")
 
         activeEmergencyVehicles[evId] = System.currentTimeMillis()
 
         if (evLat != 0.0 && evLon != 0.0) {
-            val bearing = calculateBearing(evLat, evLon, userLat, userLon)
-            evCarPositions[evId] = CarPosition(evId, evLat, evLon, bearing)
+            val heading = if (evHeading.isNaN()) calculateBearing(evLat, evLon, userLat, userLon) else evHeading
+            evCarPositions[evId] = CarPosition(evId, evLat, evLon, heading)
             scheduleEVMapUpdate()
             refreshTopDownView()
         }

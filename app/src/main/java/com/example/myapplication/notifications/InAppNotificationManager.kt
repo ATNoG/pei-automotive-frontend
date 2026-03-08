@@ -56,7 +56,8 @@ class InAppNotificationManager(private val activity: Activity) {
         val title: String,
         val message: String? = null,
         val duration: Long = DEFAULT_DURATION_MS,
-        val onDismissed: (() -> Unit)? = null
+        val onDismissed: (() -> Unit)? = null,
+        val tag: String? = null
     )
 
     // ── Constants ────────────────────────────────────────────────────────
@@ -80,6 +81,7 @@ class InAppNotificationManager(private val activity: Activity) {
 
     private val queue = ArrayDeque<AppNotification>()
     private var currentView: View? = null
+    private var currentTag: String? = null
     private var isShowing = false
     private val handler = Handler(Looper.getMainLooper())
     private var autoDismissJob: Runnable? = null
@@ -94,10 +96,68 @@ class InAppNotificationManager(private val activity: Activity) {
         title: String,
         message: String? = null,
         duration: Long = DEFAULT_DURATION_MS,
-        onDismissed: (() -> Unit)? = null
+        onDismissed: (() -> Unit)? = null,
+        tag: String? = null
     ) {
-        enqueue(AppNotification(type, title, message, duration, onDismissed))
+        enqueue(AppNotification(type, title, message, duration, onDismissed, tag))
     }
+
+    /**
+     * Show or update a tagged notification in-place.
+     * If a notification with the same [tag] is currently visible, its title/message
+     * are updated and the auto-dismiss timer is reset — no new banner is created.
+     * If no matching notification is showing, a new one is enqueued.
+     * Returns false if the tag was previously dismissed by the user (caller should skip).
+     */
+    fun showOrUpdate(
+        tag: String,
+        type: Type,
+        title: String,
+        message: String? = null,
+        duration: Long = DEFAULT_DURATION_MS,
+        onDismissed: (() -> Unit)? = null
+    ): Boolean {
+        if (tag in dismissedTags) return false
+        handler.post {
+            if (activity.isFinishing || activity.isDestroyed) return@post
+            val view = currentView
+            if (view != null && currentTag == tag && view.parent != null) {
+                // Update in place
+                view.findViewById<TextView>(R.id.notifTitle)?.text = title
+                val msgView = view.findViewById<TextView>(R.id.notifMessage)
+                if (!message.isNullOrBlank()) {
+                    msgView?.text = message
+                    msgView?.visibility = View.VISIBLE
+                } else {
+                    msgView?.visibility = View.GONE
+                }
+                // Reset auto-dismiss timer
+                cancelAutoDismiss()
+                val dismissRunnable = Runnable {
+                    if (view.parent != null) {
+                        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+                        animateOut(view, rootView, translationX = 0f, onDismissed)
+                    }
+                }
+                autoDismissJob = dismissRunnable
+                handler.postDelayed(dismissRunnable, duration)
+            } else {
+                enqueue(AppNotification(type, title, message, duration, {
+                    dismissedTags.add(tag)
+                    onDismissed?.invoke()
+                }, tag))
+            }
+        }
+        return true
+    }
+
+    /** Clear a dismissed tag so future notifications for it can appear again. */
+    fun clearDismissedTag(tag: String) {
+        dismissedTags.remove(tag)
+    }
+
+    /** Tags dismissed by the user — notifications with these tags are suppressed. */
+    private val dismissedTags = mutableSetOf<String>()
 
     /**
      * Enqueue a pre-built [AppNotification] for display.
@@ -105,8 +165,9 @@ class InAppNotificationManager(private val activity: Activity) {
     fun enqueue(notification: AppNotification) {
         handler.post {
             if (activity.isFinishing || activity.isDestroyed) return@post
+            if (notification.tag != null && notification.tag in dismissedTags) return@post
             if (queue.size >= MAX_QUEUE_SIZE) {
-                Log.w(TAG, "Queue full – dropping oldest notification")
+                Log.w(TAG, "Queue full - dropping oldest notification")
                 queue.removeFirstOrNull()
             }
             queue.addLast(notification)
@@ -173,6 +234,7 @@ class InAppNotificationManager(private val activity: Activity) {
 
         rootView.addView(view, lp)
         currentView = view
+        currentTag = notification.tag
 
         // Measure and then animate in from above
         view.post {
@@ -329,14 +391,20 @@ class InAppNotificationManager(private val activity: Activity) {
             .setListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     safeRemoveView(view)
-                    if (currentView == view) currentView = null
+                    if (currentView == view) {
+                        currentView = null
+                        currentTag = null
+                    }
                     onDismissed?.invoke()
                     processQueue()
                 }
 
                 override fun onAnimationCancel(animation: Animator) {
                     safeRemoveView(view)
-                    if (currentView == view) currentView = null
+                    if (currentView == view) {
+                        currentView = null
+                        currentTag = null
+                    }
                     processQueue()
                 }
             })

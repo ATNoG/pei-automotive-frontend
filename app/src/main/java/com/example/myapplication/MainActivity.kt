@@ -572,6 +572,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     // ========== Emergency Vehicle Handling ==========
 
+    /** EV IDs for which we've already spoken the TTS warning. */
+    private val evSpokenIds = mutableSetOf<String>()
+
     private fun handleEmergencyVehicleAlert(message: String) {
         try {
             val json = org.json.JSONObject(message)
@@ -581,25 +584,39 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val evLon = json.optDouble("ev_longitude", 0.0)
             val evHeading = json.optDouble("ev_heading_deg", Double.NaN).toFloat()
             val direction = json.optString("direction", "nearby")
-            
+            val distanceM = json.optDouble("distance_m", Double.NaN)
+
             if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) return
-                                            
+
             runOnUiThread {
                 vehicleTracker.handleEVProximityAlert(evId, evLat, evLon, evHeading)
 
-                val distanceText = UiController.formatDistance(
-                    vehicleTracker.liveDistanceToUser(evLat, evLon), "away"
-                )
-                inAppNotificationManager.show(
+                val distanceText = if (!distanceM.isNaN()) {
+                    UiController.formatDistance(distanceM, "away")
+                } else {
+                    UiController.formatDistance(
+                        vehicleTracker.liveDistanceToUser(evLat, evLon), "away"
+                    )
+                }
+
+                val evTag = "ev_$evId"
+                val shown = inAppNotificationManager.showOrUpdate(
+                    tag = evTag,
                     type = InAppNotificationManager.Type.EMERGENCY,
-                    title = "🚨 Emergency Vehicle " + direction,
+                    title = "🚨 Emergency Vehicle $direction",
                     message = distanceText,
-                    duration = 8_000L
+                    duration = 8_000L,
+                    onDismissed = { evSpokenIds.remove(evId) }
                 )
-                alertNotificationManager.speakForAlert(
-                    AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
-                    "Warning, emergency vehicle approaching"
-                )
+
+                // Speak TTS only on the first alert for this EV
+                if (shown && evId !in evSpokenIds) {
+                    evSpokenIds.add(evId)
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
+                        "Warning, emergency vehicle approaching"
+                    )
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing EV alert: ${e.message}")

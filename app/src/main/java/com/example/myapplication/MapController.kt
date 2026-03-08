@@ -156,7 +156,7 @@ class MapController(
     override fun onMapReady(map: MapLibreMap) {
         this.mapLibreMap = map
         
-        // Enable and configure compass - positioned on top right in map area
+        // Enable and configure compass - positioned on bottom right in map area
         map.uiSettings.isCompassEnabled = true
         // Position: from right edge of screen minus right panel width (approximately 350px from right for visible map area)
         val screenWidth = context.resources.displayMetrics.widthPixels
@@ -166,8 +166,8 @@ class MapController(
             (130 * context.resources.displayMetrics.density).toInt()  // 130dp for phone
         }
         val compassRightMargin = rightPanelWidth + 10  // More to the left
-        map.uiSettings.setCompassMargins(0, 30, compassRightMargin, 0)  // Higher up
-        map.uiSettings.setCompassGravity(android.view.Gravity.TOP or android.view.Gravity.END)
+        map.uiSettings.setCompassMargins(0, 0, compassRightMargin, 30)  // Bottom right
+        map.uiSettings.setCompassGravity(android.view.Gravity.BOTTOM or android.view.Gravity.END)
         map.uiSettings.setAllGesturesEnabled(true)
         
         map.setStyle(Style.Builder().fromUri(STYLE_URL_DARK)) { style ->
@@ -1194,8 +1194,19 @@ class MapController(
      * Change map style to light or dark mode
      */
     fun setMapStyle(lightMode: Boolean, onStyleLoaded: (() -> Unit)? = null) {
+        // Cancel all in-flight animations before swapping styles.
+        // Each animation runnable captures a reference to the current Style object.
+        // When setStyle() is called, MapLibre tears down the old style and any access
+        // to its sources/layers from a running runnable throws a native exception.
+        currentAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        currentAnimationRunnable = null
+        otherCarsAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        otherCarsAnimationRunnable = null
+        evAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
+        evAnimationRunnable = null
+
         val styleUrl = if (lightMode) STYLE_URL_LIGHT else STYLE_URL_DARK
-        
+
         mapLibreMap?.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
             // Reapply all configurations
             optimizeMapLayers(style)

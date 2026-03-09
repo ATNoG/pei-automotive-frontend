@@ -109,7 +109,7 @@ class UiController(private val activity: Activity) {
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
         txtCurrentSpeed?.text = speedKmh.toString()
-        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
+        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh ${activity.getString(R.string.speed_unit)}"
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
         val speedColor = if (isSpeeding) {

@@ -1,3 +1,32 @@
 <resources>
     <string name="app_name">My Application</string>
+    <string name="settings_title">Settings</string>
+    <string name="map_style">Map Style</string>
+    <string name="theme_mode">Theme Mode</string>
+    <string name="language">Language</string>
+    <string name="alerts">Alerts</string>
+    <string name="alert_accident">Accident</string>
+    <string name="alert_speeding">Speeding</string>
+    <string name="alert_weather">Weather</string>
+    <string name="alert_overtaking">Overtaking</string>
+    <string name="alert_emergency_vehicle">Emergency Vehicle</string>
+    <string name="alert_navigation">Navigation</string>
+    <string name="start_route">Start a Route</string>
+    <string name="arrival">arrival</string>
+    <string name="distance_unit">km</string>
+    <string name="speed_unit">Km/h</string>
+    <string name="speed_unit_short">KM/H</string>
+    <string name="turn_right">Turn right</string>
+    <string name="calculating_route">Calculating route...</string>
+    <string name="calculating">Calculating...</string>
+    <string name="start_navigation">Start Navigation</string>
+    <string name="error_calculating_route">Error calculating route</string>
+    <string name="try_again">Try Again</string>
+    <string name="ahead">ahead</string>
+    <string name="route_info_format">%1$s km · %2$s minutes</string>
+    <string name="away">away</string>
+    <string name="emergency_vehicle_warning">Warning, emergency vehicle approaching</string>
+    <string name="speed_limit_warning">Warning, you are exceeding the speed limit</string>
+    <string name="overtaking_warning">Warning, vehicle overtaking</string>
+    <string name="accident_warning">Warning! Accident ahead in %1$s.</string>
 </resources>

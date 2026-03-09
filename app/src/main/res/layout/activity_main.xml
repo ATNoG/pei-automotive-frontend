@@ -110,7 +110,7 @@
             <!-- Instruction text -->
             <TextView
                 android:id="@+id/txtManeuverInstruction"
-                android:text="Vire à direita"
+                android:text="@string/turn_right"
                 android:textColor="#AAAAAA"
                 android:textSize="13sp"
                 android:maxLines="2"
@@ -196,7 +196,7 @@
                 android:id="@+id/txtSpeedUnit"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text=" KM/H"
+                android:text="@string/speed_unit_short"
                 android:textColor="#AAAAAA"
                 android:textSize="14sp"
                 android:layout_marginStart="4dp"

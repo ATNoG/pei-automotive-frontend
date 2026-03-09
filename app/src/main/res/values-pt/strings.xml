@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Minha Aplicação</string>
+    <string name="settings_title">Configurações</string>
+    <string name="map_style">Estilo do Mapa</string>
+    <string name="theme_mode">Modo de Tema</string>
+    <string name="language">Idioma</string>
+    <string name="alerts">Alertas</string>
+    <string name="alert_accident">Acidente</string>
+    <string name="alert_speeding">Excesso de Velocidade</string>
+    <string name="alert_weather">Clima</string>
+    <string name="alert_overtaking">Ultrapassagem</string>
+    <string name="alert_emergency_vehicle">Veículo de Emergência</string>
+    <string name="alert_navigation">Navegação</string>
+    <string name="start_route">Iniciar Rota</string>
+    <string name="arrival">chegada</string>
+    <string name="distance_unit">km</string>
+    <string name="speed_unit">Km/h</string>
+    <string name="speed_unit_short">KM/H</string>
+    <string name="turn_right">Vire à direita</string>
+    <string name="calculating_route">Calculando rota...</string>
+    <string name="calculating">Calculando...</string>
+    <string name="start_navigation">Iniciar Navegação</string>
+    <string name="error_calculating_route">Erro ao calcular rota</string>
+    <string name="try_again">Tentar Novamente</string>
+    <string name="ahead">à frente</string>
+    <string name="route_info_format">%1$s km · %2$s minutos</string>
+    <string name="away">longe</string>
+    <string name="emergency_vehicle_warning">Atenção, veículo de emergência se aproximando</string>
+    <string name="speed_limit_warning">Atenção, você está excedendo o limite de velocidade</string>
+    <string name="overtaking_warning">Atenção, veículo ultrapassando</string>
+    <string name="accident_warning">Atenção! Acidente à frente em %1$s.</string>
+</resources>

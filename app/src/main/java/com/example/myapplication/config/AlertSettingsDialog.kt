@@ -2,6 +2,7 @@ package com.example.myapplication.config
 
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -33,6 +34,7 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
+        setupLanguageSelection(settingsView)
         buildAlertGrid(settingsView)
         setupCloseActions(settingsView, rootView)
     }
@@ -46,6 +48,34 @@ class AlertSettingsDialog(
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("lightMode", isChecked).apply()
             mapController.setMapStyle(isChecked)
+        }
+    }
+
+    // ── Language Selection ───────────────────────────────────────────────
+
+    private fun setupLanguageSelection(settingsView: View) {
+        val btnEnglish = settingsView.findViewById<Button>(R.id.btnEnglish)
+        val btnPortuguese = settingsView.findViewById<Button>(R.id.btnPortuguese)
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        val currentLanguage = prefs.getString("language", "en") ?: "en"
+
+        // Highlight the current language
+        if (currentLanguage == "en") {
+            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
+            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.transparent))
+        } else {
+            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
+            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.transparent))
+        }
+
+        btnEnglish.setOnClickListener {
+            prefs.edit().putString("language", "en").apply()
+            activity.recreate() // Restart activity to apply new locale
+        }
+
+        btnPortuguese.setOnClickListener {
+            prefs.edit().putString("language", "pt").apply()
+            activity.recreate() // Restart activity to apply new locale
         }
     }
 
@@ -113,7 +143,7 @@ class AlertSettingsDialog(
 
         // Event name
         val nameText = TextView(activity).apply {
-            text = alertType.displayName
+            text = activity.getString(alertType.displayNameResId)
             textSize = 14f
             setTextColor(android.graphics.Color.WHITE)
             layoutParams = LinearLayout.LayoutParams(

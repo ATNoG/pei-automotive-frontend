@@ -40,7 +40,8 @@ class AlertPreferenceManager(context: Context) {
         WEATHER("weather", R.string.alert_weather),
         OVERTAKING("overtaking", R.string.alert_overtaking),
         EMERGENCY_VEHICLE("emergency_vehicle", R.string.alert_emergency_vehicle),
-        NAVIGATION("navigation", R.string.alert_navigation)
+        NAVIGATION("navigation", R.string.alert_navigation),
+        HIGHWAY_ENTRY("highway_entry", R.string.alert_highway_entry)
     }
 
     private val prefs: SharedPreferences =

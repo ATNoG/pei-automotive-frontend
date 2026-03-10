@@ -43,6 +43,13 @@ interface MqttEventListener {
     fun onEmergencyVehicleAlert(payload: String)
 
     /**
+     * A highway entry alert was received.
+     *
+     * @param payload The raw JSON payload.
+     */
+    fun onHighwayEntryAlert(payload: String)
+
+    /**
      * A car position update was received (for any car type).
      *
      * @param data Parsed and validated car update data.

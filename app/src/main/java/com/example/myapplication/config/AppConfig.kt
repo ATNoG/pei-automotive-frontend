@@ -136,6 +136,11 @@ object AppConfig {
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
 
     /**
+     * MQTT topic for highway entry alerts.
+     */
+    const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
+
+    /**
      * MQTT topic for emergency vehicle proximity alerts.
      * Published by the backend emergency_vehicle_detector service.
      */

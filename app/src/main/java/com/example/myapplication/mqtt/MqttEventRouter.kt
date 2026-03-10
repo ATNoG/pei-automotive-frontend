@@ -122,6 +122,13 @@ class MqttEventRouter(
                 }
             }
 
+            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> {
+                Log.d(TAG, "Highway entry alert")
+                if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
+                    listener?.onHighwayEntryAlert(message)
+                }
+            }
+
             topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Car update received")
                 try {

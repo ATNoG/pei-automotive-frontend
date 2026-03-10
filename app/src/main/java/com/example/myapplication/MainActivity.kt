@@ -442,6 +442,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         handleEmergencyVehicleAlert(payload)
     }
 
+    override fun onHighwayEntryAlert(payload: String) {
+        handleHighwayEntryAlert(payload)
+    }
+
     override fun onCarUpdate(data: MqttEventRouter.CarUpdateData) {
         runOnUiThread {
             when {
@@ -625,6 +629,30 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing EV alert: ${e.message}")
+        }
+    }
+
+    private fun handleHighwayEntryAlert(message: String) {
+        try {
+            val json = org.json.JSONObject(message)
+            val status = json.optString("status", "unknown")
+            val title = when (status) {
+                "unsafe" -> "⚠️ Unsafe Highway Entry"
+                "safe" -> "✅ Safe Highway Entry"
+                else -> "Highway Entry Alert"
+            }
+            val messageText = "Highway entry detected: $status"
+
+            runOnUiThread {
+                inAppNotificationManager.show(
+                    type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
+                    title = title,
+                    message = messageText,
+                    duration = InAppNotificationManager.DEFAULT_DURATION_MS
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
         }
     }
 

@@ -59,4 +59,19 @@
         <item name="colorIconDefault">@color/icon_default</item>
         <item name="colorIconMuted">@color/icon_muted</item>
     </style>
+
+    <!-- Colorblind-safe theme: blue for success, orange for danger -->
+    <style name="Theme.MyApplication.ColorBlind">
+        <!-- Status / Alert -->
+        <item name="colorStatusSuccess">@color/status_success_cb</item>
+        <item name="colorStatusDanger">@color/status_danger_cb</item>
+        <item name="colorStatusDangerLight">@color/status_danger_light_cb</item>
+        <item name="colorStatusWarning">@color/status_warning_cb</item>
+
+        <!-- Speed -->
+        <item name="colorSpeedWarning">@color/speed_warning_cb</item>
+        <item name="colorSpeedLimitBorder">@color/speed_limit_border_cb</item>
+        <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay_cb</item>
+        <item name="colorSpeedAlertBackground">@color/speed_alert_bg_cb</item>
+    </style>
 </resources>

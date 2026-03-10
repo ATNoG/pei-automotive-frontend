@@ -18,6 +18,12 @@ class TopDownCarView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private val isColorBlind = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        .getBoolean("colorBlindMode", false)
+
+    private fun cbColor(normal: Int, cb: Int): Int =
+        ContextCompat.getColor(context, if (isColorBlind) cb else normal)
+
     // Coordinate system bounds (increased for less zoom)
     private val gridMinX = -18f
     private val gridMaxX = 18f
@@ -36,24 +42,24 @@ class TopDownCarView @JvmOverloads constructor(
     
     // Paint objects
     private val backgroundPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_grass)
+        color = cbColor(R.color.car_view_grass, R.color.car_view_grass_cb)
         style = Paint.Style.FILL
     }
     
     private val roadPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_asphalt)
+        color = cbColor(R.color.car_view_asphalt, R.color.car_view_asphalt_cb)
         style = Paint.Style.FILL
     }
     
     private val roadEdgePaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_edge_line)
+        color = cbColor(R.color.car_view_edge_line, R.color.car_view_edge_line_cb)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
     }
     
     private val centerLinePaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_center_line)
+        color = cbColor(R.color.car_view_center_line, R.color.car_view_center_line_cb)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
@@ -61,7 +67,7 @@ class TopDownCarView @JvmOverloads constructor(
     }
     
     private val laneDividerPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_lane_divider)
+        color = cbColor(R.color.car_view_lane_divider, R.color.car_view_lane_divider_cb)
         style = Paint.Style.STROKE
         strokeWidth = 2f
         isAntiAlias = true
@@ -69,35 +75,35 @@ class TopDownCarView @JvmOverloads constructor(
     }
     
     private val userCarPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_user_car)
+        color = cbColor(R.color.car_view_user_car, R.color.car_view_user_car_cb)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
+        setShadowLayer(8f, 0f, 0f, cbColor(R.color.car_view_shadow, R.color.car_view_shadow_cb))
     }
     
     private val otherCarPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_other_car)
+        color = cbColor(R.color.car_view_other_car, R.color.car_view_other_car_cb)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(6f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
+        setShadowLayer(6f, 0f, 0f, cbColor(R.color.car_view_shadow, R.color.car_view_shadow_cb))
     }
     
     private val evCarPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_ev_car)
+        color = cbColor(R.color.car_view_ev_car, R.color.car_view_ev_car_cb)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_ev_shadow))
+        setShadowLayer(8f, 0f, 0f, cbColor(R.color.car_view_ev_shadow, R.color.car_view_ev_shadow_cb))
     }
     
     private val evCarStrokePaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_user_stroke)
+        color = cbColor(R.color.car_view_user_stroke, R.color.car_view_user_stroke_cb)
         style = Paint.Style.STROKE
         strokeWidth = 4f
         isAntiAlias = true
     }
     
     private val textPaint = Paint().apply {
-        color = ContextCompat.getColor(context, R.color.car_view_other_stroke)
+        color = cbColor(R.color.car_view_other_stroke, R.color.car_view_other_stroke_cb)
         textSize = 24f
         isAntiAlias = true
     }

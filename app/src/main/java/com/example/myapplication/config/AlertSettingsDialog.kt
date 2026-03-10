@@ -34,6 +34,7 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
+        setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupCloseActions(settingsView, rootView)
     }
@@ -47,6 +48,18 @@ class AlertSettingsDialog(
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("lightMode", isChecked).apply()
             mapController.setMapStyle(isChecked)
+        }
+    }
+
+    // ── Colorblind Mode ──────────────────────────────────────────────────
+
+    private fun setupColorBlindToggle(settingsView: View) {
+        val switchColorBlind = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchColorBlind)
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        switchColorBlind.isChecked = prefs.getBoolean("colorBlindMode", false)
+        switchColorBlind.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("colorBlindMode", isChecked).apply()
+            activity.recreate()
         }
     }
 

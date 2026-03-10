@@ -6,6 +6,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.myapplication.MapController
 import com.example.myapplication.R
 
@@ -115,7 +116,7 @@ class AlertSettingsDialog(
         val nameText = TextView(activity).apply {
             text = alertType.displayName
             textSize = 14f
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             )

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- ========== Material Theme Base Colors ========== -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -7,4 +9,98 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- ========== Surface / Background ========== -->
+    <color name="surface_card">#F0121212</color>
+    <color name="surface_overlay">#80000000</color>
+    <color name="surface_dialog">#FF2D2D2D</color>
+    <color name="surface_dialog_header">#FF252525</color>
+    <color name="surface_dialog_card">#FF1E1E1E</color>
+    <color name="surface_dialog_alert">#FF2D2D44</color>
+    <color name="surface_route_info">#FF2A2A2A</color>
+    <color name="surface_panel">#FF222222</color>
+    <color name="surface_panel_header">#FF202020</color>
+    <color name="surface_panel_lane">#FF505050</color>
+    <color name="surface_panel_speed">#FF303030</color>
+    <color name="surface_weather_badge">#FF4A4A4A</color>
+    <color name="surface_button_neutral">#FF333333</color>
+    <color name="surface_eta_flag">#FFCACACA</color>
+
+    <!-- ========== Text Colors ========== -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FFAAAAAA</color>
+    <color name="text_tertiary">#FFBBBBBB</color>
+    <color name="text_hint">#FF888888</color>
+    <color name="text_description">#FFDDDDDD</color>
+    <color name="text_on_light">#FF000000</color>
+
+    <!-- ========== Accent / Brand ========== -->
+    <color name="accent_blue">#FF2196F3</color>
+
+    <!-- ========== Status / Alert ========== -->
+    <color name="status_success">#FF4CAF50</color>
+    <color name="status_danger">#FFFF0000</color>
+    <color name="status_danger_light">#FFF44336</color>
+    <color name="status_warning">#FFFFD54F</color>
+
+    <!-- ========== Speed ========== -->
+    <color name="speed_warning">#FFFF4444</color>
+    <color name="speed_limit_border">#FFD32F2F</color>
+    <color name="speed_alert_overlay">#44FF0000</color>
+    <color name="speed_alert_bg">#FFFF0000</color>
+
+    <!-- ========== Stroke / Divider ========== -->
+    <color name="card_stroke">#33FFFFFF</color>
+    <color name="card_stroke_light">#44FFFFFF</color>
+    <color name="divider">#FF444444</color>
+    <color name="divider_light">#FF404040</color>
+
+    <!-- ========== Icons ========== -->
+    <color name="icon_default">#FFFFFFFF</color>
+    <color name="icon_muted">#FF888888</color>
+
+    <!-- ========== Marker / Arrow ========== -->
+    <color name="arrow_other_car">#FFFF5722</color>
+    <color name="arrow_ev_red">#FFFF1744</color>
+    <color name="arrow_ev_blue">#FF2979FF</color>
+
+    <!-- ========== Map / Route ========== -->
+    <color name="route_brightening">#FFFFD27A</color>
+    <color name="route_border">#FF1565C0</color>
+    <color name="route_traveled">#FF666666</color>
+    <color name="route_remaining">#FFFF4081</color>
+
+    <!-- ========== Launcher ========== -->
+    <color name="launcher_green">#FF3DDC84</color>
+
+    <!-- ========== TopDown Car View ========== -->
+    <color name="car_view_grass">#040404FF</color>
+    <color name="car_view_asphalt">#FF2E2E2E</color>
+    <color name="car_view_edge_line">#FFFFFFFF</color>
+    <color name="car_view_center_line">#FFFDD835</color>
+    <color name="car_view_lane_divider">#FFFFFFFF</color>
+    <color name="car_view_user_car">#FFE53935</color>
+    <color name="car_view_other_car">#FF757575</color>
+    <color name="car_view_ev_car">#FF2196F3</color>
+    <color name="car_view_user_stroke">#FFFF4444</color>
+    <color name="car_view_other_stroke">#FF9E9E9E</color>
+    <color name="car_view_shadow">#AA000000</color>
+    <color name="car_view_ev_shadow">#AA0000FF</color>
+
+    <!-- ========== Overtaking Animation View ========== -->
+    <color name="overtaking_road_line">#FFFFFFFF</color>
+    <color name="overtaking_dashed_line">#FFE0E0E0</color>
+    <color name="overtaking_car_window">#FF37474F</color>
+    <color name="overtaking_grass">#FF1B2E1B</color>
+    <color name="overtaking_road_horizon">#FF121212</color>
+    <color name="overtaking_road_near">#FF3E3E3E</color>
+    <color name="overtaking_indicator_blue_light">#FF2979FF</color>
+    <color name="overtaking_indicator_blue_dark">#FF1565C0</color>
+    <color name="overtaking_indicator_red_light">#FFFF5252</color>
+    <color name="overtaking_indicator_red_dark">#FFD32F2F</color>
+    <color name="overtaking_car_blue">#FF448AFF</color>
+    <color name="overtaking_car_red">#FFFF5252</color>
+    <color name="overtaking_car_blue_dark">#FF1565C0</color>
+    <color name="overtaking_car_red_dark">#FFB71C1C</color>
+
 </resources>

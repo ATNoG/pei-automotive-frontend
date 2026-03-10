@@ -10,6 +10,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.example.myapplication.config.WeatherCardPreferenceManager
 import com.example.myapplication.navigation.models.ManeuverType
 import com.example.myapplication.navigation.models.NavigationState
@@ -113,9 +114,9 @@ class UiController(private val activity: Activity) {
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
         val speedColor = if (isSpeeding) {
-            android.graphics.Color.parseColor("#FF4444")
+            ContextCompat.getColor(activity, R.color.speed_warning)
         } else {
-            android.graphics.Color.WHITE
+            ContextCompat.getColor(activity, R.color.text_primary)
         }
         txtCurrentSpeed?.setTextColor(speedColor)
         txtSpeedUnit?.setTextColor(speedColor)
@@ -123,14 +124,14 @@ class UiController(private val activity: Activity) {
 
         // Speed limit sign: turn red and scale up when speeding, reset when not
         if (isSpeeding) {
-            txtSpeedLimit?.setTextColor(android.graphics.Color.RED)
+            txtSpeedLimit?.setTextColor(ContextCompat.getColor(activity, R.color.status_danger))
             speedLimitContainer?.animate()
                 ?.scaleX(1.2f)
                 ?.scaleY(1.2f)
                 ?.setDuration(300)
                 ?.start()
         } else {
-            txtSpeedLimit?.setTextColor(android.graphics.Color.BLACK)
+            txtSpeedLimit?.setTextColor(ContextCompat.getColor(activity, R.color.text_on_light))
             speedLimitContainer?.animate()
                 ?.scaleX(1.0f)
                 ?.scaleY(1.0f)
@@ -207,7 +208,7 @@ class UiController(private val activity: Activity) {
                 layoutParams = LinearLayout.LayoutParams(
                     (1 * density).toInt(), (24 * density).toInt()
                 ).also { it.marginStart = dividerMarginPx; it.marginEnd = dividerMarginPx }
-                setBackgroundColor(android.graphics.Color.parseColor("#44FFFFFF"))
+                setBackgroundColor(ContextCompat.getColor(activity, R.color.card_stroke_light))
             }
             container.addView(divider)
 
@@ -223,7 +224,7 @@ class UiController(private val activity: Activity) {
             val valueTv = TextView(activity).apply {
                 text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
                 textSize = 20f
-                setTextColor(android.graphics.Color.WHITE)
+                setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -361,28 +362,28 @@ class UiController(private val activity: Activity) {
                 }
                 alertCard.addView(TextView(activity).apply {
                     text = "⚠️ ${alert.event}"
-                    setTextColor(android.graphics.Color.parseColor("#FFD54F"))
+                    setTextColor(ContextCompat.getColor(activity, R.color.status_warning))
                     textSize = 16f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 })
                 val fmt = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                 alertCard.addView(TextView(activity).apply {
                     text = "🕐 ${fmt.format(java.util.Date(alert.start * 1000))} – ${fmt.format(java.util.Date(alert.end * 1000))}"
-                    setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                    setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
                     textSize = 13f
                     setPadding(0, 12, 0, 0)
                 })
                 if (alert.senderName.isNotEmpty()) {
                     alertCard.addView(TextView(activity).apply {
                         text = "📢 ${alert.senderName}"
-                        setTextColor(android.graphics.Color.parseColor("#AAAAAA"))
+                        setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
                         textSize = 13f
                         setPadding(0, 8, 0, 0)
                     })
                 }
                 alertCard.addView(TextView(activity).apply {
                     text = alert.description
-                    setTextColor(android.graphics.Color.parseColor("#DDDDDD"))
+                    setTextColor(ContextCompat.getColor(activity, R.color.text_description))
                     textSize = 14f
                     setPadding(0, 16, 0, 0)
                 })

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
 import kotlin.math.min
 
 /**
@@ -35,24 +36,24 @@ class TopDownCarView @JvmOverloads constructor(
     
     // Paint objects
     private val backgroundPaint = Paint().apply {
-        color = Color.parseColor("#040404ff")  // Dark grass
+        color = ContextCompat.getColor(context, R.color.car_view_grass)
         style = Paint.Style.FILL
     }
     
     private val roadPaint = Paint().apply {
-        color = Color.parseColor("#2E2E2E")  // Dark asphalt
+        color = ContextCompat.getColor(context, R.color.car_view_asphalt)
         style = Paint.Style.FILL
     }
     
     private val roadEdgePaint = Paint().apply {
-        color = Color.parseColor("#FFFFFF")  // White edge line
+        color = ContextCompat.getColor(context, R.color.car_view_edge_line)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
     }
     
     private val centerLinePaint = Paint().apply {
-        color = Color.parseColor("#FDD835")  // Yellow center line
+        color = ContextCompat.getColor(context, R.color.car_view_center_line)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
@@ -60,7 +61,7 @@ class TopDownCarView @JvmOverloads constructor(
     }
     
     private val laneDividerPaint = Paint().apply {
-        color = Color.parseColor("#ffffffff")  // White lane divider
+        color = ContextCompat.getColor(context, R.color.car_view_lane_divider)
         style = Paint.Style.STROKE
         strokeWidth = 2f
         isAntiAlias = true
@@ -68,35 +69,35 @@ class TopDownCarView @JvmOverloads constructor(
     }
     
     private val userCarPaint = Paint().apply {
-        color = Color.parseColor("#E53935")  // Red
+        color = ContextCompat.getColor(context, R.color.car_view_user_car)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, Color.parseColor("#AA000000"))
+        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
     }
     
     private val otherCarPaint = Paint().apply {
-        color = Color.parseColor("#757575")  // Gray
+        color = ContextCompat.getColor(context, R.color.car_view_other_car)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(6f, 0f, 0f, Color.parseColor("#AA000000"))
+        setShadowLayer(6f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
     }
     
     private val evCarPaint = Paint().apply {
-        color = Color.parseColor("#2196F3")  // Blue for emergency vehicle
+        color = ContextCompat.getColor(context, R.color.car_view_ev_car)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, Color.parseColor("#AA0000FF"))
+        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_ev_shadow))
     }
     
     private val evCarStrokePaint = Paint().apply {
-        color = Color.parseColor("#FF4444")  // Red stroke ring
+        color = ContextCompat.getColor(context, R.color.car_view_user_stroke)
         style = Paint.Style.STROKE
         strokeWidth = 4f
         isAntiAlias = true
     }
     
     private val textPaint = Paint().apply {
-        color = Color.parseColor("#9E9E9E")
+        color = ContextCompat.getColor(context, R.color.car_view_other_stroke)
         textSize = 24f
         isAntiAlias = true
     }

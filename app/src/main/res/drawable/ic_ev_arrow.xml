@@ -6,10 +6,10 @@
     android:viewportHeight="24">
     <!-- Emergency vehicle arrow - red/blue colors -->
     <path
-        android:fillColor="#FF1744"
+        android:fillColor="@color/arrow_ev_red"
         android:pathData="M12,2L9,22L12,18L15,22z"/>
     <path
-        android:fillColor="#2979FF"
+        android:fillColor="@color/arrow_ev_blue"
         android:pathData="M12,2L9,12L12,10L15,12z"
         android:fillAlpha="0.7"/>
 </vector>

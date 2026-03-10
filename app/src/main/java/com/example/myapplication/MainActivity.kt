@@ -64,6 +64,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var pendingRoute: NavigationRoute? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Apply colorblind theme before inflating any views
+        val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        if (appPrefs.getBoolean("colorBlindMode", false)) {
+            setTheme(R.style.Theme_MyApplication_ColorBlind)
+        }
+
         super.onCreate(savedInstanceState)
 
         // initialize MapLibre (only required once, before creating MapView)
@@ -89,6 +95,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             findViewById(R.id.topDownCarView),
             findViewById(R.id.overtakingWarningIcon)
         )
+
+        // Swap overtaking warning icon for colorblind mode
+        if (appPrefs.getBoolean("colorBlindMode", false)) {
+            findViewById<ImageView>(R.id.overtakingWarningIcon)
+                .setImageResource(R.drawable.cb_warning)
+        }
 
         // Setup Navigation Manager
         setupNavigation()

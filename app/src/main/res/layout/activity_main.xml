@@ -43,7 +43,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="13°C"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-black"
@@ -89,7 +89,7 @@
             android:layout_height="40dp"
             android:src="@drawable/ic_straight"
             android:scaleType="fitCenter"
-            app:tint="#FFFFFF" />
+            app:tint="?attr/colorIconDefault" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -101,7 +101,7 @@
             <TextView
                 android:id="@+id/txtNextManeuverDistance"
                 android:text="800 m"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="22sp"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
@@ -111,7 +111,7 @@
             <TextView
                 android:id="@+id/txtManeuverInstruction"
                 android:text="Vire à direita"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/colorTextSecondary"
                 android:textSize="13sp"
                 android:maxLines="2"
                 android:maxWidth="250dp"
@@ -157,7 +157,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:text="50"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorTextOnLight"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </FrameLayout>
@@ -173,7 +173,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="24°"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="18sp"
                 android:layout_marginStart="8dp"/>
 
@@ -187,7 +187,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="85"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-black"/>
@@ -197,7 +197,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text=" KM/H"
-                android:textColor="#AAAAAA"
+                android:textColor="?attr/colorTextSecondary"
                 android:textSize="14sp"
                 android:layout_marginStart="4dp"
                 android:layout_marginTop="12dp"/>
@@ -218,7 +218,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="14:30"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textStyle="bold"/>
                     
                 <TextView
@@ -226,7 +226,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="12 km"
-                    android:textColor="#AAAAAA"
+                    android:textColor="?attr/colorTextSecondary"
                     android:textSize="12sp"/>
             </LinearLayout>
         </LinearLayout>
@@ -260,7 +260,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Start a Route"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:paddingHorizontal="24dp"
@@ -293,7 +293,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--:--"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textSize="18sp"
                     android:textStyle="bold"/>
 
@@ -301,7 +301,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="arrival"
-                    android:textColor="#AAAAAA"
+                    android:textColor="?attr/colorTextSecondary"
                     android:textSize="12sp"/>
 
             </LinearLayout>
@@ -309,7 +309,7 @@
             <View
                 android:layout_width="1dp"
                 android:layout_height="40dp"
-                android:background="#444444"
+                android:background="?attr/colorDivider"
                 android:layout_marginHorizontal="16dp"/>
 
             <!-- Distance -->
@@ -324,7 +324,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textSize="18sp"
                     android:textStyle="bold"/>
 
@@ -332,7 +332,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="km"
-                    android:textColor="#AAAAAA"
+                    android:textColor="?attr/colorTextSecondary"
                     android:textSize="12sp"/>
 
             </LinearLayout>
@@ -360,7 +360,7 @@
             android:background="@drawable/stop_navigation_button_bg"
             android:padding="12dp"
             android:scaleType="fitCenter"
-            app:tint="#FFFFFF"
+            app:tint="?attr/colorIconDefault"
             android:clickable="true"
             android:focusable="true"/>
 
@@ -384,7 +384,7 @@
             android:id="@+id/overtakingAnimation"
             android:layout_width="130dp"
             android:layout_height="220dp"
-            android:background="#F0121212"
+            android:background="?attr/colorSurfaceCard"
             android:clipToPadding="false">
 
             <com.example.myapplication.TopDownCarView
@@ -441,7 +441,7 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:text="80"
-                    android:textColor="#000000"
+                    android:textColor="?attr/colorTextOnLight"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </FrameLayout>
@@ -451,7 +451,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="13 Km/h"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="24sp"
                 android:textStyle="bold"/>
 
@@ -464,7 +464,7 @@
         android:id="@+id/speedAlertBlur"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#44FF0000"
+        android:background="?attr/colorSpeedAlertOverlay"
         android:visibility="gone"/>
 
 

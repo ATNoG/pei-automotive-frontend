@@ -11,6 +11,67 @@
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+
+        <!-- ========== Custom Surface / Background ========== -->
+        <item name="colorSurfaceCard">@color/surface_card</item>
+        <item name="colorSurfaceOverlay">@color/surface_overlay</item>
+        <item name="colorSurfaceDialog">@color/surface_dialog</item>
+        <item name="colorSurfaceDialogHeader">@color/surface_dialog_header</item>
+        <item name="colorSurfaceDialogCard">@color/surface_dialog_card</item>
+        <item name="colorSurfaceDialogAlert">@color/surface_dialog_alert</item>
+        <item name="colorSurfaceRouteInfo">@color/surface_route_info</item>
+        <item name="colorSurfacePanel">@color/surface_panel</item>
+        <item name="colorSurfacePanelHeader">@color/surface_panel_header</item>
+        <item name="colorSurfacePanelLane">@color/surface_panel_lane</item>
+        <item name="colorSurfacePanelSpeed">@color/surface_panel_speed</item>
+        <item name="colorSurfaceWeatherBadge">@color/surface_weather_badge</item>
+        <item name="colorSurfaceButtonNeutral">@color/surface_button_neutral</item>
+        <item name="colorSurfaceEtaFlag">@color/surface_eta_flag</item>
+
+        <!-- ========== Text ========== -->
+        <item name="colorTextPrimary">@color/text_primary</item>
+        <item name="colorTextSecondary">@color/text_secondary</item>
+        <item name="colorTextTertiary">@color/text_tertiary</item>
+        <item name="colorTextHint">@color/text_hint</item>
+        <item name="colorTextDescription">@color/text_description</item>
+        <item name="colorTextOnLight">@color/text_on_light</item>
+
+        <!-- ========== Accent / Brand ========== -->
+        <item name="colorAccentBlue">@color/accent_blue</item>
+
+        <!-- ========== Status / Alert ========== -->
+        <item name="colorStatusSuccess">@color/status_success</item>
+        <item name="colorStatusWarning">@color/status_warning</item>
+        <item name="colorStatusDanger">@color/status_danger</item>
+        <item name="colorStatusDangerLight">@color/status_danger_light</item>
+        <item name="colorSpeedWarning">@color/speed_warning</item>
+        <item name="colorSpeedLimitBorder">@color/speed_limit_border</item>
+        <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay</item>
+        <item name="colorSpeedAlertBackground">@color/speed_alert_bg</item>
+
+        <!-- ========== Stroke / Divider ========== -->
+        <item name="colorCardStroke">@color/card_stroke</item>
+        <item name="colorCardStrokeLight">@color/card_stroke_light</item>
+        <item name="colorDivider">@color/divider</item>
+        <item name="colorDividerLight">@color/divider_light</item>
+
+        <!-- ========== Icons ========== -->
+        <item name="colorIconDefault">@color/icon_default</item>
+        <item name="colorIconMuted">@color/icon_muted</item>
+    </style>
+
+    <!-- Colorblind-safe theme: blue for success, orange for danger -->
+    <style name="Theme.MyApplication.ColorBlind">
+        <!-- Status / Alert -->
+        <item name="colorStatusSuccess">@color/status_success_cb</item>
+        <item name="colorStatusDanger">@color/status_danger_cb</item>
+        <item name="colorStatusDangerLight">@color/status_danger_light_cb</item>
+        <item name="colorStatusWarning">@color/status_warning_cb</item>
+
+        <!-- Speed -->
+        <item name="colorSpeedWarning">@color/speed_warning_cb</item>
+        <item name="colorSpeedLimitBorder">@color/speed_limit_border_cb</item>
+        <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay_cb</item>
+        <item name="colorSpeedAlertBackground">@color/speed_alert_bg_cb</item>
     </style>
 </resources>

@@ -1,16 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8" ?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/mainContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+>
 
     <!-- MAP (full width) -->
     <org.maplibre.android.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+    />
 
     <!-- RIGHT PANEL (Modern CardView based design) -->
     <LinearLayout
@@ -25,7 +28,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintWidth_percent="0.25">
+        app:layout_constraintWidth_percent="0.25"
+    >
 
         <!-- TOP INFO BOX / NAVIGATION PANEL -->
         <FrameLayout
@@ -35,7 +39,8 @@
             android:layout_weight="1.2"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
-            android:layout_marginBottom="6dp">
+            android:layout_marginBottom="6dp"
+        >
 
             <!-- START ROUTE BUTTON (shown when no route active) -->
             <LinearLayout
@@ -45,7 +50,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:visibility="visible">
+                android:visibility="visible"
+            >
 
                 <TextView
                     android:id="@+id/btnStartRoute"
@@ -59,7 +65,8 @@
                     android:paddingVertical="16dp"
                     android:background="@drawable/start_route_button_bg"
                     android:clickable="true"
-                    android:focusable="true"/>
+                    android:focusable="true"
+                />
 
             </LinearLayout>
 
@@ -71,7 +78,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center_vertical"
-                android:visibility="gone">
+                android:visibility="gone"
+            >
 
                 <!-- Left: Arrival Time -->
                 <LinearLayout
@@ -79,7 +87,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center">
+                    android:gravity="center"
+                >
 
                     <TextView
                         android:id="@+id/txtNavArrival"
@@ -89,7 +98,8 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content"
+                    />
 
                     <TextView
                         android:text="arrival"
@@ -97,7 +107,8 @@
                         android:textSize="11sp"
                         android:gravity="center"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content"
+                    />
                 </LinearLayout>
 
                 <!-- Divider -->
@@ -105,7 +116,8 @@
                     android:layout_width="1dp"
                     android:layout_height="50dp"
                     android:background="#404040"
-                    android:layout_marginHorizontal="12dp" />
+                    android:layout_marginHorizontal="12dp"
+                />
 
                 <!-- Right: Distance -->
                 <LinearLayout
@@ -113,7 +125,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:gravity="center">
+                    android:gravity="center"
+                >
 
                     <TextView
                         android:id="@+id/txtNavDistance"
@@ -123,7 +136,8 @@
                         android:textStyle="bold"
                         android:gravity="center"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content"
+                    />
 
                     <TextView
                         android:text="km"
@@ -131,7 +145,8 @@
                         android:textSize="11sp"
                         android:gravity="center"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"/>
+                        android:layout_height="wrap_content"
+                    />
                 </LinearLayout>
 
             </LinearLayout>
@@ -145,7 +160,8 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="10dp"
             android:layout_marginBottom="6dp"
-            android:visibility="gone">
+            android:visibility="gone"
+        >
 
             <ImageView
                 android:id="@+id/btnStopNavigation"
@@ -158,7 +174,8 @@
                 android:scaleType="fitCenter"
                 app:tint="#FFFFFF"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true"
+            />
 
         </FrameLayout>
 
@@ -173,12 +190,14 @@
             android:layout_weight="2"
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
-            android:layout_marginBottom="6dp">
+            android:layout_marginBottom="6dp"
+        >
 
             <com.example.myapplication.TopDownCarView
                 android:id="@+id/topDownCarView"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+            />
 
             <ImageView
                 android:id="@+id/overtakingWarningIcon"
@@ -188,7 +207,8 @@
                 android:layout_margin="12dp"
                 android:src="@drawable/red_warning"
                 android:visibility="gone"
-                android:contentDescription="Overtaking warning" />
+                android:contentDescription="Overtaking warning"
+            />
 
         </FrameLayout>
 
@@ -201,7 +221,8 @@
             android:layout_marginLeft="10dp"
             android:layout_marginRight="10dp"
             android:clipChildren="false"
-            android:clipToPadding="false">
+            android:clipToPadding="false"
+        >
 
             <!-- Red blur background for speed alert (initially invisible) -->
             <View
@@ -210,79 +231,89 @@
                 android:layout_height="match_parent"
                 android:background="#FF0000"
                 android:alpha="0"
-                android:visibility="gone" />
+                android:visibility="gone"
+            />
 
             <LinearLayout
-                    android:id="@+id/speedArea"
-                    android:orientation="horizontal"
-                    android:background="@drawable/panel_bottom_speed"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:padding="12dp"
-                    android:gravity="center_vertical"
-                    android:clipChildren="false"
-                    android:clipToPadding="false">
+                android:id="@+id/speedArea"
+                android:orientation="horizontal"
+                android:background="@drawable/panel_bottom_speed"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:gravity="center_vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+            >
 
                     <!-- Speed limit circle with red border -->
                     <FrameLayout
-                        android:id="@+id/speedLimitContainer"
-                        android:layout_width="50dp"
-                        android:layout_height="50dp"
-                        android:layout_marginEnd="12dp">
-                        
+                    android:id="@+id/speedLimitContainer"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_marginEnd="12dp"
+                >
+
                         <View
-                            android:layout_width="match_parent"
-                            android:layout_height="match_parent"
-                            android:background="@drawable/speed_limit_circle_bg" />
-                        
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/speed_limit_circle_bg"
+                    />
+
                         <TextView
-                            android:id="@+id/txtSpeedLimit"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="center"
-                            android:text="--"
-                            android:textColor="#000000"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
+                        android:id="@+id/txtSpeedLimit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="--"
+                        android:textColor="#000000"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                    />
                     </FrameLayout>
 
                     <!-- SPEED ALERT ICON (hidden) -->
                     <ImageView
-                        android:id="@+id/speedAlertIcon"
-                        android:layout_width="0dp"
-                        android:layout_height="0dp"
-                        android:visibility="gone" />
+                    android:id="@+id/speedAlertIcon"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:visibility="gone"
+                />
 
                     <Space
-                        android:layout_width="8dp"
-                        android:layout_height="0dp" />
+                    android:layout_width="8dp"
+                    android:layout_height="0dp"
+                />
 
                     <!-- Current speed (large, right side) -->
                     <LinearLayout
-                        android:layout_width="0dp"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="right|center_vertical"
+                    android:paddingEnd="8dp"
+                >
+
+                        <TextView
+                        android:id="@+id/txtCurrentSpeed"
+                        android:text="12"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF"
+                        android:textSize="28sp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="horizontal"
-                        android:gravity="right|center_vertical"
-                        android:paddingEnd="8dp">
+                    />
 
                         <TextView
-                            android:id="@+id/txtCurrentSpeed"
-                            android:text="12"
-                            android:textStyle="bold"
-                            android:textColor="#FFFFFF"
-                            android:textSize="28sp"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
-
-                        <TextView
-                            android:id="@+id/txtSpeedUnit"
-                            android:text="Km/h"
-                            android:textColor="#FFFFFF"
-                            android:textSize="28sp"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:paddingStart="4dp" />
+                        android:id="@+id/txtSpeedUnit"
+                        android:text="Km/h"
+                        android:textColor="#FFFFFF"
+                        android:textSize="28sp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="4dp"
+                    />
                     </LinearLayout>
                 </LinearLayout>
         </FrameLayout>
@@ -302,14 +333,16 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
-        android:focusable="true">
+        android:focusable="true"
+    >
 
         <TextView
             android:id="@+id/txtWeatherEmoji"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🌡️"
-            android:textSize="36sp"/>
+            android:textSize="36sp"
+        />
 
         <TextView
             android:id="@+id/txtTemperature"
@@ -320,7 +353,8 @@
             android:fontFamily="sans-serif-black"
             android:layout_marginStart="12dp"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+        />
 
         <!-- Dynamic extras (wind, humidity, etc.) – populated by UiController -->
         <LinearLayout
@@ -329,7 +363,8 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:visibility="gone"/>
+            android:visibility="gone"
+        />
 
 </LinearLayout>
 
@@ -350,7 +385,8 @@
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="@id/weatherBadge"
         app:layout_constraintBottom_toBottomOf="@id/weatherBadge"
-        app:layout_constraintStart_toEndOf="@id/weatherBadge">
+        app:layout_constraintStart_toEndOf="@id/weatherBadge"
+    >
 
         <!-- Turn direction icon - larger -->
         <ImageView
@@ -359,13 +395,15 @@
             android:layout_height="56dp"
             android:src="@drawable/ic_straight"
             android:scaleType="fitCenter"
-            app:tint="#FFFFFF" />
+            app:tint="#FFFFFF"
+        />
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:layout_marginStart="16dp"
+        >
 
             <!-- Distance to next maneuver - larger text -->
             <TextView
@@ -375,7 +413,8 @@
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+            />
 
             <!-- Instruction text - larger -->
             <TextView
@@ -387,25 +426,46 @@
                 android:maxWidth="300dp"
                 android:ellipsize="end"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="wrap_content"
+            />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- SETTINGS BUTTON -->
-    <ImageView
+    <!-- SETTINGS CARD -->
+    <LinearLayout
         android:id="@+id/btnSettings"
-        android:src="@drawable/ic_settings"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginStart="12dp"
-        android:layout_marginBottom="25dp"
-        android:adjustViewBounds="true"
-        android:scaleType="fitCenter"
+        android:orientation="horizontal"
+        android:background="@drawable/weather_bg"
+        android:padding="8dp"
+        android:layout_margin="2dp"
+        android:gravity="center_vertical"
         android:clickable="true"
         android:focusable="true"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+    >
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️"
+            android:textSize="36sp"
+        />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="28sp"
+            android:fontFamily="sans-serif-black"
+            android:layout_marginStart="12dp"
+        />
+
+    </LinearLayout>
 
 
 

@@ -344,7 +344,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     private fun setupSettingsButton() {
-        val settingsButton = findViewById<ImageView>(R.id.btnSettings)
+        val settingsButton = findViewById<View>(R.id.btnSettings)
         settingsButton?.apply {
             isClickable = true
             isFocusable = true

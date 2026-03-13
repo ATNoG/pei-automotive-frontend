@@ -339,7 +339,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="🌡️"
-            android:textSize="36sp"
+            android:textSize="20sp"
         />
 
         <TextView
@@ -347,8 +347,8 @@
             android:text="11°C"
             android:textColor="#FFFFFF"
             android:textStyle="bold"
-            android:textSize="28sp"
-            android:fontFamily="sans-serif-black"
+            android:textSize="20sp"
+            android:fontFamily="DM Mono"
             android:layout_marginStart="12dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -435,7 +435,7 @@
         android:orientation="horizontal"
         android:background="@drawable/weather_bg"
         android:padding="8dp"
-        android:layout_margin="2dp"
+        android:layout_margin="12dp"
         android:gravity="center_vertical"
         android:clickable="true"
         android:focusable="true"
@@ -449,7 +449,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="⚙️"
-            android:textSize="36sp"
+            android:textSize="20sp"
         />
 
         <TextView
@@ -457,9 +457,8 @@
             android:layout_height="wrap_content"
             android:text="Settings"
             android:textColor="#FFFFFF"
-            android:textStyle="bold"
-            android:textSize="28sp"
-            android:fontFamily="sans-serif-black"
+            android:textSize="20sp"
+            android:fontFamily="DM Mono"
             android:layout_marginStart="12dp"
         />
 

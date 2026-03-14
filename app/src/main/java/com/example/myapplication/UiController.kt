@@ -298,18 +298,10 @@ class UiController(private val activity: Activity) {
     }
 
     fun setupWeatherCardClick() {
-        weatherCard?.setOnClickListener {
-            playTapAnimation(it)
-            showWeatherDialog()
-        }
-    }
-
-    fun playTapAnimation(view: View) {
-        runCatching {
-            view.clearAnimation()
-            view.startAnimation(AnimationUtils.loadAnimation(activity, R.anim.button_heartbeat))
-        }.onFailure { error ->
-            Log.w("UiController", "Tap animation failed: ${error.message}")
+        weatherCard?.apply {
+            applyPressAnimation(activity) {
+                showWeatherDialog()
+            }
         }
     }
 

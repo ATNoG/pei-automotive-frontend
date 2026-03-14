@@ -59,9 +59,9 @@
                     android:layout_height="wrap_content"
                     android:text="▶ Start a Route"
                     android:textColor="#FFFFFF"
-                    android:textSize="18sp"
+                    android:textSize="20sp"
                     android:textStyle="bold"
-                    android:fontFamily="sans-serif-black"
+                    android:fontFamily="DM Mono"
                     android:clickable="true"
                     android:focusable="true"
                 />

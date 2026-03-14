@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupNavigationButton() {
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.setOnClickListener {
+            uiController.playTapAnimation(it)
             showNavigationDialog()
         }
 
@@ -353,6 +354,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             isClickable = true
             isFocusable = true
             setOnClickListener {
+                uiController.playTapAnimation(it)
                 Log.d("SETTINGS", "Settings button clicked")
                 showSettingsDialog()
             }

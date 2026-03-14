@@ -278,9 +278,9 @@
             android:id="@+id/startRouteContainer"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
+            android:orientation="horizontal"
             android:padding="16dp"
-            android:gravity="center"
+            android:gravity="center_vertical"
             android:visibility="visible"
         >
 
@@ -290,7 +290,7 @@
                 android:layout_height="wrap_content"
                 android:text="▶ Start a Route"
                 android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:textSize="28sp"
                 android:textStyle="bold"
                 android:fontFamily="sans-serif-black"
                 android:clickable="true"

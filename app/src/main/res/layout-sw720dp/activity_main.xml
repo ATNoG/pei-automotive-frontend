@@ -295,19 +295,21 @@
 
                         <TextView
                         android:id="@+id/txtCurrentSpeed"
-                        android:text="12"
+                        android:text="0"
                         android:textStyle="bold"
                         android:textColor="#FFFFFF"
                         android:textSize="28sp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:fontFamily="DM Mono"
                     />
 
                         <TextView
                         android:id="@+id/txtSpeedUnit"
                         android:text="Km/h"
                         android:textColor="#FFFFFF"
-                        android:textSize="28sp"
+                        android:textSize="20sp"
+                        android:fontFamily="DM Mono"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:paddingStart="4dp"

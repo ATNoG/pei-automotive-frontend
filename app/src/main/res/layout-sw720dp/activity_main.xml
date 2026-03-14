@@ -437,7 +437,7 @@
         android:orientation="horizontal"
         android:background="@drawable/weather_bg"
         android:padding="8dp"
-        android:layout_margin="12dp"
+        android:layout_margin="2dp"
         android:gravity="center_vertical"
         android:clickable="true"
         android:focusable="true"

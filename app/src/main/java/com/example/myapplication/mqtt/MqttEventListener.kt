@@ -18,7 +18,7 @@ interface MqttEventListener {
     fun onSpeedAlert()
 
     /** An overtaking alert was received. */
-    fun onOvertakingAlert()
+    fun onOvertakingAlert(payload: String)
 
     /**
      * An accident alert was received.

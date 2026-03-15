@@ -3,9 +3,12 @@ package com.example.myapplication
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
-import com.example.myapplication.config.AppConfig
+import org.json.JSONObject
+import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -24,7 +27,8 @@ import kotlin.math.sin
 class VehicleTracker(
     private val mapController: MapController,
     private val topDownCarView: TopDownCarView,
-    private val overtakingWarningIcon: ImageView
+    private val overtakingWarningIcon: ImageView,
+    private val overtakingEdgeLightView: OvertakingEdgeLightView
 ) {
 
     companion object {
@@ -57,6 +61,7 @@ class VehicleTracker(
     private var hasSeenUserCar = false
     private var hasSeenOtherCar = false
     private var overtakingAnimationStarted = false
+    private var lastOvertakingSide = OvertakingEdgeLightView.Side.LEFT
 
     // ── Throttling Handlers ──────────────────────────────────────────────
 
@@ -64,6 +69,7 @@ class VehicleTracker(
 
     private var otherCarUpdateRunnable: Runnable? = null
     private var evUpdateRunnable: Runnable? = null
+    private var hideOvertakingRunnable: Runnable? = null
 
     // ====================================================================
     //  User Car
@@ -108,19 +114,26 @@ class VehicleTracker(
     //  Overtaking
     // ====================================================================
 
-    fun showOvertakingWarning() {
-        Log.d(TAG, "Showing overtaking warning")
+    fun showOvertakingWarning(payload: String) {
+        val side = resolveOvertakingSide(payload)
+        Log.d(TAG, "Showing overtaking warning on $side side")
         overtakingAnimationStarted = true
+        overtakingEdgeLightView.showIndicator(side, OVERTAKING_WARNING_DURATION_MS)
+        updateOvertakingWarningIconPosition(side)
         overtakingWarningIcon.visibility = View.VISIBLE
 
-        overtakingWarningIcon.postDelayed({
-            hideOvertakingWarning()
-        }, OVERTAKING_WARNING_DURATION_MS)
+        hideOvertakingRunnable?.let { mainHandler.removeCallbacks(it) }
+        val hideRunnable = Runnable { hideOvertakingWarning() }
+        hideOvertakingRunnable = hideRunnable
+        mainHandler.postDelayed(hideRunnable, OVERTAKING_WARNING_DURATION_MS)
     }
 
     private fun hideOvertakingWarning() {
         Log.d(TAG, "Hiding overtaking warning")
+        hideOvertakingRunnable?.let { mainHandler.removeCallbacks(it) }
+        hideOvertakingRunnable = null
         overtakingWarningIcon.visibility = View.GONE
+        overtakingEdgeLightView.hideIndicator()
         overtakingAnimationStarted = false
     }
 
@@ -133,6 +146,7 @@ class VehicleTracker(
             otherCarPositions.clear()
             mapController.clearOtherCar()
             overtakingWarningIcon.visibility = View.GONE
+            overtakingEdgeLightView.hideIndicator()
             Log.d(TAG, "Overtaking state reset")
         }
     }
@@ -225,6 +239,71 @@ class VehicleTracker(
         topDownCarView.updateEVCars(evRelative)
     }
 
+    private fun resolveOvertakingSide(payload: String): OvertakingEdgeLightView.Side {
+        val alertCar = findAlertRelatedOtherCar(payload) ?: findNearestOtherCar()
+        if (alertCar == null) {
+            Log.d(TAG, "No tracked overtaking car found, reusing last side $lastOvertakingSide")
+            return lastOvertakingSide
+        }
+
+        val (lateral, longitudinal) = relativePosition(alertCar.lat, alertCar.lon)
+        val resolvedSide = when {
+            lateral < -0.5f -> OvertakingEdgeLightView.Side.LEFT
+            lateral > 0.5f -> OvertakingEdgeLightView.Side.RIGHT
+            else -> lastOvertakingSide
+        }
+
+        lastOvertakingSide = resolvedSide
+        Log.d(
+            TAG,
+            "Resolved overtaking side=$resolvedSide for ${alertCar.carId} (lat=$lateral, lon=$longitudinal)"
+        )
+        return resolvedSide
+    }
+
+    private fun findAlertRelatedOtherCar(payload: String): CarPosition? {
+        val candidateIds = try {
+            val json = JSONObject(payload)
+            listOf(
+                "overtaking_car_id",
+                "overtaken_car_id",
+                "car_id",
+                "target_car_id",
+                "regular_car_id"
+            ).mapNotNull { key ->
+                json.optString(key).takeIf { it.isNotBlank() }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to parse overtaking payload for side detection", e)
+            emptyList()
+        }
+
+        return candidateIds
+            .asSequence()
+            .mapNotNull { carId -> otherCarPositions[carId] }
+            .firstOrNull()
+    }
+
+    private fun findNearestOtherCar(): CarPosition? =
+        otherCarPositions.values.minByOrNull { car ->
+            val (lateral, longitudinal) = relativePosition(car.lat, car.lon)
+            abs(lateral) + abs(longitudinal)
+        }
+
+    private fun updateOvertakingWarningIconPosition(side: OvertakingEdgeLightView.Side) {
+        val params = overtakingWarningIcon.layoutParams as? FrameLayout.LayoutParams ?: return
+        val gravity = when (side) {
+            OvertakingEdgeLightView.Side.LEFT -> Gravity.TOP or Gravity.START
+            OvertakingEdgeLightView.Side.RIGHT -> Gravity.TOP or Gravity.END
+            OvertakingEdgeLightView.Side.NONE -> Gravity.TOP or Gravity.START
+        }
+
+        if (params.gravity != gravity) {
+            params.gravity = gravity
+            overtakingWarningIcon.layoutParams = params
+        }
+    }
+
     /**
      * Convert absolute GPS to meters relative to user car orientation.
      * Returns (lateral, longitudinal) in the car's reference frame.
@@ -291,6 +370,8 @@ class VehicleTracker(
     fun destroy() {
         otherCarUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
         evUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
+        hideOvertakingRunnable?.let { mainHandler.removeCallbacks(it) }
+        overtakingEdgeLightView.hideIndicator()
     }
 
     // ── Private Throttle Helper ──────────────────────────────────────────

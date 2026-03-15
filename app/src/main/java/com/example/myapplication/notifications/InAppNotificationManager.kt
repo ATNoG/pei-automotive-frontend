@@ -17,6 +17,7 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
+import java.util.Locale
 
 /**
  * InAppNotificationManager — unified in-app notification system.
@@ -442,7 +443,7 @@ class InAppNotificationManager(private val activity: Activity) {
         val strokeWidthPx = (1.5f * density).toInt()
         // Use ~70% opacity of the accent color for the stroke so it reads clearly
         // without being too harsh against the dark card background
-        val strokeColor = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        val strokeColor = resolveStrokeColor(notification)
         val background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             setColor(0xF0121212.toInt())
@@ -452,6 +453,26 @@ class InAppNotificationManager(private val activity: Activity) {
         view.background = background
 
         return view
+    }
+
+    private fun resolveStrokeColor(notification: AppNotification): Int {
+        val defaultStroke = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        if (notification.type != Type.WEATHER) return defaultStroke
+
+        val firstWord = notification.title
+            .trim()
+            .replace(Regex("^[^A-Za-z]+"), "")
+            .substringBefore(" ")
+            .lowercase(Locale.getDefault())
+
+        val weatherStroke = when (firstWord) {
+            "yellow" -> 0xB3FFD54F.toInt()
+            "orange" -> 0xB3FB8C00.toInt()
+            "red" -> 0xB3E53935.toInt()
+            else -> return defaultStroke
+        }
+
+        return weatherStroke
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

@@ -35,7 +35,9 @@ object AppConfig {
         "speed-car",
         "curved-route-car",
         "ev-test-regular",
-        "car-behind"
+        "car-behind",
+        "highway-car",
+        "highway-car-2"
     )
 
     /**
@@ -45,7 +47,9 @@ object AppConfig {
     val OTHER_CAR_IDS = setOf(
         "overtaking-car-behind",
         "accident-car",
-        "car-ahead"
+        "car-ahead",
+        "entering-car",
+        "entering-car-2"
     )
 
     // ========== Default Positions ==========

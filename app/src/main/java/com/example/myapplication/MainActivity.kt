@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private lateinit var mqttManager: MqttManager
     private lateinit var mqttEventRouter: MqttEventRouter
     private lateinit var vehicleTracker: VehicleTracker
+    private lateinit var overtakingEdgeLightView: OvertakingEdgeLightView
     private lateinit var navigationManager: NavigationManager
     private lateinit var inAppNotificationManager: InAppNotificationManager
     private lateinit var alertNotificationManager: AlertNotificationManager
@@ -82,6 +84,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
         uiController = UiController(this)
+        overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
         inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
@@ -92,7 +95,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         vehicleTracker = VehicleTracker(
             mapController,
             findViewById(R.id.topDownCarView),
-            findViewById(R.id.overtakingWarningIcon)
+            findViewById(R.id.overtakingWarningIcon),
+            overtakingEdgeLightView
         )
 
         // Setup Navigation Manager
@@ -139,8 +143,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     private fun setupNavigationButton() {
         // Start Route button (top right panel)
-        findViewById<TextView>(R.id.btnStartRoute)?.setOnClickListener {
-            showNavigationDialog()
+        findViewById<TextView>(R.id.btnStartRoute)?.apply {
+            applyPressAnimation(this@MainActivity) {
+                showNavigationDialog()
+            }
         }
 
         // Stop navigation button (below nav panel when active)
@@ -349,16 +355,27 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     private fun setupSettingsButton() {
-        val settingsButton = findViewById<ImageView>(R.id.btnSettings)
+        val settingsButton = findViewById<View>(R.id.btnSettings)
         settingsButton?.apply {
             isClickable = true
             isFocusable = true
-            setOnClickListener {
+            applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
                 showSettingsDialog()
             }
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
+    }
+
+    private fun attachOvertakingEdgeLight(): OvertakingEdgeLightView {
+        val rootView = findViewById<ViewGroup>(android.R.id.content)
+        return OvertakingEdgeLightView(this).also { edgeView ->
+            edgeView.layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            rootView.addView(edgeView)
+        }
     }
 
     @SuppressLint("InflateParams")
@@ -426,8 +443,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread { uiController.showSpeedAlert() }
     }
 
-    override fun onOvertakingAlert() {
-        runOnUiThread { vehicleTracker.showOvertakingWarning() }
+    override fun onOvertakingAlert(payload: String) {
+        runOnUiThread { vehicleTracker.showOvertakingWarning(payload) }
     }
 
     override fun onAccidentAlert(topic: String, payload: String) {

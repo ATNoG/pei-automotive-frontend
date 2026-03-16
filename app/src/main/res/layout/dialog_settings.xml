@@ -47,7 +47,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
                     app:tint="#FFFFFF"
-                    android:contentDescription="Close" />
+                    android:contentDescription="@string/settings_close" />
 
             </LinearLayout>
 

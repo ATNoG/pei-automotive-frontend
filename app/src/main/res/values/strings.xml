@@ -18,8 +18,8 @@
     <string name="speed_unit">Km/h</string>
     <string name="speed_unit_short">KM/H</string>
     <string name="turn_right">Turn right</string>
-    <string name="calculating_route">Calculating route...</string>
-    <string name="calculating">Calculating...</string>
+    <string name="calculating_route">Calculating route…</string>
+    <string name="calculating">Calculating…</string>
     <string name="start_navigation">Start Navigation</string>
     <string name="error_calculating_route">Error calculating route</string>
     <string name="try_again">Try Again</string>
@@ -30,10 +30,18 @@
     <string name="speed_limit_warning">Warning, you are exceeding the speed limit</string>
     <string name="overtaking_warning">Warning, vehicle overtaking</string>
     <string name="accident_warning">Warning! Accident ahead in %1$s.</string>
-    <string name="weather_wind">Vento</string>
-    <string name="weather_humidity">Humidade</string>
-    <string name="weather_feels_like">Sensação térmica</string>
-    <string name="weather_pressure">Pressão</string>
-    <string name="weather_visibility">Visibilidade</string>
-    <string name="weather_uv_index">Índice UV</string>
+    <string name="weather_wind">💨 Wind</string>
+    <string name="weather_humidity">💧 Humidity</string>
+    <string name="weather_feels_like">🌡️ Feels Like</string>
+    <string name="weather_pressure">🔵 Pressure</string>
+    <string name="weather_visibility">👁️ Visibility</string>
+    <string name="weather_uv_index">☀️ UV Index</string>
+    <string name="weather_active_alert">⚠️ Active Weather Alert</string>
+    <string name="settings_close">Close</string>
+    <string name="destination_selection">Select destination:</string>
+    <string name="cancel">Cancel</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_details">Weather Details</string>
+    <string name="weather_toggle_card">Toggle a card to pin it to the weather card.</string>
+    <string name="navigation_error">Error: %1$s</string>
 </resources>

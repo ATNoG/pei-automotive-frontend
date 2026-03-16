@@ -19,8 +19,8 @@
     <string name="speed_unit">Km/h</string>
     <string name="speed_unit_short">KM/H</string>
     <string name="turn_right">Vire à direita</string>
-    <string name="calculating_route">Calculando rota...</string>
-    <string name="calculating">Calculando...</string>
+    <string name="calculating_route">Calculando rota…</string>
+    <string name="calculating">Calculando…</string>
     <string name="start_navigation">Iniciar Navegação</string>
     <string name="error_calculating_route">Erro ao calcular rota</string>
     <string name="try_again">Tentar Novamente</string>
@@ -31,10 +31,18 @@
     <string name="speed_limit_warning">Atenção, você está excedendo o limite de velocidade</string>
     <string name="overtaking_warning">Atenção, veículo ultrapassando</string>
     <string name="accident_warning">Atenção! Acidente à frente em %1$s.</string>
-    <string name="weather_wind">Wind</string>
-    <string name="weather_humidity">Humidity</string>
-    <string name="weather_feels_like">Feels Like</string>
-    <string name="weather_pressure">Pressure</string>
-    <string name="weather_visibility">Visibility</string>
-    <string name="weather_uv_index">UV Index</string>
+    <string name="weather_wind">💨 Vento</string>
+    <string name="weather_humidity">💧 Humidade</string>
+    <string name="weather_feels_like">🌡️ Sensação térmica</string>
+    <string name="weather_pressure">🔵 Pressão</string>
+    <string name="weather_visibility">👁️ Visibilidade</string>
+    <string name="weather_uv_index">☀️ Índice UV</string>
+    <string name="weather_active_alert">⚠️ Alertas Ativos do Clima</string>
+    <string name="settings_close">Fechar</string>
+    <string name="destination_selection">Escolha um destino:</string>
+    <string name="cancel">Cancelar</string>
+    <string name="weather_partly_cloudy">Parcialmente nublado</string>
+    <string name="weather_details">Detalhes do Clima</string>
+    <string name="weather_toggle_card">Alterne a carta para fixá-la à carta de previsão do tempo.</string>
+    <string name="navigation_error">Erro: %1$s</string>
 </resources>

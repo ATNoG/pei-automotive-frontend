@@ -59,7 +59,7 @@
                         android:id="@+id/txtWeatherDialogCondition"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Partly Cloudy"
+                        android:text="@string/weather_partly_cloudy"
                         android:textSize="13sp"
                         android:textColor="#AAAAAA" />
 
@@ -72,7 +72,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
                     app:tint="#FFFFFF"
-                    android:contentDescription="Close" />
+                    android:contentDescription="@string/cancel" />
             </LinearLayout>
 
             <!-- Scrollable Content -->
@@ -92,7 +92,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Weather Details"
+                        android:text="@string/weather_details"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="#FFFFFF"
@@ -101,7 +101,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Toggle a card to pin it to the weather card."
+                        android:text="@string/weather_toggle_card"
                         android:textSize="12sp"
                         android:textColor="#AAAAAA"
                         android:layout_marginBottom="12dp"/>
@@ -134,7 +134,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="🌡️ Feels Like"
+                                    android:text="@string/weather_feels_like"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -179,7 +179,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="💨 Wind"
+                                    android:text="@string/weather_wind"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -233,7 +233,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="💧 Humidity"
+                                    android:text="@string/weather_humidity"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -278,7 +278,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="🔵 Pressure"
+                                    android:text="@string/weather_pressure"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -332,7 +332,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="👁️ Visibility"
+                                    android:text="@string/weather_visibility"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -377,7 +377,7 @@
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="☀️ UV Index"
+                                    android:text="@string/weather_uv_index"
                                     android:textSize="12sp"
                                     android:textColor="#AAAAAA"/>
 
@@ -416,7 +416,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="⚠️ Active Weather Alerts"
+                            android:text="@string/weather_active_alert"
                             android:textSize="14sp"
                             android:textStyle="bold"
                             android:textColor="#FFD54F"

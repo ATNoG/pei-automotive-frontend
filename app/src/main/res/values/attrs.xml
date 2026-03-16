@@ -33,6 +33,13 @@
     <attr name="colorStatusWarning" format="color" />
     <attr name="colorStatusDanger" format="color" />
     <attr name="colorStatusDangerLight" format="color" />
+    <attr name="colorNotificationInfo" format="color" />
+    <attr name="colorNotificationSuccess" format="color" />
+    <attr name="colorNotificationWarning" format="color" />
+    <attr name="colorNotificationError" format="color" />
+    <attr name="colorNotificationAccident" format="color" />
+    <attr name="colorNotificationWeather" format="color" />
+    <attr name="colorNotificationEmergency" format="color" />
     <attr name="colorSpeedWarning" format="color" />
     <attr name="colorSpeedLimitBorder" format="color" />
     <attr name="colorSpeedAlertOverlay" format="color" />

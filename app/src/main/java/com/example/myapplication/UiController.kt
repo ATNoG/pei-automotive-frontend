@@ -2,6 +2,7 @@ package com.example.myapplication
 
 import android.app.Activity
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
 import com.example.myapplication.config.WeatherCardPreferenceManager
 import com.example.myapplication.navigation.models.ManeuverType
@@ -114,9 +116,9 @@ class UiController(private val activity: Activity) {
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
         val speedColor = if (isSpeeding) {
-            ContextCompat.getColor(activity, R.color.speed_warning)
+            resolveThemeColor(R.attr.colorSpeedWarning)
         } else {
-            ContextCompat.getColor(activity, R.color.text_primary)
+            resolveThemeColor(R.attr.colorTextPrimary)
         }
         txtCurrentSpeed?.setTextColor(speedColor)
         txtSpeedUnit?.setTextColor(speedColor)
@@ -124,14 +126,14 @@ class UiController(private val activity: Activity) {
 
         // Speed limit sign: turn red and scale up when speeding, reset when not
         if (isSpeeding) {
-            txtSpeedLimit?.setTextColor(ContextCompat.getColor(activity, R.color.status_danger))
+            txtSpeedLimit?.setTextColor(resolveThemeColor(R.attr.colorStatusDanger))
             speedLimitContainer?.animate()
                 ?.scaleX(1.2f)
                 ?.scaleY(1.2f)
                 ?.setDuration(300)
                 ?.start()
         } else {
-            txtSpeedLimit?.setTextColor(ContextCompat.getColor(activity, R.color.text_on_light))
+            txtSpeedLimit?.setTextColor(resolveThemeColor(R.attr.colorTextOnLight))
             speedLimitContainer?.animate()
                 ?.scaleX(1.0f)
                 ?.scaleY(1.0f)
@@ -471,6 +473,19 @@ class UiController(private val activity: Activity) {
     fun cleanup() {
         // No pending runnables left after accident-banner removal.
         Log.d("UiController", "cleanup()")
+    }
+
+    private fun resolveThemeColor(@AttrRes attrRes: Int): Int {
+        val typedValue = TypedValue()
+        if (!activity.theme.resolveAttribute(attrRes, typedValue, true)) {
+            Log.w("UiController", "Theme color attribute not found: $attrRes")
+            return 0
+        }
+        return if (typedValue.resourceId != 0) {
+            activity.getColor(typedValue.resourceId)
+        } else {
+            typedValue.data
+        }
     }
 
     // ====================================================================

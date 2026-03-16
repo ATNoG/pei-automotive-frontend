@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import android.util.TypedValue
 import android.view.GestureDetector
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -17,6 +18,7 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
+import androidx.annotation.AttrRes
 
 /**
  * InAppNotificationManager — unified in-app notification system.
@@ -39,14 +41,14 @@ class InAppNotificationManager(private val activity: Activity) {
 
     // ── Notification Types ───────────────────────────────────────────────
 
-    enum class Type(val accentColor: Int) {
-        INFO(accentColor = 0xFF4A90D9.toInt()),
-        SUCCESS(accentColor = 0xFF4CAF50.toInt()),
-        WARNING(accentColor = 0xFFFFD54F.toInt()),
-        ERROR(accentColor = 0xFFFF4444.toInt()),
-        ACCIDENT(accentColor = 0xFFFF6B35.toInt()),
-        WEATHER(accentColor = 0xFF9EC8F5.toInt()),
-        EMERGENCY(accentColor = 0xFFFF4444.toInt())
+    enum class Type(@AttrRes val accentColorAttr: Int) {
+        INFO(accentColorAttr = R.attr.colorNotificationInfo),
+        SUCCESS(accentColorAttr = R.attr.colorNotificationSuccess),
+        WARNING(accentColorAttr = R.attr.colorNotificationWarning),
+        ERROR(accentColorAttr = R.attr.colorNotificationError),
+        ACCIDENT(accentColorAttr = R.attr.colorNotificationAccident),
+        WEATHER(accentColorAttr = R.attr.colorNotificationWeather),
+        EMERGENCY(accentColorAttr = R.attr.colorNotificationEmergency)
     }
 
     // ── Data ─────────────────────────────────────────────────────────────
@@ -440,12 +442,11 @@ class InAppNotificationManager(private val activity: Activity) {
         val density = activity.resources.displayMetrics.density
         val cornerRadiusPx = 20 * density
         val strokeWidthPx = (1.5f * density).toInt()
-        // Use ~70% opacity of the accent color for the stroke so it reads clearly
-        // without being too harsh against the dark card background
-        val strokeColor = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        val strokeColor = resolveThemeColor(notification.type.accentColorAttr)
+        val backgroundColor = resolveThemeColor(R.attr.colorSurfaceCard)
         val background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
-            setColor(0xF0121212.toInt())
+            setColor(backgroundColor)
             cornerRadius = cornerRadiusPx
             setStroke(strokeWidthPx, strokeColor)
         }
@@ -459,6 +460,19 @@ class InAppNotificationManager(private val activity: Activity) {
     private fun cancelAutoDismiss() {
         autoDismissJob?.let { handler.removeCallbacks(it) }
         autoDismissJob = null
+    }
+
+    private fun resolveThemeColor(@AttrRes attrRes: Int): Int {
+        val typedValue = TypedValue()
+        if (!activity.theme.resolveAttribute(attrRes, typedValue, true)) {
+            Log.w(TAG, "Theme color attribute not found: $attrRes")
+            return 0
+        }
+        return if (typedValue.resourceId != 0) {
+            activity.getColor(typedValue.resourceId)
+        } else {
+            typedValue.data
+        }
     }
 
     private fun safeRemoveView(view: View) {

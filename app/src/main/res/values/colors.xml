@@ -42,6 +42,13 @@
     <color name="status_danger">#FFFF0000</color>
     <color name="status_danger_light">#FFF44336</color>
     <color name="status_warning">#FFFFD54F</color>
+    <color name="notification_info">#FF4A90D9</color>
+    <color name="notification_success">#FF4CAF50</color>
+    <color name="notification_warning">#FFFFD54F</color>
+    <color name="notification_error">#FFFF4444</color>
+    <color name="notification_accident">#FFFF6B35</color>
+    <color name="notification_weather">#FF9EC8F5</color>
+    <color name="notification_emergency">#FFFF4444</color>
 
     <!-- ========== Speed ========== -->
     <color name="speed_warning">#FFFF4444</color>
@@ -136,12 +143,19 @@
 
     <!-- ========== Status / Alert ========== -->
     <color name="status_success_cb">#FF33B5E5</color>       <!-- sky blue instead of green -->
-    <color name="status_danger_cb">#FFFF8800</color>        <!-- orange instead of red -->
+    <color name="status_danger_cb">#76A900</color>        <!-- orange instead of red -->
     <color name="status_danger_light_cb">#FFFFBB33</color>  <!-- light orange -->
     <color name="status_warning_cb">#FFFFC107</color>       <!-- amber -->
+    <color name="notification_info_cb">#FF2196F3</color>
+    <color name="notification_success_cb">#FF33B5E5</color>
+    <color name="notification_warning_cb">#FFFFC107</color>
+    <color name="notification_error_cb">#FFFF8800</color>
+    <color name="notification_accident_cb">#FFFF8800</color>
+    <color name="notification_weather_cb">#FF90CAF9</color>
+    <color name="notification_emergency_cb">#FFFF8800</color>
 
     <!-- ========== Speed ========== -->
-    <color name="speed_warning_cb">#FFFF8800</color>        
+    <color name="speed_warning_cb">#FFEA69</color>
     <color name="speed_limit_border_cb">#2271B2</color>
     <color name="speed_alert_overlay_cb">#44FF8800</color>  <!-- orange overlay -->
     <color name="speed_alert_bg_cb">#FFFF8800</color>        <!-- orange -->

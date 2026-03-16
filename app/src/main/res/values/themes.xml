@@ -45,6 +45,13 @@
         <item name="colorStatusWarning">@color/status_warning</item>
         <item name="colorStatusDanger">@color/status_danger</item>
         <item name="colorStatusDangerLight">@color/status_danger_light</item>
+        <item name="colorNotificationInfo">@color/notification_info</item>
+        <item name="colorNotificationSuccess">@color/notification_success</item>
+        <item name="colorNotificationWarning">@color/notification_warning</item>
+        <item name="colorNotificationError">@color/notification_error</item>
+        <item name="colorNotificationAccident">@color/notification_accident</item>
+        <item name="colorNotificationWeather">@color/notification_weather</item>
+        <item name="colorNotificationEmergency">@color/notification_emergency</item>
         <item name="colorSpeedWarning">@color/speed_warning</item>
         <item name="colorSpeedLimitBorder">@color/speed_limit_border</item>
         <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay</item>
@@ -104,6 +111,13 @@
         <item name="colorStatusWarning">@color/status_warning_cb</item>
         <item name="colorStatusDanger">@color/status_danger_cb</item>
         <item name="colorStatusDangerLight">@color/status_danger_light_cb</item>
+        <item name="colorNotificationInfo">@color/notification_info_cb</item>
+        <item name="colorNotificationSuccess">@color/notification_success_cb</item>
+        <item name="colorNotificationWarning">@color/notification_warning_cb</item>
+        <item name="colorNotificationError">@color/notification_error_cb</item>
+        <item name="colorNotificationAccident">@color/notification_accident_cb</item>
+        <item name="colorNotificationWeather">@color/notification_weather_cb</item>
+        <item name="colorNotificationEmergency">@color/notification_emergency_cb</item>
         <item name="colorSpeedWarning">@color/speed_warning_cb</item>
         <item name="colorSpeedLimitBorder">@color/speed_limit_border_cb</item>
         <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay_cb</item>

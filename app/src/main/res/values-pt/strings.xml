@@ -31,4 +31,10 @@
     <string name="speed_limit_warning">Atenção, você está excedendo o limite de velocidade</string>
     <string name="overtaking_warning">Atenção, veículo ultrapassando</string>
     <string name="accident_warning">Atenção! Acidente à frente em %1$s.</string>
+    <string name="weather_wind">Wind</string>
+    <string name="weather_humidity">Humidity</string>
+    <string name="weather_feels_like">Feels Like</string>
+    <string name="weather_pressure">Pressure</string>
+    <string name="weather_visibility">Visibility</string>
+    <string name="weather_uv_index">UV Index</string>
 </resources>

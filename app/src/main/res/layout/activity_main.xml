@@ -420,7 +420,7 @@
             android:background="?attr/colorSurfaceCard"
             android:clipToPadding="false">
 
-            <com.example.myapplication.TopDownCarView
+            <pt.it.automotive.app.TopDownCarView
                 android:id="@+id/topDownCarView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"

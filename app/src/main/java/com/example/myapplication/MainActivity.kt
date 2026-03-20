@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AlertSettingsDialog
 import com.example.myapplication.config.AppConfig
+import com.example.myapplication.config.WeatherSourcePreferenceManager
 import com.example.myapplication.mqtt.MqttEventListener
 import com.example.myapplication.mqtt.MqttEventRouter
 import com.example.myapplication.navigation.NavigationListener
@@ -65,6 +66,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // Pending route for navigation dialog
     private var pendingRoute: NavigationRoute? = null
 
+    // Cached station assignment for Ditto weather source
+    private var lastStationAssignment: MqttEventRouter.StationAssignmentData? = null
+    private var hasRealStationAssignment = false // true when data came from station_assigner, not client-side fallback
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Apply colorblind theme before inflating any views
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
@@ -90,7 +95,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
-        alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
+        alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController) {
+            onWeatherSourceChanged()
+        }
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
         vehicleTracker = VehicleTracker(
@@ -390,19 +397,59 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         alertSettingsDialog.show()
     }
 
+    private var weatherUpdateJob: kotlinx.coroutines.Job? = null
+
     private fun setupWeatherUpdates() {
-        // Fetch weather every 10 minutes
-        lifecycleScope.launch {
+        startOpenWeatherPolling()
+    }
+
+    private fun startOpenWeatherPolling() {
+        weatherUpdateJob?.cancel()
+        weatherUpdateJob = lifecycleScope.launch {
             fetchAndUpdateWeather()
-            // Schedule periodic updates
             while (true) {
-                kotlinx.coroutines.delay(600000) // 10 minutes
+                kotlinx.coroutines.delay(AppConfig.WEATHER_UPDATE_INTERVAL_MS)
                 fetchAndUpdateWeather()
             }
         }
     }
 
+    private fun stopOpenWeatherPolling() {
+        weatherUpdateJob?.cancel()
+        weatherUpdateJob = null
+    }
+
+    /**
+     * Called when the user toggles the weather data source in settings.
+     * Starts/stops OpenWeatherMap polling accordingly.
+     */
+    private fun onWeatherSourceChanged() {
+        val source = WeatherSourcePreferenceManager(this).getSource()
+        Log.d(TAG, "Weather source changed to: ${source.label}")
+
+        when (source) {
+            WeatherSourcePreferenceManager.Source.OPEN_WEATHER_MAP -> {
+                startOpenWeatherPolling()
+            }
+            WeatherSourcePreferenceManager.Source.DITTO -> {
+                stopOpenWeatherPolling()
+                runOnUiThread {
+                    if (lastStationAssignment != null) {
+                        Log.d(TAG, "Switching to Ditto — displaying cached station data")
+                        uiController.updateDittoWeatherData(lastStationAssignment!!)
+                    } else {
+                        Log.d(TAG, "Switching to Ditto — no station data cached yet, showing waiting state")
+                        uiController.showDittoWaitingState()
+                    }
+                }
+            }
+        }
+    }
+
     private suspend fun fetchAndUpdateWeather() {
+        // Skip if user selected Ditto as weather source
+        if (uiController.getWeatherSource() == WeatherSourcePreferenceManager.Source.DITTO) return
+
         val apiKey = BuildConfig.OPENWEATHER_API_KEY
         if (apiKey.isEmpty()) {
             Log.w("WEATHER", "OpenWeatherMap API key not configured")
@@ -474,6 +521,72 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 data.carId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data)
                 else -> Log.d(TAG, "Unknown car_id ${data.carId}, ignoring")
             }
+        }
+    }
+
+    override fun onMeteoStationsUpdate(payload: String) {
+        // Use meteo/updates as fallback: find nearest station client-side
+        // This ensures data arrives even if station_assigner hasn't published a per-car assignment
+        if (hasRealStationAssignment) {
+            Log.d(TAG, "Meteo stations update received, but already have real station assignment — skipping")
+            return
+        }
+
+        try {
+            val json = org.json.JSONObject(payload)
+            val stations = json.getJSONArray("stations")
+            Log.d(TAG, "Meteo stations update: ${stations.length()} stations, finding nearest to ($currentLat, $currentLon)")
+
+            var nearestData: MqttEventRouter.StationAssignmentData? = null
+            var minDist = Double.MAX_VALUE
+
+            for (i in 0 until stations.length()) {
+                val s = stations.getJSONObject(i)
+                val loc = s.optJSONObject("location") ?: continue
+                val measurement = s.optJSONObject("measurement") ?: continue
+                val sLat = loc.optDouble("latitude", 0.0)
+                val sLon = loc.optDouble("longitude", 0.0)
+                if (sLat == 0.0 && sLon == 0.0) continue
+
+                val dist = vehicleTracker.haversineDistanceM(currentLat, currentLon, sLat, sLon)
+                if (dist < minDist) {
+                    minDist = dist
+                    nearestData = MqttEventRouter.StationAssignmentData(
+                        carId = "",
+                        stationId = s.optInt("station_id", 0),
+                        stationName = s.optString("location_name", ""),
+                        stationLat = sLat,
+                        stationLon = sLon,
+                        temperature = measurement.optDouble("temperature", 0.0),
+                        windIntensity = measurement.optDouble("wind_intensity", 0.0),
+                        windDirection = measurement.optInt("wind_direction", 0),
+                        humidity = measurement.optInt("humidity", 0),
+                        pressure = measurement.optDouble("pressure", 0.0),
+                        radiation = measurement.optDouble("radiation", 0.0),
+                        accumulatedPrecipitation = measurement.optDouble("accumulated_precipitation", 0.0),
+                        measurementTime = measurement.optString("time", "")
+                    )
+                }
+            }
+
+            if (nearestData != null) {
+                Log.d(TAG, "Nearest station from meteo/updates: ${nearestData.stationName} (${minDist.toInt()}m away), temp=${nearestData.temperature}°C")
+                lastStationAssignment = nearestData
+                runOnUiThread { uiController.updateDittoWeatherData(nearestData) }
+            } else {
+                Log.w(TAG, "No valid stations found in meteo/updates payload")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error processing meteo stations update: ${e.message}")
+        }
+    }
+
+    override fun onStationAssignment(data: MqttEventRouter.StationAssignmentData) {
+        Log.d(TAG, "Station assignment received: car=${data.carId}, station=${data.stationId} (${data.stationName}), temp=${data.temperature}°C, wind=${data.windIntensity}km/h")
+        lastStationAssignment = data
+        hasRealStationAssignment = true
+        runOnUiThread {
+            uiController.updateDittoWeatherData(data)
         }
     }
 

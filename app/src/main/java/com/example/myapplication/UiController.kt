@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
@@ -16,6 +17,8 @@ import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
 import com.example.myapplication.config.WeatherCardPreferenceManager
+import com.example.myapplication.config.WeatherSourcePreferenceManager
+import com.example.myapplication.mqtt.MqttEventRouter
 import com.example.myapplication.navigation.models.ManeuverType
 import com.example.myapplication.navigation.models.NavigationState
 import com.example.myapplication.navigation.models.NavigationStep
@@ -38,6 +41,8 @@ import kotlin.math.roundToInt
 class UiController(private val activity: Activity) {
 
     companion object {
+        private const val TAG = "UiController"
+
         /**
          * Format a distance in meters to a human-readable string.
          * @param distanceMeters Distance in metres.
@@ -102,6 +107,8 @@ class UiController(private val activity: Activity) {
     // Cached for the weather detail dialog
     private var cachedWeatherData: OpenWeatherMapClient.WeatherData? = null
     private var cachedAlerts: List<OpenWeatherMapClient.WeatherAlert> = emptyList()
+    private var cachedDittoData: MqttEventRouter.StationAssignmentData? = null
+    private val weatherSourcePrefs = WeatherSourcePreferenceManager(activity)
 
     // ====================================================================
     //  Speed
@@ -185,10 +192,37 @@ class UiController(private val activity: Activity) {
     ) {
         cachedWeatherData = weatherData
         cachedAlerts = alerts
-        txtTemperature?.text = "${weatherData.temperature}°C"
-        txtWeatherEmoji?.text = getWeatherEmoji(weatherData.weatherCondition, weatherData.weatherDescription)
-        rebuildWeatherCardExtras(weatherData)
+        if (weatherSourcePrefs.getSource() == WeatherSourcePreferenceManager.Source.OPEN_WEATHER_MAP) {
+            txtTemperature?.text = "${weatherData.temperature}°C"
+            txtWeatherEmoji?.text = getWeatherEmoji(weatherData.weatherCondition, weatherData.weatherDescription)
+            rebuildWeatherCardExtras(weatherData)
+        }
     }
+
+    fun updateDittoWeatherData(data: MqttEventRouter.StationAssignmentData) {
+        Log.d(TAG, "Ditto weather received: station=${data.stationName}, temp=${data.temperature}, wind=${data.windIntensity}")
+        cachedDittoData = data
+        if (weatherSourcePrefs.getSource() == WeatherSourcePreferenceManager.Source.DITTO) {
+            txtTemperature?.text = "${data.temperature.toInt()}°C"
+            txtWeatherEmoji?.text = getDittoWeatherEmoji(data)
+            rebuildWeatherCardExtrasFromDitto(data)
+        }
+    }
+
+    /**
+     * Show a placeholder on the weather card when Ditto is selected but no data yet.
+     */
+    fun showDittoWaitingState() {
+        Log.d(TAG, "Ditto source selected, no data yet — showing waiting state")
+        txtTemperature?.text = "--°C"
+        txtWeatherEmoji?.text = "📡"
+        weatherCardExtras?.removeAllViews()
+        weatherCardExtras?.visibility = View.GONE
+    }
+
+    fun hasDittoData(): Boolean = cachedDittoData != null
+
+    fun getWeatherSource(): WeatherSourcePreferenceManager.Source = weatherSourcePrefs.getSource()
 
     /**
      * Rebuild the dynamic extras section of the weather card based on saved preferences.
@@ -254,6 +288,101 @@ class UiController(private val activity: Activity) {
         WeatherCardPreferenceManager.Field.UV_INDEX -> String.format("%.1f", data.uvIndex)
     }
 
+    // ── Ditto weather card extras ──────────────────────────────────────
+
+    private fun rebuildWeatherCardExtrasFromDitto(data: MqttEventRouter.StationAssignmentData) {
+        val container = weatherCardExtras ?: return
+        container.removeAllViews()
+
+        val enabledFields = weatherCardPrefs.enabledFields()
+        if (enabledFields.isEmpty()) {
+            container.visibility = View.GONE
+            return
+        }
+
+        val density = activity.resources.displayMetrics.density
+        val dividerMarginPx = (10 * density).toInt()
+
+        enabledFields.forEach { field ->
+            val value = getDittoFieldValue(field, data) ?: return@forEach
+
+            val divider = View(activity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    (1 * density).toInt(), (24 * density).toInt()
+                ).also { it.marginStart = dividerMarginPx; it.marginEnd = dividerMarginPx }
+                setBackgroundColor(ContextCompat.getColor(activity, R.color.card_stroke_light))
+            }
+            container.addView(divider)
+
+            val emoji = TextView(activity).apply {
+                text = field.emoji
+                textSize = 20f
+            }
+            container.addView(emoji)
+
+            val valueTv = TextView(activity).apply {
+                text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
+                textSize = 20f
+                setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.marginStart = (4 * density).toInt() }
+            }
+            container.addView(valueTv)
+        }
+
+        container.visibility = View.VISIBLE
+    }
+
+    /**
+     * Map WeatherCardPreferenceManager fields to Ditto station data.
+     * Returns null for fields not available from Ditto (e.g. UV Index, Visibility, Feels Like).
+     */
+    private fun getDittoFieldValue(
+        field: WeatherCardPreferenceManager.Field,
+        data: MqttEventRouter.StationAssignmentData
+    ): String? = when (field) {
+        WeatherCardPreferenceManager.Field.WIND ->
+            "${data.windIntensity.toInt()} km/h ${windDirectionEnumToString(data.windDirection)}"
+        WeatherCardPreferenceManager.Field.HUMIDITY -> "${data.humidity}"
+        WeatherCardPreferenceManager.Field.PRESSURE ->
+            if (data.pressure > 0) "${data.pressure.toInt()}" else null
+        WeatherCardPreferenceManager.Field.FEELS_LIKE -> null // Not available from Ditto
+        WeatherCardPreferenceManager.Field.VISIBILITY -> null // Not available from Ditto
+        WeatherCardPreferenceManager.Field.UV_INDEX -> null   // Not available from Ditto
+    }
+
+    /**
+     * Convert the Ditto WindDirection enum (0-8) to a compass string.
+     */
+    private fun windDirectionEnumToString(direction: Int): String = when (direction) {
+        1 -> "N"
+        2 -> "NE"
+        3 -> "E"
+        4 -> "SE"
+        5 -> "S"
+        6 -> "SW"
+        7 -> "W"
+        8 -> "NW"
+        else -> ""
+    }
+
+    /**
+     * Infer a weather emoji from Ditto station data (no condition string available).
+     * Uses precipitation, wind, and radiation as heuristics.
+     */
+    private fun getDittoWeatherEmoji(data: MqttEventRouter.StationAssignmentData): String = when {
+        data.accumulatedPrecipitation > 5.0 -> "🌧️"
+        data.accumulatedPrecipitation > 0.0 -> "🌦️"
+        data.windIntensity > 50.0 -> "💨"
+        data.radiation > 600.0 -> "☀️"
+        data.radiation > 200.0 -> "🌤️"
+        data.radiation > 50.0 -> "⛅"
+        else -> "☁️"
+    }
+
     private fun windDegreesToDirection(deg: Int): String {
         val directions = arrayOf(
             "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
@@ -300,6 +429,67 @@ class UiController(private val activity: Activity) {
         else -> "🌡️"
     }
 
+    @SuppressLint("SetTextI18n")
+    private fun showDittoWeatherDialog() {
+        val data = cachedDittoData ?: run {
+            Log.w(TAG, "showDittoWeatherDialog called but cachedDittoData is null")
+            return
+        }
+
+        val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
+        val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        rootView.addView(dialogView)
+
+        // ── Header ────────────────────────────────────────────────────────
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
+            "${data.temperature.toInt()}°C"
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text =
+            data.stationName.ifEmpty { "Station ${data.stationId}" }
+        dialogView.findViewById<TextView>(R.id.txtWeatherDialogEmoji)?.text =
+            getDittoWeatherEmoji(data)
+
+        // ── Detail rows — fill what Ditto provides, "N/A" for unavailable ─
+        dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "N/A"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text =
+            "${data.windIntensity.toInt()} km/h  ${windDirectionEnumToString(data.windDirection)}"
+        dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${data.humidity}%"
+        dialogView.findViewById<TextView>(R.id.txtPressure)?.text =
+            if (data.pressure > 0) "${data.pressure.toInt()} hPa" else "N/A"
+        dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "N/A"
+        dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text = "N/A"
+
+        // ── In-card toggles ───────────────────────────────────────────────
+        val cardSwitches = listOf(
+            R.id.switchCardFeelsLike to WeatherCardPreferenceManager.Field.FEELS_LIKE,
+            R.id.switchCardWind to WeatherCardPreferenceManager.Field.WIND,
+            R.id.switchCardHumidity to WeatherCardPreferenceManager.Field.HUMIDITY,
+            R.id.switchCardPressure to WeatherCardPreferenceManager.Field.PRESSURE,
+            R.id.switchCardVisibility to WeatherCardPreferenceManager.Field.VISIBILITY,
+            R.id.switchCardUvIndex to WeatherCardPreferenceManager.Field.UV_INDEX
+        )
+        cardSwitches.forEach { (viewId, field) ->
+            dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
+                isChecked = weatherCardPrefs.isEnabled(field)
+                setOnCheckedChangeListener { _, checked ->
+                    weatherCardPrefs.setEnabled(field, checked)
+                    rebuildWeatherCardExtrasFromDitto(data)
+                }
+            }
+        }
+
+        // ── Alerts section — not available from Ditto ─────────────────────
+        dialogView.findViewById<LinearLayout>(R.id.alertsSection)?.visibility = View.GONE
+
+        // ── Dismiss ───────────────────────────────────────────────────────
+        dialogView.findViewById<ImageButton>(R.id.btnCloseWeatherDialog)?.setOnClickListener {
+            rootView.removeView(dialogView)
+        }
+        dialogView.findViewById<View>(R.id.weatherDialogOverlay)?.setOnClickListener {
+            rootView.removeView(dialogView)
+        }
+        dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { /* consume */ }
+    }
+
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
@@ -309,6 +499,23 @@ class UiController(private val activity: Activity) {
     }
 
     private fun showWeatherDialog() {
+        val source = weatherSourcePrefs.getSource()
+        Log.d(TAG, "showWeatherDialog: source=$source, hasDitto=${cachedDittoData != null}, hasOWM=${cachedWeatherData != null}")
+
+        if (source == WeatherSourcePreferenceManager.Source.DITTO) {
+            if (cachedDittoData != null) {
+                showDittoWeatherDialog()
+            } else {
+                Log.w(TAG, "Ditto selected but no station data received yet")
+                android.widget.Toast.makeText(
+                    activity,
+                    "Waiting for weather station data...",
+                    android.widget.Toast.LENGTH_SHORT
+                ).show()
+            }
+            return
+        }
+
         val weatherData = cachedWeatherData ?: return
 
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)

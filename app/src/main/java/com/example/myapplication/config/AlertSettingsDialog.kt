@@ -19,7 +19,8 @@ import com.example.myapplication.R
 class AlertSettingsDialog(
     private val activity: AppCompatActivity,
     private val alertPreferenceManager: AlertPreferenceManager,
-    private val mapController: MapController
+    private val mapController: MapController,
+    private val onWeatherSourceChanged: (() -> Unit)? = null
 ) {
 
     private companion object {
@@ -35,6 +36,7 @@ class AlertSettingsDialog(
 
         setupMapStyleToggle(settingsView)
         setupColorBlindToggle(settingsView)
+        setupWeatherSourceToggle(settingsView)
         buildAlertGrid(settingsView)
         setupCloseActions(settingsView, rootView)
     }
@@ -48,6 +50,20 @@ class AlertSettingsDialog(
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("lightMode", isChecked).apply()
             mapController.setMapStyle(isChecked)
+        }
+    }
+
+    // ── Weather Data Source ──────────────────────────────────────────────
+
+    private fun setupWeatherSourceToggle(settingsView: View) {
+        val weatherSourcePrefs = WeatherSourcePreferenceManager(activity)
+        val switchSource = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchWeatherSource)
+        switchSource.isChecked = weatherSourcePrefs.getSource() == WeatherSourcePreferenceManager.Source.DITTO
+        switchSource.setOnCheckedChangeListener { _, isChecked ->
+            val source = if (isChecked) WeatherSourcePreferenceManager.Source.DITTO
+                         else WeatherSourcePreferenceManager.Source.OPEN_WEATHER_MAP
+            weatherSourcePrefs.setSource(source)
+            onWeatherSourceChanged?.invoke()
         }
     }
 

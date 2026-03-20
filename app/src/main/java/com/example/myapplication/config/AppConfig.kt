@@ -173,6 +173,20 @@ object AppConfig {
      */
     const val MQTT_TOPIC_ACCIDENT_CLEARED = "alerts/accident/cleared"
 
+    /**
+     * MQTT topic base for per-car weather station assignments.
+     * Published by the station_assigner backend service as `cars/station/{car_id}`.
+     * Payload includes station info and the latest measurement.
+     */
+    const val MQTT_TOPIC_STATION_ASSIGNMENT_BASE = "cars/station"
+
+    /**
+     * MQTT topic for bulk meteo station updates.
+     * Published by the meteo_consumer backend service every 5 minutes.
+     * Contains all stations with their latest measurements.
+     */
+    const val MQTT_TOPIC_METEO_UPDATES = "meteo/updates"
+
     // ========== Accident Management ==========
 
     /**

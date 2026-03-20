@@ -6,6 +6,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.example.myapplication.MapController
 import com.example.myapplication.R
 
@@ -33,6 +34,7 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
+        setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupCloseActions(settingsView, rootView)
     }
@@ -46,6 +48,18 @@ class AlertSettingsDialog(
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("lightMode", isChecked).apply()
             mapController.setMapStyle(isChecked)
+        }
+    }
+
+    // ── Colorblind Mode ──────────────────────────────────────────────────
+
+    private fun setupColorBlindToggle(settingsView: View) {
+        val switchColorBlind = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchColorBlind)
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        switchColorBlind.isChecked = prefs.getBoolean("colorBlindMode", false)
+        switchColorBlind.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("colorBlindMode", isChecked).apply()
+            activity.recreate()
         }
     }
 
@@ -115,7 +129,7 @@ class AlertSettingsDialog(
         val nameText = TextView(activity).apply {
             text = alertType.displayName
             textSize = 14f
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             )

@@ -2,9 +2,9 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="oval">
     <!-- White background -->
-    <solid android:color="#FFFFFF" />
+    <solid android:color="@color/white" />
     <!-- Large red border -->
     <stroke
-        android:width="4dp"
-        android:color="#D32F2F" />
+        android:width="5dp"
+        android:color="?attr/colorSpeedLimitBorder" />
 </shape>

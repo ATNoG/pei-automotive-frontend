@@ -58,7 +58,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="▶ Start a Route"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:fontFamily="DM Mono"
@@ -91,7 +91,7 @@
                     <TextView
                         android:id="@+id/txtNavArrival"
                         android:text="--:--"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:gravity="center"
@@ -101,7 +101,7 @@
 
                     <TextView
                         android:text="arrival"
-                        android:textColor="#888888"
+                        android:textColor="?attr/colorTextHint"
                         android:textSize="11sp"
                         android:gravity="center"
                         android:layout_width="wrap_content"
@@ -113,9 +113,8 @@
                 <View
                     android:layout_width="1dp"
                     android:layout_height="50dp"
-                    android:background="#404040"
-                    android:layout_marginHorizontal="12dp"
-                />
+                    android:background="?attr/colorDividerLight"
+                    android:layout_marginHorizontal="12dp" />
 
                 <!-- Right: Distance -->
                 <LinearLayout
@@ -129,7 +128,7 @@
                     <TextView
                         android:id="@+id/txtNavDistance"
                         android:text="--"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:textSize="28sp"
                         android:textStyle="bold"
                         android:gravity="center"
@@ -139,7 +138,7 @@
 
                     <TextView
                         android:text="km"
-                        android:textColor="#888888"
+                        android:textColor="?attr/colorTextHint"
                         android:textSize="11sp"
                         android:gravity="center"
                         android:layout_width="wrap_content"
@@ -170,7 +169,7 @@
                 android:background="@drawable/stop_navigation_button_bg"
                 android:padding="12dp"
                 android:scaleType="fitCenter"
-                app:tint="#FFFFFF"
+                app:tint="?attr/colorIconDefault"
                 android:clickable="true"
                 android:focusable="true"
             />
@@ -227,7 +226,7 @@
                 android:id="@+id/speedAlertBlur"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#FF0000"
+                android:background="?attr/colorSpeedAlertBackground"
                 android:alpha="0"
                 android:visibility="gone"
             />
@@ -259,15 +258,14 @@
                     />
 
                         <TextView
-                        android:id="@+id/txtSpeedLimit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
-                        android:text="--"
-                        android:textColor="#000000"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                    />
+                            android:id="@+id/txtSpeedLimit"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="--"
+                            android:textColor="?attr/colorTextOnLight"
+                            android:textSize="20sp"
+                            android:textStyle="bold" />
                     </FrameLayout>
 
                     <!-- SPEED ALERT ICON (hidden) -->
@@ -294,26 +292,24 @@
                 >
 
                         <TextView
-                        android:id="@+id/txtCurrentSpeed"
-                        android:text="0"
-                        android:textStyle="bold"
-                        android:textColor="#FFFFFF"
-                        android:textSize="28sp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="DM Mono"
-                    />
+                            android:id="@+id/txtCurrentSpeed"
+                            android:text="0"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textSize="28sp"
+                            android:fontFamily="DM Mono"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
 
                         <TextView
-                        android:id="@+id/txtSpeedUnit"
-                        android:text="Km/h"
-                        android:textColor="#FFFFFF"
-                        android:textSize="20sp"
-                        android:fontFamily="DM Mono"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:paddingStart="4dp"
-                    />
+                            android:id="@+id/txtSpeedUnit"
+                            android:text="Km/h"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textSize="20sp"
+                            android:fontFamily="DM Mono"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="4dp" />
                     </LinearLayout>
                 </LinearLayout>
         </FrameLayout>
@@ -347,7 +343,7 @@
         <TextView
             android:id="@+id/txtTemperature"
             android:text="11°C"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textStyle="bold"
             android:textSize="20sp"
             android:fontFamily="DM Mono"
@@ -395,8 +391,7 @@
             android:layout_height="56dp"
             android:src="@drawable/ic_straight"
             android:scaleType="fitCenter"
-            app:tint="#FFFFFF"
-        />
+            app:tint="?attr/colorIconDefault" />
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -409,7 +404,7 @@
             <TextView
                 android:id="@+id/txtNextManeuverDistance"
                 android:text="800 m"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:textSize="28sp"
                 android:textStyle="bold"
                 android:layout_width="wrap_content"
@@ -420,7 +415,7 @@
             <TextView
                 android:id="@+id/txtManeuverInstruction"
                 android:text="Vire à direita"
-                android:textColor="#BBBBBB"
+                android:textColor="?attr/colorTextTertiary"
                 android:textSize="16sp"
                 android:maxLines="2"
                 android:maxWidth="300dp"

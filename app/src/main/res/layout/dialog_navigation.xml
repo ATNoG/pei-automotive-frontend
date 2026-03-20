@@ -4,7 +4,7 @@
     android:id="@+id/destinationOverlay"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80000000"
+    android:background="?attr/colorSurfaceOverlay"
     android:clickable="true"
     android:focusable="true">
 
@@ -13,7 +13,7 @@
         android:layout_width="450dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        app:cardBackgroundColor="#1E1E1E"
+        app:cardBackgroundColor="?attr/colorSurfaceDialogCard"
         app:cardCornerRadius="24dp"
         app:cardElevation="16dp">
 
@@ -36,11 +36,11 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:layout_marginEnd="14dp"
-                    app:tint="#2196F3" />
+                    app:tint="?attr/colorAccentBlue" />
                 
                 <TextView
                     android:text="Navigation"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:layout_width="0dp"
@@ -54,13 +54,13 @@
                     android:layout_width="44dp"
                     android:layout_height="44dp"
                     android:padding="8dp"
-                    app:tint="#888888" />
+                    app:tint="?attr/colorIconMuted" />
             </LinearLayout>
 
             <!-- Destination Selection -->
             <TextView
                 android:text="Select destination:"
-                android:textColor="#BBBBBB"
+                android:textColor="?attr/colorTextTertiary"
                 android:textSize="14sp"
                 android:layout_marginBottom="16dp"
                 android:layout_width="match_parent"
@@ -72,18 +72,18 @@
                 android:text="Mercado Santiago"
                 android:textAllCaps="false"
                 android:textSize="18sp"
-                android:textColor="#FFFFFF"
+                android:textColor="?attr/colorTextPrimary"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
                 android:layout_marginBottom="16dp"
-                android:backgroundTint="#2196F3" />
+                android:backgroundTint="?attr/colorAccentBlue" />
 
             <!-- Route Info Preview (shown after selection) -->
             <LinearLayout
                 android:id="@+id/routeInfoPreview"
                 android:visibility="gone"
                 android:orientation="horizontal"
-                android:background="#2A2A2A"
+                android:background="?attr/colorSurfaceRouteInfo"
                 android:padding="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -99,7 +99,7 @@
                     <TextView
                         android:id="@+id/txtRouteDestination"
                         android:text="Mercado Santiago"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:layout_width="wrap_content"
@@ -108,7 +108,7 @@
                     <TextView
                         android:id="@+id/txtRouteInfo"
                         android:text="Calculating route..."
-                        android:textColor="#AAAAAA"
+                        android:textColor="?attr/colorTextSecondary"
                         android:textSize="13sp"
                         android:layout_marginTop="4dp"
                         android:layout_width="wrap_content"
@@ -128,24 +128,24 @@
                     android:id="@+id/btnCancel"
                     android:text="Cancel"
                     android:textAllCaps="false"
-                    android:textColor="#AAAAAA"
+                    android:textColor="?attr/colorTextSecondary"
                     android:layout_width="0dp"
                     android:layout_height="56dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    android:backgroundTint="#333333" />
+                    android:backgroundTint="?attr/colorSurfaceButtonNeutral" />
 
                 <Button
                     android:id="@+id/btnStartNavigation"
                     android:text="Start Navigation"
                     android:textAllCaps="false"
-                    android:textColor="#FFFFFF"
+                    android:textColor="?attr/colorTextPrimary"
                     android:enabled="false"
                     android:layout_width="0dp"
                     android:layout_height="56dp"
                     android:layout_weight="1.5"
                     android:layout_marginStart="8dp"
-                    android:backgroundTint="#4CAF50" />
+                    android:backgroundTint="?attr/colorStatusSuccess" />
 
             </LinearLayout>
 

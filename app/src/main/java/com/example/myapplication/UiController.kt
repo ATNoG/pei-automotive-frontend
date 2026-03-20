@@ -1,6 +1,8 @@
 package com.example.myapplication
 
 import android.app.Activity
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -19,6 +21,7 @@ import com.example.myapplication.navigation.models.NavigationState
 import com.example.myapplication.navigation.models.NavigationStep
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.roundToInt
 
 /**
  * UiController - manages persistent HUD widgets in the main activity.
@@ -243,12 +246,12 @@ class UiController(private val activity: Activity) {
         field: WeatherCardPreferenceManager.Field,
         data: OpenWeatherMapClient.WeatherData
     ): String = when (field) {
-        WeatherCardPreferenceManager.Field.WIND      -> "${data.windSpeed} km/h ${windDegreesToDirection(data.windDeg)}"
-        WeatherCardPreferenceManager.Field.HUMIDITY  -> "${data.humidity}"
+        WeatherCardPreferenceManager.Field.WIND -> "${data.windSpeed} km/h ${windDegreesToDirection(data.windDeg)}"
+        WeatherCardPreferenceManager.Field.HUMIDITY -> "${data.humidity}"
         WeatherCardPreferenceManager.Field.FEELS_LIKE -> "${data.feelsLike}"
-        WeatherCardPreferenceManager.Field.PRESSURE  -> "${data.pressure}"
+        WeatherCardPreferenceManager.Field.PRESSURE -> "${data.pressure}"
         WeatherCardPreferenceManager.Field.VISIBILITY -> "${data.visibility}"
-        WeatherCardPreferenceManager.Field.UV_INDEX  -> String.format("%.1f", data.uvIndex)
+        WeatherCardPreferenceManager.Field.UV_INDEX -> String.format("%.1f", data.uvIndex)
     }
 
     private fun windDegreesToDirection(deg: Int): String {
@@ -272,10 +275,12 @@ class UiController(private val activity: Activity) {
             description.contains("light", ignoreCase = true) -> "🌦️"
             else -> "🌧️"
         }
+
         condition.equals("Snow", ignoreCase = true) -> when {
             description.contains("sleet", ignoreCase = true) -> "🌨️"
             else -> "❄️"
         }
+
         condition.equals("Clear", ignoreCase = true) -> "☀️"
         condition.equals("Clouds", ignoreCase = true) -> when {
             description.contains("few", ignoreCase = true) -> "🌤️"
@@ -296,7 +301,11 @@ class UiController(private val activity: Activity) {
     }
 
     fun setupWeatherCardClick() {
-        weatherCard?.setOnClickListener { showWeatherDialog() }
+        weatherCard?.apply {
+            applyPressAnimation(activity) {
+                showWeatherDialog()
+            }
+        }
     }
 
     private fun showWeatherDialog() {
@@ -328,12 +337,12 @@ class UiController(private val activity: Activity) {
         // Map each card's SwitchCompat to its WeatherCardPreferenceManager.Field.
         // Toggling saves the pref and immediately rebuilds the weather card HUD.
         val cardSwitches = listOf(
-            R.id.switchCardFeelsLike  to WeatherCardPreferenceManager.Field.FEELS_LIKE,
-            R.id.switchCardWind       to WeatherCardPreferenceManager.Field.WIND,
-            R.id.switchCardHumidity   to WeatherCardPreferenceManager.Field.HUMIDITY,
-            R.id.switchCardPressure   to WeatherCardPreferenceManager.Field.PRESSURE,
+            R.id.switchCardFeelsLike to WeatherCardPreferenceManager.Field.FEELS_LIKE,
+            R.id.switchCardWind to WeatherCardPreferenceManager.Field.WIND,
+            R.id.switchCardHumidity to WeatherCardPreferenceManager.Field.HUMIDITY,
+            R.id.switchCardPressure to WeatherCardPreferenceManager.Field.PRESSURE,
             R.id.switchCardVisibility to WeatherCardPreferenceManager.Field.VISIBILITY,
-            R.id.switchCardUvIndex    to WeatherCardPreferenceManager.Field.UV_INDEX
+            R.id.switchCardUvIndex to WeatherCardPreferenceManager.Field.UV_INDEX
         )
         cardSwitches.forEach { (viewId, field) ->
             dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
@@ -355,7 +364,7 @@ class UiController(private val activity: Activity) {
             cachedAlerts.forEach { alert ->
                 val alertCard = LinearLayout(activity).apply {
                     orientation = LinearLayout.VERTICAL
-                    setBackgroundResource(R.drawable.card_background_with_stroke)
+                    background = createWeatherAlertBackground(alert.event)
                     setPadding(32, 24, 32, 24)
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
@@ -404,7 +413,6 @@ class UiController(private val activity: Activity) {
         }
         dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { /* consume */ }
     }
-
 
 
     // ====================================================================
@@ -485,6 +493,28 @@ class UiController(private val activity: Activity) {
             activity.getColor(typedValue.resourceId)
         } else {
             typedValue.data
+        }
+    }
+    
+    private fun createWeatherAlertBackground(title: String): GradientDrawable {
+        val firstWord = title
+            .trim()
+            .replace(Regex("^[^A-Za-z]+"), "")
+            .substringBefore(" ")
+            .lowercase(Locale.getDefault())
+
+        val strokeColor = when (firstWord) {
+            "yellow" -> Color.parseColor("#FFD54F")
+            "orange" -> Color.parseColor("#FB8C00")
+            "red" -> Color.parseColor("#E53935")
+            else -> Color.parseColor("#33FFFFFF")
+        }
+
+        return GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 20f * activity.resources.displayMetrics.density
+            setColor(Color.parseColor("#F0121212"))
+            setStroke((1f * activity.resources.displayMetrics.density).roundToInt(), strokeColor)
         }
     }
 

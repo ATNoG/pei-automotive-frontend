@@ -94,7 +94,7 @@ class MqttEventRouter(
             topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received")
                 if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.OVERTAKING)) {
-                    listener?.onOvertakingAlert()
+                    listener?.onOvertakingAlert(message)
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.OVERTAKING,
                         "Warning, vehicle overtaking"
@@ -161,7 +161,8 @@ class MqttEventRouter(
 
     /**
      * Check if an alert payload is targeted at one of our user cars.
-     * Inspects common fields: car_id, target_car_id, regular_car_id.
+     * Inspects common fields: car_id, target_car_id, regular_car_id,
+     * overtaking_car_id, overtaken_car_id.
      * Returns true if no car identifier is found (broadcast alert) or
      * if the identifier matches one of our [userCarIds].
      */
@@ -172,9 +173,19 @@ class MqttEventRouter(
             val targetCarId = json.optString("target_car_id", "")
             val regularCarId = json.optString("regular_car_id", "")
 
-            val id = carId.ifEmpty { targetCarId.ifEmpty { regularCarId } }
-            if (id.isEmpty()) return true // No car filter in payload — treat as broadcast
-            id in userCarIds
+            val overtakingCarId = json.optString("overtaking_car_id", "")
+            val overtakenCarId = json.optString("overtaken_car_id", "")
+
+            val ids = listOf(
+                carId,
+                targetCarId,
+                regularCarId,
+                overtakingCarId,
+                overtakenCarId
+            ).filter { it.isNotEmpty() }
+
+            if (ids.isEmpty()) return true // No car filter in payload — treat as broadcast
+            ids.any { it in userCarIds }
         } catch (e: Exception) {
             true // Parse failure — don't drop the alert
         }

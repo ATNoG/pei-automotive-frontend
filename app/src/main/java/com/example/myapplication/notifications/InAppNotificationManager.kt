@@ -19,6 +19,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.annotation.AttrRes
+import java.util.Locale
 
 /**
  * InAppNotificationManager — unified in-app notification system.
@@ -453,6 +454,26 @@ class InAppNotificationManager(private val activity: Activity) {
         view.background = background
 
         return view
+    }
+
+    private fun resolveStrokeColor(notification: AppNotification): Int {
+        val defaultStroke = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        if (notification.type != Type.WEATHER) return defaultStroke
+
+        val firstWord = notification.title
+            .trim()
+            .replace(Regex("^[^A-Za-z]+"), "")
+            .substringBefore(" ")
+            .lowercase(Locale.getDefault())
+
+        val weatherStroke = when (firstWord) {
+            "yellow" -> 0xB3FFD54F.toInt()
+            "orange" -> 0xB3FB8C00.toInt()
+            "red" -> 0xB3E53935.toInt()
+            else -> return defaultStroke
+        }
+
+        return weatherStroke
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

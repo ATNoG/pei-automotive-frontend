@@ -132,7 +132,7 @@ class TopDownCarView @JvmOverloads constructor(
         evCars.addAll(cars)
         invalidate()
     }
-    
+
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         
@@ -174,7 +174,7 @@ class TopDownCarView @JvmOverloads constructor(
         // Draw center line (yellow dashed) - divides the two opposing lanes
         val (centerXScreen, _) = gridToScreen(roadCenterX, 0f)
         canvas.drawLine(centerXScreen, roadTopScreen, centerXScreen, roadBottomScreen, centerLinePaint)
-        
+
         // Car radius in grid units
         val carRadius = 2.2f
         
@@ -208,4 +208,5 @@ class TopDownCarView @JvmOverloads constructor(
         val (userScreenX, userScreenY) = gridToScreen(userCarGridX, userCarGridY)
         canvas.drawCircle(userScreenX, userScreenY, carRadius * scale, userCarPaint)
     }
+
 }

@@ -457,7 +457,7 @@ class InAppNotificationManager(private val activity: Activity) {
     }
 
     private fun resolveStrokeColor(notification: AppNotification): Int {
-        val defaultStroke = (notification.type.accentColor and 0x00FFFFFF) or 0xB3000000.toInt()
+        val defaultStroke = (resolveThemeColor(notification.type.accentColorAttr) and 0x00FFFFFF) or 0xB3000000.toInt()
         if (notification.type != Type.WEATHER) return defaultStroke
 
         val firstWord = notification.title

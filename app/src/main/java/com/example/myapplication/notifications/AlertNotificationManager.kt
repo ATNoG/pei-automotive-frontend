@@ -13,13 +13,14 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.example.myapplication.R
 import com.example.myapplication.OpenWeatherMapClient
 import com.example.myapplication.UiController
 import com.example.myapplication.config.AlertPreferenceManager
 import java.util.Locale
 
 class AlertNotificationManager(
-    private val activity: Activity,
+    internal val activity: Activity,
     private val alertPreferenceManager: AlertPreferenceManager,
     private val inAppNotificationManager: InAppNotificationManager
 ) {
@@ -282,7 +283,7 @@ class AlertNotificationManager(
 
         speakForAlert(
             AlertPreferenceManager.AlertType.ACCIDENT,
-            "Warning! Accident ahead in $distanceText."
+            activity.getString(R.string.accident_warning, distanceText)
         )
 
         onAccidentDisplayed?.invoke(accidentData)

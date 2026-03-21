@@ -2,6 +2,7 @@ package com.example.myapplication.config
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.myapplication.R
 
 /**
  * Manages per-event-type alert preferences (enabled/disabled + audio on/off).
@@ -26,20 +27,21 @@ class AlertPreferenceManager(context: Context) {
      * Ordering here determines the display order in the settings dialog.
      *
      * @property key             SharedPreferences key prefix.
-     * @property displayName     Human-readable label for the settings UI.
+     * @property displayNameResId Resource ID for the display name.
      * @property defaultAudioEnabled  Whether audio (TTS) defaults to ON for this type.
      */
     enum class AlertType(
         val key: String,
-        val displayName: String,
+        val displayNameResId: Int,
         val defaultAudioEnabled: Boolean = false
     ) {
-        ACCIDENT("accident", "Accident", defaultAudioEnabled = true),
-        SPEEDING("speeding", "Speeding"),
-        WEATHER("weather", "Weather"),
-        OVERTAKING("overtaking", "Overtaking"),
-        EMERGENCY_VEHICLE("emergency_vehicle", "Emergency Vehicle"),
-        NAVIGATION("navigation", "Navigation")
+        ACCIDENT("accident", R.string.alert_accident, defaultAudioEnabled = true),
+        SPEEDING("speeding", R.string.alert_speeding),
+        WEATHER("weather", R.string.alert_weather),
+        OVERTAKING("overtaking", R.string.alert_overtaking),
+        EMERGENCY_VEHICLE("emergency_vehicle", R.string.alert_emergency_vehicle),
+        NAVIGATION("navigation", R.string.alert_navigation),
+        HIGHWAY_ENTRY("highway_entry", R.string.alert_highway_entry)
     }
 
     private val prefs: SharedPreferences =

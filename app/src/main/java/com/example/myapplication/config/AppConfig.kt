@@ -35,7 +35,9 @@ object AppConfig {
         "speed-car",
         "curved-route-car",
         "ev-test-regular",
-        "car-behind"
+        "car-behind",
+        "highway-car",
+        "highway-car-2"
     )
 
     /**
@@ -45,7 +47,9 @@ object AppConfig {
     val OTHER_CAR_IDS = setOf(
         "overtaking-car-behind",
         "accident-car",
-        "car-ahead"
+        "car-ahead",
+        "entering-car",
+        "entering-car-2"
     )
 
     // ========== Default Positions ==========
@@ -134,6 +138,11 @@ object AppConfig {
      * MQTT topic for overtaking alerts.
      */
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
+
+    /**
+     * MQTT topic for highway entry alerts.
+     */
+    const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
 
     /**
      * MQTT topic for emergency vehicle proximity alerts.

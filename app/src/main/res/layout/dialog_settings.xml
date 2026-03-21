@@ -35,7 +35,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Settings"
+                    android:text="@string/settings_title"
                     android:textSize="22sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorTextPrimary" />
@@ -47,7 +47,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
                     app:tint="?attr/colorIconDefault"
-                    android:contentDescription="Close" />
+                    android:contentDescription="@string/settings_close" />
 
             </LinearLayout>
 
@@ -67,7 +67,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Map Style"
+                        android:text="@string/map_style"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
@@ -91,7 +91,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Theme Mode"
+                            android:text="@string/theme_mode"
                             android:textSize="14sp"
                             android:textColor="?attr/colorTextPrimary" />
 
@@ -119,11 +119,59 @@
 
                     </LinearLayout>
 
+                    <!-- Language Section Header -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/language"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorTextPrimary"
+                        android:layout_marginBottom="12dp"
+                        android:layout_marginTop="20dp" />
+
+                    <!-- Language Selection Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:layout_marginBottom="20dp">
+
+                        <Button
+                            android:id="@+id/btnEnglish"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="English"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:background="?attr/selectableItemBackground"
+                            android:layout_marginEnd="8dp" />
+
+                        <Button
+                            android:id="@+id/btnPortuguese"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Português"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:background="?attr/selectableItemBackground"
+                            android:layout_marginStart="8dp" />
+
+                    </LinearLayout>
+                  
                     <!-- Accessibility Section Header -->
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Accessibility"
+                        android:text="@string/accessibility"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
@@ -141,20 +189,20 @@
                         android:paddingBottom="14dp"
                         android:background="@drawable/card_background_with_stroke"
                         android:layout_marginBottom="20dp">
-
+                         
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Colorblind Mode"
-                            android:textSize="14sp"
-                            android:textColor="?attr/colorTextPrimary" />
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:text="@string/colorblind"
+                          android:textSize="14sp"
+                          android:textColor="?attr/colorTextPrimary" />
 
                         <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switchColorBlind"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="false" />
+                          android:id="@+id/switchColorBlind"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:checked="false" />
 
                     </LinearLayout>
 
@@ -162,7 +210,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="Alerts"
+                        android:text="@string/alerts"
                         android:textSize="14sp"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"

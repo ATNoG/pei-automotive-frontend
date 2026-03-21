@@ -115,7 +115,7 @@ class UiController(private val activity: Activity) {
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
         txtCurrentSpeed?.text = speedKmh.toString()
-        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh Km/h"
+        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh ${activity.getString(R.string.speed_unit)}"
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
         val speedColor = if (isSpeeding) {
@@ -465,12 +465,12 @@ class UiController(private val activity: Activity) {
 
     /** Show a loading indicator while calculating route. */
     fun showRouteCalculating() {
-        android.widget.Toast.makeText(activity, "Calculating route...", android.widget.Toast.LENGTH_SHORT).show()
+        android.widget.Toast.makeText(activity, activity.getString(R.string.calculating_route), android.widget.Toast.LENGTH_SHORT).show()
     }
 
     /** Show a navigation error. */
     fun showNavigationError(error: String) {
-        android.widget.Toast.makeText(activity, "Error: $error", android.widget.Toast.LENGTH_LONG).show()
+        android.widget.Toast.makeText(activity, activity.getString(R.string.navigation_error, error), android.widget.Toast.LENGTH_LONG).show()
     }
 
     // ====================================================================

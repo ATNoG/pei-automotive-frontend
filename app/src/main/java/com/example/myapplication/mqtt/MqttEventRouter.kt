@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.myapplication.notifications.AlertNotificationManager
 import com.example.myapplication.BuildConfig
 import com.example.myapplication.MqttManager
+import com.example.myapplication.R
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AppConfig
 import org.json.JSONObject
@@ -86,7 +87,7 @@ class MqttEventRouter(
                     listener?.onSpeedAlert()
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.SPEEDING,
-                        "Warning, you are exceeding the speed limit"
+                        alertNotificationManager.activity.getString(R.string.speed_limit_warning)
                     )
                 }
             }
@@ -97,7 +98,7 @@ class MqttEventRouter(
                     listener?.onOvertakingAlert(message)
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.OVERTAKING,
-                        "Warning, vehicle overtaking"
+                        alertNotificationManager.activity.getString(R.string.overtaking_warning)
                     )
                 }
             }
@@ -118,6 +119,13 @@ class MqttEventRouter(
                 Log.d(TAG, "Emergency vehicle alert")
                 if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE)) {
                     listener?.onEmergencyVehicleAlert(message)
+                }
+            }
+
+            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> {
+                Log.d(TAG, "Highway entry alert")
+                if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
+                    listener?.onHighwayEntryAlert(message)
                 }
             }
 

@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -27,6 +28,7 @@ import com.example.myapplication.navigation.routing.OsrmApiClient
 import kotlinx.coroutines.launch
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
+import java.util.Locale
 
 class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener {
 
@@ -73,6 +75,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
 
         super.onCreate(savedInstanceState)
+
+        // Set app locale based on user preference
+        setAppLocale()
 
         // initialize MapLibre (only required once, before creating MapView)
         MapLibre.getInstance(this, BuildConfig.MAPTILER_API_KEY, WellKnownTileServer.MapTiler)
@@ -184,9 +189,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Mercado Santiago button - calculate route
         overlayView.findViewById<Button>(R.id.btnDestMercadoSantiago)?.setOnClickListener {
             routeInfoPreview?.visibility = View.VISIBLE
-            txtRouteInfo?.text = "Calculating route..."
+            txtRouteInfo?.text = getString(R.string.calculating_route)
             btnStartNavigation?.isEnabled = false
-            btnStartNavigation?.text = "Calculating..."
+            btnStartNavigation?.text = getString(R.string.calculating)
 
             // Calculate route to Mercado Santiago
             calculateRouteForDialog(mercadoSantiago) { route ->
@@ -194,9 +199,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     pendingRoute = route
                     val distKm = String.format("%.1f", route.totalDistance / 1000)
                     val timeMin = (route.totalDuration / 60).toInt()
-                    txtRouteInfo?.text = "$distKm km · $timeMin minutes"
+                    txtRouteInfo?.text = getString(R.string.route_info_format, distKm, timeMin.toString())
                     btnStartNavigation?.isEnabled = true
-                    btnStartNavigation?.text = "Start Navigation"
+                    btnStartNavigation?.text = getString(R.string.start_navigation)
 
                     // Auto-start navigation after route calculation
                     rootView.postDelayed({
@@ -206,9 +211,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                         }
                     }, 300)
                 } else {
-                    txtRouteInfo?.text = "Error calculating route"
+                    txtRouteInfo?.text = getString(R.string.error_calculating_route)
                     btnStartNavigation?.isEnabled = false
-                    btnStartNavigation?.text = "Try Again"
+                    btnStartNavigation?.text = getString(R.string.try_again)
                 }
             }
         }
@@ -466,6 +471,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         handleEmergencyVehicleAlert(payload)
     }
 
+    override fun onHighwayEntryAlert(payload: String) {
+        handleHighwayEntryAlert(payload)
+    }
+
     override fun onCarUpdate(data: MqttEventRouter.CarUpdateData) {
         runOnUiThread {
             when {
@@ -568,7 +577,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             runOnUiThread {
                 alertNotificationManager.showAccidentAlert(accidentData) { data ->
                     mapController.addAccidentMarker(data.eventId, data.latitude, data.longitude)
-                    val distanceText = UiController.formatDistance(data.distanceMeters, "ahead")
+                    val distanceText = UiController.formatDistance(data.distanceMeters, getString(R.string.ahead))
                     inAppNotificationManager.show(
                         type = InAppNotificationManager.Type.ACCIDENT,
                         title = "⚠️ Accident Alert",
@@ -621,10 +630,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 vehicleTracker.handleEVProximityAlert(evId, evLat, evLon, evHeading)
 
                 val distanceText = if (!distanceM.isNaN()) {
-                    UiController.formatDistance(distanceM, "away")
+                    UiController.formatDistance(distanceM, getString(R.string.away))
                 } else {
                     UiController.formatDistance(
-                        vehicleTracker.liveDistanceToUser(evLat, evLon), "away"
+                        vehicleTracker.liveDistanceToUser(evLat, evLon), getString(R.string.away)
                     )
                 }
 
@@ -643,12 +652,36 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     evSpokenIds.add(evId)
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
-                        "Warning, emergency vehicle approaching"
+                        getString(R.string.emergency_vehicle_warning)
                     )
                 }
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing EV alert: ${e.message}")
+        }
+    }
+
+    private fun handleHighwayEntryAlert(message: String) {
+        try {
+            val json = org.json.JSONObject(message)
+            val status = json.optString("status", "unknown")
+            val title = when (status) {
+                "unsafe" -> "⚠️ Unsafe Highway Entry"
+                "safe" -> "✅ Safe Highway Entry"
+                else -> "Highway Entry Alert"
+            }
+            val messageText = "Highway entry detected: $status"
+
+            runOnUiThread {
+                inAppNotificationManager.show(
+                    type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
+                    title = title,
+                    message = messageText,
+                    duration = InAppNotificationManager.DEFAULT_DURATION_MS
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
         }
     }
 
@@ -696,5 +729,18 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()
+    }
+
+    private fun setAppLocale() {
+        val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        val language = prefs.getString("language", "en") ?: "en"
+        val locale = when (language) {
+            "pt" -> Locale("pt", "PT")
+            else -> Locale("en", "US")
+        }
+        Locale.setDefault(locale)
+        val config = resources.configuration
+        config.setLocale(locale)
+        resources.updateConfiguration(config, resources.displayMetrics)
     }
 }

@@ -114,40 +114,13 @@
     <!-- ========== Colorblind-Safe Alternatives (_cb) ============== -->
     <!-- ============================================================ -->
 
-    <!-- ========== Surface / Background ========== -->
-    <color name="surface_card_cb">#F0121212</color>
-    <color name="surface_overlay_cb">#80000000</color>
-    <color name="surface_dialog_cb">#FF2D2D2D</color>
-    <color name="surface_dialog_header_cb">#FF252525</color>
-    <color name="surface_dialog_card_cb">#FF1E1E1E</color>
-    <color name="surface_dialog_alert_cb">#FF2D2D44</color>
-    <color name="surface_route_info_cb">#FF2A2A2A</color>
-    <color name="surface_panel_cb">#FF222222</color>
-    <color name="surface_panel_header_cb">#FF282a2d</color>
-    <color name="surface_panel_lane_cb">#FF505050</color>
-    <color name="surface_panel_speed_cb">#FF4f4f53</color>
-    <color name="surface_weather_badge_cb">#FF282a2d</color>
-    <color name="surface_button_neutral_cb">#FF333333</color>
-    <color name="surface_eta_flag_cb">#FFCACACA</color>
-
-    <!-- ========== Text Colors ========== -->
-    <color name="text_primary_cb">#FFFFFFFF</color>
-    <color name="text_secondary_cb">#FFAAAAAA</color>
-    <color name="text_tertiary_cb">#FFBBBBBB</color>
-    <color name="text_hint_cb">#FF888888</color>
-    <color name="text_description_cb">#FFDDDDDD</color>
-    <color name="text_on_light_cb">#FF000000</color>
-
-    <!-- ========== Accent / Brand ========== -->
-    <color name="accent_blue_cb">#FF2196F3</color>
-
     <!-- ========== Status / Alert ========== -->
     <color
         name="status_success_cb"
     >#FF33B5E5</color>       <!-- sky blue instead of green -->
     <color
         name="status_danger_cb"
-    >#76A900</color>        <!-- orange instead of red -->
+    >#FF76A900</color>        <!-- orange instead of red -->
     <color
         name="status_danger_light_cb"
     >#FFFFBB33</color>  <!-- light orange -->
@@ -161,75 +134,38 @@
     <color name="notification_emergency_cb">#FFFF8800</color>
 
     <!-- ========== Speed ========== -->
-    <color name="speed_warning_cb">#FFEA69</color>
-    <color name="speed_limit_border_cb">#2271B2</color>
+    <color name="speed_warning_cb">#FFFFEA69</color>
+    <color name="speed_limit_border_cb">#FF2271B2</color>
     <color
         name="speed_alert_overlay_cb"
     >#44FF8800</color>  <!-- orange overlay -->
     <color name="speed_alert_bg_cb">#FFFF8800</color>        <!-- orange -->
 
-    <!-- ========== Stroke / Divider ========== -->
-    <color name="card_stroke_cb">#33FFFFFF</color>
-    <color name="card_stroke_light_cb">#44FFFFFF</color>
-    <color name="divider_cb">#FF444444</color>
-    <color name="divider_light_cb">#FF404040</color>
-
     <!-- ========== Icons ========== -->
     <color name="icon_default_cb">#FFFFFFFF</color>
-    <color name="icon_muted_cb">#FF888888</color>
 
     <!-- ========== Marker / Arrow ========== -->
-    <color name="arrow_other_car_cb">#FFFF5722</color>
     <color
         name="arrow_ev_red_cb"
     >#FFFF8800</color>         <!-- orange instead of red -->
-    <color name="arrow_ev_blue_cb">#FF2979FF</color>
-
-    <!-- ========== Map / Route ========== -->
-    <color name="route_brightening_cb">#FFFFD27A</color>
-    <color name="route_border_cb">#FF1565C0</color>
-    <color name="route_traveled_cb">#FF666666</color>
-    <color name="route_remaining_cb">#FFFF4081</color>
-
-    <!-- ========== Launcher ========== -->
-    <color name="launcher_green_cb">#FF3DDC84</color>
 
     <!-- ========== TopDown Car View ========== -->
-    <color name="car_view_grass_cb">#040404FF</color>
-    <color name="car_view_asphalt_cb">#FF2E2E2E</color>
-    <color name="car_view_edge_line_cb">#FFFFFFFF</color>
-    <color name="car_view_center_line_cb">#FFFDD835</color>
-    <color name="car_view_lane_divider_cb">#FFFFFFFF</color>
     <color name="car_view_user_car_cb">#3DB7E9</color>
-    <color name="car_view_other_car_cb">#FF757575</color>
     <color name="car_view_ev_car_cb">#ffffff</color>
     <color
         name="car_view_user_stroke_cb"
     >#FF29B6F6</color> <!-- blue stroke to match CB user car -->
-    <color name="car_view_other_stroke_cb">#FF9E9E9E</color>
-    <color name="car_view_shadow_cb">#AA000000</color>
-    <color name="car_view_ev_shadow_cb">#AA0000FF</color>
 
     <!-- ========== Overtaking Animation View ========== -->
-    <color name="overtaking_road_line_cb">#FFFFFFFF</color>
-    <color name="overtaking_dashed_line_cb">#FFE0E0E0</color>
-    <color name="overtaking_car_window_cb">#FF37474F</color>
-    <color name="overtaking_grass_cb">#FF1B2E1B</color>
-    <color name="overtaking_road_horizon_cb">#FF121212</color>
-    <color name="overtaking_road_near_cb">#FF3E3E3E</color>
-    <color name="overtaking_indicator_blue_light_cb">#FF2979FF</color>
-    <color name="overtaking_indicator_blue_dark_cb">#FF1565C0</color>
     <color
         name="overtaking_indicator_red_light_cb"
     >#FFFFBB33</color>  <!-- orange -->
     <color
         name="overtaking_indicator_red_dark_cb"
     >#FFE65100</color>    <!-- dark orange -->
-    <color name="overtaking_car_blue_cb">#FF448AFF</color>
     <color
         name="overtaking_car_red_cb"
     >#FFFFBB33</color>              <!-- orange -->
-    <color name="overtaking_car_blue_dark_cb">#FF1565C0</color>
     <color
         name="overtaking_car_red_dark_cb"
     >#FFB54C00</color>          <!-- dark orange -->

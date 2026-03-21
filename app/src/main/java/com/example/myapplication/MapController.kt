@@ -817,7 +817,7 @@ class MapController(
                 val layer = style.getLayer(id)
                 if (layer is LineLayer) {
                     layer.setProperties(
-                        lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_brightening, R.color.route_brightening_cb))),
+                        lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_brightening))),
                         lineWidth(2.5f)
                     )
                 }
@@ -950,7 +950,7 @@ class MapController(
         // Add route casing (outer line for border effect)
         val routeCasingLayer = LineLayer(ROUTE_CASING_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_border, R.color.route_border_cb))),  // Dark blue border
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_border))),  // Dark blue border
                 lineWidth(12f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
@@ -961,7 +961,7 @@ class MapController(
         // Add traveled route layer (gray, below remaining route)
         val routeTraveledLayer = LineLayer(ROUTE_TRAVELED_LAYER_ID, ROUTE_TRAVELED_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_traveled, R.color.route_traveled_cb))),  // Gray for traveled portion
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_traveled))),  // Gray for traveled portion
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND),
@@ -973,7 +973,7 @@ class MapController(
         // Add route line (inner, bright line - remaining route)
         val routeLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_remaining, R.color.route_remaining_cb))),  // Magenta/pink for remaining route
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_remaining))),  // Magenta/pink for remaining route
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)

@@ -42,68 +42,68 @@ class TopDownCarView @JvmOverloads constructor(
     
     // Paint objects
     private val backgroundPaint = Paint().apply {
-        color = cbColor(R.color.car_view_grass, R.color.car_view_grass_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_grass)
         style = Paint.Style.FILL
     }
-    
+
     private val roadPaint = Paint().apply {
-        color = cbColor(R.color.car_view_asphalt, R.color.car_view_asphalt_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_asphalt)
         style = Paint.Style.FILL
     }
-    
+
     private val roadEdgePaint = Paint().apply {
-        color = cbColor(R.color.car_view_edge_line, R.color.car_view_edge_line_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_edge_line)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
     }
-    
+
     private val centerLinePaint = Paint().apply {
-        color = cbColor(R.color.car_view_center_line, R.color.car_view_center_line_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_center_line)
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
         pathEffect = DashPathEffect(floatArrayOf(20f, 15f), 0f)
     }
-    
+
     private val laneDividerPaint = Paint().apply {
-        color = cbColor(R.color.car_view_lane_divider, R.color.car_view_lane_divider_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_lane_divider)
         style = Paint.Style.STROKE
         strokeWidth = 2f
         isAntiAlias = true
         pathEffect = DashPathEffect(floatArrayOf(15f, 15f), 0f)
     }
-    
+
     private val userCarPaint = Paint().apply {
         color = cbColor(R.color.car_view_user_car, R.color.car_view_user_car_cb)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, cbColor(R.color.car_view_shadow, R.color.car_view_shadow_cb))
+        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
     }
-    
+
     private val otherCarPaint = Paint().apply {
-        color = cbColor(R.color.car_view_other_car, R.color.car_view_other_car_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_other_car)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(6f, 0f, 0f, cbColor(R.color.car_view_shadow, R.color.car_view_shadow_cb))
+        setShadowLayer(6f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_shadow))
     }
-    
+
     private val evCarPaint = Paint().apply {
         color = cbColor(R.color.car_view_ev_car, R.color.car_view_ev_car_cb)
         style = Paint.Style.FILL
         isAntiAlias = true
-        setShadowLayer(8f, 0f, 0f, cbColor(R.color.car_view_ev_shadow, R.color.car_view_ev_shadow_cb))
+        setShadowLayer(8f, 0f, 0f, ContextCompat.getColor(context, R.color.car_view_ev_shadow))
     }
-    
+
     private val evCarStrokePaint = Paint().apply {
         color = cbColor(R.color.car_view_user_stroke, R.color.car_view_user_stroke_cb)
         style = Paint.Style.STROKE
         strokeWidth = 4f
         isAntiAlias = true
     }
-    
+
     private val textPaint = Paint().apply {
-        color = cbColor(R.color.car_view_other_stroke, R.color.car_view_other_stroke_cb)
+        color = ContextCompat.getColor(context, R.color.car_view_other_stroke)
         textSize = 24f
         isAntiAlias = true
     }

@@ -56,6 +56,23 @@ interface MqttEventListener {
      */
     fun onCarUpdate(data: MqttEventRouter.CarUpdateData)
 
+    /**
+     * A weather station assignment was received for the user's car.
+     * Contains the nearest station's info and latest measurement.
+     *
+     * @param data Parsed station assignment data.
+     */
+    fun onStationAssignment(data: MqttEventRouter.StationAssignmentData)
+
+    /**
+     * A bulk meteo stations update was received from meteo_consumer.
+     * Contains all stations with their latest measurements.
+     * Used as fallback when no per-car station assignment has arrived yet.
+     *
+     * @param payload The raw JSON payload with stations array.
+     */
+    fun onMeteoStationsUpdate(payload: String)
+
     /** MQTT connection established successfully. */
     fun onMqttConnected()
 

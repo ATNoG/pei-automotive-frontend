@@ -139,6 +139,37 @@ class MqttEventRouter(
                     Log.e(TAG, "Error parsing car update: ${e.message}")
                 }
             }
+
+            topic == AppConfig.MQTT_TOPIC_METEO_UPDATES -> {
+                Log.d(TAG, "Meteo updates received (len=${message.length})")
+                try {
+                    val json = JSONObject(message)
+                    val stations = json.optJSONArray("stations")
+                    val count = stations?.length() ?: 0
+                    Log.d(TAG, "Meteo update contains $count stations")
+                    if (count > 0) {
+                        listener?.onMeteoStationsUpdate(message)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error parsing meteo update: ${e.message}")
+                }
+            }
+
+            topic.startsWith(AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE + "/") -> {
+                Log.d(TAG, "Station assignment received on $topic (len=${message.length})")
+                val carId = topic.substringAfterLast("/")
+                if (carId in userCarIds) {
+                    try {
+                        val data = parseStationAssignment(carId, JSONObject(message))
+                        Log.d(TAG, "Parsed station assignment: car=$carId, station=${data.stationId} (${data.stationName}), temp=${data.temperature}")
+                        listener?.onStationAssignment(data)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing station assignment: ${e.message}", e)
+                    }
+                } else {
+                    Log.d(TAG, "Station assignment for car=$carId ignored (not in userCarIds)")
+                }
+            }
         }
     }
 
@@ -148,9 +179,11 @@ class MqttEventRouter(
         subscribe(AppConfig.MQTT_TOPIC_ALERTS)
         subscribe(AppConfig.MQTT_TOPIC_CAR_UPDATES)
         subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)
+        subscribe(AppConfig.MQTT_TOPIC_METEO_UPDATES)
 
         userCarIds.forEach { carId ->
             subscribe("${AppConfig.MQTT_TOPIC_ACCIDENT_ALERT}/$carId")
+            subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
         }
     }
 
@@ -200,6 +233,26 @@ class MqttEventRouter(
     }
 
     // ── Car Update Parsing ───────────────────────────────────────────────
+
+    /**
+     * Structured result of parsing a station assignment MQTT payload.
+     * Published by the station_assigner backend service on `cars/station/{car_id}`.
+     */
+    data class StationAssignmentData(
+        val carId: String,
+        val stationId: Int,
+        val stationName: String,
+        val stationLat: Double,
+        val stationLon: Double,
+        val temperature: Double,
+        val windIntensity: Double,
+        val windDirection: Int,
+        val humidity: Int,
+        val pressure: Double,
+        val radiation: Double,
+        val accumulatedPrecipitation: Double,
+        val measurementTime: String
+    )
 
     /**
      * Structured result of parsing a car-position MQTT payload.
@@ -284,4 +337,28 @@ class MqttEventRouter(
             .substringAfterLast(":")
             .substringAfterLast("/")
             .ifEmpty { "main-car" }
+
+    // ── Station Assignment Parsing ────────────────────────────────────
+
+    private fun parseStationAssignment(carId: String, json: JSONObject): StationAssignmentData {
+        val station = json.getJSONObject("station")
+        val location = station.optJSONObject("location")
+        val measurement = station.optJSONObject("measurement")
+
+        return StationAssignmentData(
+            carId = carId,
+            stationId = station.optInt("station_id", 0),
+            stationName = station.optString("location_name", ""),
+            stationLat = location?.optDouble("latitude", 0.0) ?: 0.0,
+            stationLon = location?.optDouble("longitude", 0.0) ?: 0.0,
+            temperature = measurement?.optDouble("temperature", 0.0) ?: 0.0,
+            windIntensity = measurement?.optDouble("wind_intensity", 0.0) ?: 0.0,
+            windDirection = measurement?.optInt("wind_direction", 0) ?: 0,
+            humidity = measurement?.optInt("humidity", 0) ?: 0,
+            pressure = measurement?.optDouble("pressure", 0.0) ?: 0.0,
+            radiation = measurement?.optDouble("radiation", 0.0) ?: 0.0,
+            accumulatedPrecipitation = measurement?.optDouble("accumulated_precipitation", 0.0) ?: 0.0,
+            measurementTime = measurement?.optString("time", "") ?: ""
+        )
+    }
 }

@@ -14,6 +14,7 @@
     <string name="alert_emergency_vehicle">Emergency Vehicle</string>
     <string name="alert_navigation">Navigation</string>
     <string name="alert_highway_entry">Highway Entry/Exit</string>
+    <string name="alert_traffic_jam">Traffic Jam</string>
     <string name="alert_sound">Sound</string>
     <string name="alert_enabled">Alert</string>
     <string name="start_route">▶ Start a Route</string>
@@ -34,6 +35,9 @@
     <string name="speed_limit_warning">Warning, you are exceeding the speed limit</string>
     <string name="overtaking_warning">Warning, vehicle overtaking</string>
     <string name="accident_warning">Warning! Accident ahead in %1$s.</string>
+    <string name="traffic_jam_warning">Warning! Traffic jam ahead in %1$s.</string>
+    <string name="traffic_jam_warning_short">Traffic jam %1$s</string>
+    <string name="traffic_jam_warning_generic">Warning, traffic jam ahead</string>
     <string name="highway_entry_warning">Highway alert detected</string>
     <string name="highway_entry_warning_safe">Safe highway entry</string>
     <string name="highway_entry_warning_unsafe">Warning, unsafe highway entry</string>

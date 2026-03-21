@@ -129,6 +129,16 @@ class MqttEventRouter(
                 }
             }
 
+            topic == AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT ||
+                topic.startsWith(AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT + "/") -> {
+                Log.d(TAG, "Traffic jam alert on $topic")
+                // Traffic jam alerts are road-context events; process regardless of a specific
+                // target car so shared jam zones still show up on the frontend map.
+                if (shouldProcess(AlertPreferenceManager.AlertType.TRAFFIC_JAM)) {
+                    listener?.onTrafficJamAlert(message)
+                }
+            }
+
             topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Car update received")
                 try {

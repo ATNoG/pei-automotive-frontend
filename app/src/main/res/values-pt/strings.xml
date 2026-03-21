@@ -15,6 +15,7 @@
     <string name="alert_emergency_vehicle">Veículo de Emergência</string>
     <string name="alert_navigation">Navegação</string>
     <string name="alert_highway_entry">Entrada/Saída da Autoestrada</string>
+    <string name="alert_traffic_jam">Trânsito Congestionado</string>
     <string name="alert_sound">Som</string>
     <string name="alert_enabled">Alerta</string>
     <string name="start_route">▶ Iniciar Rota</string>
@@ -35,6 +36,9 @@
     <string name="speed_limit_warning">Atenção, você está excedendo o limite de velocidade</string>
     <string name="overtaking_warning">Atenção, veículo ultrapassando</string>
     <string name="accident_warning">Atenção! Acidente à frente em %1$s.</string>
+    <string name="traffic_jam_warning">Atenção! Trânsito congestionado à frente em %1$s.</string>
+    <string name="traffic_jam_warning_short">Trânsito congestionado %1$s</string>
+    <string name="traffic_jam_warning_generic">Atenção, trânsito congestionado à frente</string>
     <string name="highway_entry_warning">Alerta de autoestrada detectado</string>
     <string name="highway_entry_warning_safe">Entrada na autoestrada segura</string>
     <string name="highway_entry_warning_unsafe">Atenção, entrada na autoestrada insegura</string>

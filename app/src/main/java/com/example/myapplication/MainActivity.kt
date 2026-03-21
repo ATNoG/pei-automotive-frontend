@@ -521,6 +521,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         handleHighwayEntryAlert(payload)
     }
 
+    override fun onTrafficJamAlert(payload: String) {
+        handleTrafficJamAlert(payload)
+    }
+
     override fun onCarUpdate(data: MqttEventRouter.CarUpdateData) {
         runOnUiThread {
             when {
@@ -803,6 +807,57 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
+        }
+    }
+
+    private fun handleTrafficJamAlert(message: String) {
+        try {
+            val json = org.json.JSONObject(message)
+            val distanceM = json.optDouble("distance_m", Double.NaN)
+            val jam = json.optJSONObject("jam")
+            val jamId = jam?.optString("jam_id")?.takeIf { it.isNotBlank() }
+                ?: json.optString("jam_id", "")
+            val jamLat = jam?.optDouble("center_latitude", Double.NaN) ?: Double.NaN
+            val jamLon = jam?.optDouble("center_longitude", Double.NaN) ?: Double.NaN
+            val jamActive = jam?.optBoolean("active", true) ?: true
+
+            val (messageText, ttsText) = if (!distanceM.isNaN() && distanceM >= 0.0) {
+                val distanceText = UiController.formatDistance(distanceM, getString(R.string.ahead))
+                Pair(
+                    getString(R.string.traffic_jam_warning_short, distanceText),
+                    getString(R.string.traffic_jam_warning, distanceText)
+                )
+            } else {
+                Pair(
+                    getString(R.string.traffic_jam_warning_generic),
+                    getString(R.string.traffic_jam_warning_generic)
+                )
+            }
+
+            runOnUiThread {
+                if (!jamId.isNullOrBlank() && !jamLat.isNaN() && !jamLon.isNaN()) {
+                    val markerId = "jam-$jamId"
+                    if (jamActive) {
+                        mapController.addAccidentMarker(markerId, jamLat, jamLon)
+                    } else {
+                        mapController.removeAccidentMarker(markerId)
+                    }
+                }
+
+                inAppNotificationManager.show(
+                    type = InAppNotificationManager.Type.WARNING,
+                    title = "🚦 Traffic Jam Alert",
+                    message = messageText,
+                    duration = InAppNotificationManager.DEFAULT_DURATION_MS
+                )
+
+                alertNotificationManager.speakForAlert(
+                    AlertPreferenceManager.AlertType.TRAFFIC_JAM,
+                    ttsText
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing traffic jam alert: ${e.message}")
         }
     }
 

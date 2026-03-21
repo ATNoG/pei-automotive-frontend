@@ -119,6 +119,7 @@ class AlertSettingsDialog(
         val alertTypes = listOf(
             AlertPreferenceManager.AlertType.ACCIDENT,
             AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+            AlertPreferenceManager.AlertType.TRAFFIC_JAM,
             AlertPreferenceManager.AlertType.SPEEDING,
             AlertPreferenceManager.AlertType.WEATHER,
             AlertPreferenceManager.AlertType.OVERTAKING,

@@ -10,6 +10,7 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
 import kotlin.math.roundToInt
 
 class OvertakingEdgeLightView @JvmOverloads constructor(
@@ -31,6 +32,17 @@ class OvertakingEdgeLightView @JvmOverloads constructor(
         RIGHT,
         NONE
     }
+
+    private val isColorBlind = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        .getBoolean("colorBlindMode", false)
+
+    private fun cbColor(normal: Int, cb: Int): Int =
+        ContextCompat.getColor(context, if (isColorBlind) cb else normal)
+
+    // Glow RGB components resolved from colors.xml (alpha is applied dynamically in onDraw)
+    private val glowEdge = cbColor(R.color.overtaking_indicator_red_light, R.color.overtaking_indicator_red_light_cb)
+    private val glowMid  = cbColor(R.color.overtaking_indicator_red_dark,  R.color.overtaking_indicator_red_dark_cb)
+    private val glowCore = cbColor(R.color.overtaking_car_red,             R.color.overtaking_car_red_cb)
 
     private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -105,8 +117,8 @@ class OvertakingEdgeLightView @JvmOverloads constructor(
                 glowRect.right,
                 0f,
                 intArrayOf(
-                    Color.argb(edgeAlpha, 255, 70, 70),
-                    Color.argb(midAlpha, 255, 20, 20),
+                    Color.argb(edgeAlpha, Color.red(glowEdge), Color.green(glowEdge), Color.blue(glowEdge)),
+                    Color.argb(midAlpha,  Color.red(glowMid),  Color.green(glowMid),  Color.blue(glowMid)),
                     Color.TRANSPARENT
                 ),
                 floatArrayOf(0f, 0.08f, 1f),
@@ -120,8 +132,8 @@ class OvertakingEdgeLightView @JvmOverloads constructor(
                 0f,
                 intArrayOf(
                     Color.TRANSPARENT,
-                    Color.argb(midAlpha, 255, 20, 20),
-                    Color.argb(edgeAlpha, 255, 70, 70)
+                    Color.argb(midAlpha,  Color.red(glowMid),  Color.green(glowMid),  Color.blue(glowMid)),
+                    Color.argb(edgeAlpha, Color.red(glowEdge), Color.green(glowEdge), Color.blue(glowEdge))
                 ),
                 floatArrayOf(0f, 0.92f, 1f),
                 Shader.TileMode.CLAMP
@@ -136,7 +148,7 @@ class OvertakingEdgeLightView @JvmOverloads constructor(
             Side.RIGHT -> RectF(viewWidth - coreWidth, top, viewWidth, bottom)
             Side.NONE -> return
         }
-        corePaint.color = Color.argb(coreAlpha, 255, 110, 110)
+        corePaint.color = Color.argb(coreAlpha, Color.red(glowCore), Color.green(glowCore), Color.blue(glowCore))
         canvas.drawRect(coreRect, corePaint)
     }
 

@@ -784,16 +784,16 @@ class UiController(
             .lowercase(Locale.getDefault())
 
         val strokeColor = when (firstWord) {
-            "yellow" -> Color.parseColor("#FFD54F")
-            "orange" -> Color.parseColor("#FB8C00")
-            "red" -> Color.parseColor("#E53935")
-            else -> Color.parseColor("#33FFFFFF")
+            "yellow" -> resolveThemeColor(R.attr.colorStatusWarning)
+            "orange" -> resolveThemeColor(R.attr.colorNotificationAccident)
+            "red"    -> resolveThemeColor(R.attr.colorStatusDangerLight)
+            else     -> resolveThemeColor(R.attr.colorCardStroke)
         }
 
         return GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = 20f * activity.resources.displayMetrics.density
-            setColor(Color.parseColor("#F0121212"))
+            setColor(resolveThemeColor(R.attr.colorSurfaceCard))
             setStroke((1f * activity.resources.displayMetrics.density).roundToInt(), strokeColor)
         }
     }

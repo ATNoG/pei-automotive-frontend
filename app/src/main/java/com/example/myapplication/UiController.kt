@@ -74,11 +74,8 @@ class UiController(
     // ── Weather widgets ──────────────────────────────────────────────────
 
     private val txtTemperature: TextView? = activity.findViewById(R.id.txtTemperature)
-    private val weatherCard: View? =
-        activity.findViewById(R.id.weatherCard) ?: activity.findViewById(R.id.weatherBadge)
+    private val weatherCard: View? = activity.findViewById(R.id.weatherBadge)
     private val weatherCardExtras: LinearLayout? = activity.findViewById(R.id.weatherCardExtras)
-    private val txtEta: TextView? = activity.findViewById(R.id.txtEta)
-    private val txtDistance: TextView? = activity.findViewById(R.id.txtDistance)
     private val txtWeatherEmoji: TextView? = activity.findViewById(R.id.txtWeatherEmoji)
     private val weatherCardPrefs = WeatherCardPreferenceManager(activity)
 
@@ -120,12 +117,10 @@ class UiController(
     fun updateSpeedLimit(limit: Int?) {
         val displayText = limit?.toString() ?: "--"
         txtSpeedLimit?.text = displayText
-        activity.findViewById<TextView>(R.id.txtSpeedLimitRight)?.text = displayText
     }
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
         txtCurrentSpeed?.text = speedKmh.toString()
-        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.text = "$speedKmh ${activity.getString(R.string.speed_unit)}"
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
         val speedColor = if (isSpeeding) {
@@ -135,7 +130,6 @@ class UiController(
         }
         txtCurrentSpeed?.setTextColor(speedColor)
         txtSpeedUnit?.setTextColor(speedColor)
-        activity.findViewById<TextView>(R.id.txtCurrentSpeedRight)?.setTextColor(speedColor)
 
         // Speed limit sign: turn red and scale up when speeding, reset when not
         if (isSpeeding) {

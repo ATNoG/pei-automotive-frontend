@@ -63,7 +63,7 @@
     <color name="divider_light">#FF404040</color>
 
     <!-- ========== Icons ========== -->
-    <color name="icon_default">#FFFFFFFF</color>
+    <color name="icon_default">#44FFFFFF</color>
     <color name="icon_muted">#FF888888</color>
 
     <!-- ========== Marker / Arrow ========== -->

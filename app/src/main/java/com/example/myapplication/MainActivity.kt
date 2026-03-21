@@ -783,6 +783,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 else -> "Highway Entry Alert"
             }
             val messageText = "Highway entry detected: $status"
+            val ttsText = when (status) {
+                "unsafe" -> getString(R.string.highway_entry_warning_unsafe)
+                "safe" -> getString(R.string.highway_entry_warning_safe)
+                else -> getString(R.string.highway_entry_warning)
+            }
 
             runOnUiThread {
                 inAppNotificationManager.show(
@@ -790,6 +795,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     title = title,
                     message = messageText,
                     duration = InAppNotificationManager.DEFAULT_DURATION_MS
+                )
+                alertNotificationManager.speakForAlert(
+                    AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+                    ttsText
                 )
             }
         } catch (e: Exception) {

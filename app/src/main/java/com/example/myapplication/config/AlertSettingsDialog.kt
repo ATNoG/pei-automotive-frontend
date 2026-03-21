@@ -1,11 +1,14 @@
 package com.example.myapplication.config
 
+import android.content.res.Configuration
+import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
@@ -16,7 +19,7 @@ import com.example.myapplication.R
  * Encapsulates the Settings dialog UI and alert preference wiring.
  *
  * Displays alert types in a 2-column grid, each in its own bordered card
- * with the event name, audio toggle, and enable switch on the same row.
+ * with the event name plus explicit sound and enable switches.
  */
 class AlertSettingsDialog(
     private val activity: AppCompatActivity,
@@ -25,9 +28,11 @@ class AlertSettingsDialog(
 ) {
 
     private companion object {
-        const val GRID_COLUMNS = 2
+        const val GRID_COLUMNS_TABLET = 2
         const val GRID_GAP_DP = 10
         const val CARD_PADDING_DP = 14
+        const val CONTROL_GAP_DP = 10
+        const val CARD_TITLE_BOTTOM_GAP_DP = 10
     }
 
     fun show() {
@@ -102,11 +107,25 @@ class AlertSettingsDialog(
 
     private fun buildAlertGrid(settingsView: View) {
         val container = settingsView.findViewById<LinearLayout>(R.id.alertSettingsContainer)
+        container.removeAllViews()
         val density = activity.resources.displayMetrics.density
         val gapPx = (GRID_GAP_DP * density).toInt()
+        val gridColumns = if (activity.resources.configuration.smallestScreenWidthDp >= 600) {
+            GRID_COLUMNS_TABLET
+        } else {
+            1
+        }
 
-        val alertTypes = AlertPreferenceManager.AlertType.entries
-        val rows = alertTypes.chunked(GRID_COLUMNS)
+        val alertTypes = listOf(
+            AlertPreferenceManager.AlertType.ACCIDENT,
+            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+            AlertPreferenceManager.AlertType.SPEEDING,
+            AlertPreferenceManager.AlertType.WEATHER,
+            AlertPreferenceManager.AlertType.OVERTAKING,
+            AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
+            AlertPreferenceManager.AlertType.NAVIGATION
+        )
+        val rows = alertTypes.chunked(gridColumns)
 
         rows.forEachIndexed { rowIndex, rowItems ->
             val rowLayout = LinearLayout(activity).apply {
@@ -128,8 +147,8 @@ class AlertSettingsDialog(
             }
 
             // Pad incomplete last row with spacer
-            if (rowItems.size < GRID_COLUMNS) {
-                for (i in rowItems.size until GRID_COLUMNS) {
+            if (rowItems.size < gridColumns) {
+                for (i in rowItems.size until gridColumns) {
                     val spacer = View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 0, 1f).apply {
                             marginStart = gapPx
@@ -145,77 +164,102 @@ class AlertSettingsDialog(
 
     /**
      * Create a single bordered card for one alert type.
-     * Layout: [EventName]  [🔊]  [Switch]
+     * Layout: title on top, then two toggle blocks on the next row.
      */
     private fun createAlertCard(
         alertType: AlertPreferenceManager.AlertType,
         density: Float
     ): LinearLayout {
         val padPx = (CARD_PADDING_DP * density).toInt()
+        val controlGapPx = (CONTROL_GAP_DP * density).toInt()
+        val titleBottomGapPx = (CARD_TITLE_BOTTOM_GAP_DP * density).toInt()
 
         val card = LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
             setPadding(padPx, padPx, padPx, padPx)
             background = activity.getDrawable(R.drawable.card_background_with_stroke)
         }
 
-        // Event name
         val nameText = TextView(activity).apply {
             text = activity.getString(alertType.displayNameResId)
             textSize = 14f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = titleBottomGapPx
+            }
+        }
+
+        val controlsRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
 
-        // Audio toggle emoji
-        val audioToggle = createAudioToggle(alertType, density)
+        val soundControl = createToggleBlock(
+            labelRes = R.string.alert_sound,
+            initialChecked = alertPreferenceManager.isAudioEnabled(alertType),
+            marginEndPx = controlGapPx
+        ) { checked ->
+            alertPreferenceManager.setAudioEnabled(alertType, checked)
+        }
 
-        // Enable switch
-        val enableSwitch = createEnableSwitch(alertType, audioToggle)
+        val enableControl = createToggleBlock(
+            labelRes = R.string.alert_enabled,
+            initialChecked = alertPreferenceManager.isEnabled(alertType),
+            marginEndPx = 0
+        ) { checked ->
+            alertPreferenceManager.setEnabled(alertType, checked)
+            soundControl.second.isEnabled = checked
+        }
+
+        soundControl.second.isEnabled = enableControl.second.isChecked
 
         card.addView(nameText)
-        card.addView(audioToggle)
-        card.addView(enableSwitch)
+        controlsRow.addView(soundControl.first)
+        controlsRow.addView(enableControl.first)
+        card.addView(controlsRow)
         return card
     }
 
-    private fun createAudioToggle(
-        alertType: AlertPreferenceManager.AlertType,
-        density: Float
-    ): TextView {
-        return TextView(activity).apply {
-            text = "\uD83D\uDD0A"
-            textSize = 18f
-            setPadding(
-                (8 * density).toInt(), (4 * density).toInt(),
-                (8 * density).toInt(), (4 * density).toInt()
-            )
-            visibility = if (alertPreferenceManager.isEnabled(alertType)) View.VISIBLE else View.INVISIBLE
-            alpha = if (alertPreferenceManager.isAudioEnabled(alertType)) 1.0f else 0.3f
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                val newState = !alertPreferenceManager.isAudioEnabled(alertType)
-                alertPreferenceManager.setAudioEnabled(alertType, newState)
-                this.alpha = if (newState) 1.0f else 0.3f
-            }
+    private fun createToggleBlock(
+        labelRes: Int,
+        initialChecked: Boolean,
+        marginEndPx: Int,
+        onChanged: (Boolean) -> Unit
+    ): Pair<LinearLayout, SwitchCompat> {
+        val label = TextView(activity).apply {
+            text = activity.getString(labelRes)
+            textSize = 12f
+            setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
         }
-    }
 
-    private fun createEnableSwitch(
-        alertType: AlertPreferenceManager.AlertType,
-        audioToggle: TextView
-    ): androidx.appcompat.widget.SwitchCompat {
-        return androidx.appcompat.widget.SwitchCompat(activity).apply {
-            isChecked = alertPreferenceManager.isEnabled(alertType)
-            setOnCheckedChangeListener { _, checked ->
-                alertPreferenceManager.setEnabled(alertType, checked)
-                audioToggle.visibility = if (checked) View.VISIBLE else View.INVISIBLE
-            }
+        val toggle = SwitchCompat(activity).apply {
+            isChecked = initialChecked
+            setOnCheckedChangeListener { _, checked -> onChanged(checked) }
         }
+
+        val block = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                1f
+            ).apply {
+                marginEnd = marginEndPx
+            }
+            addView(label)
+            addView(toggle)
+        }
+
+        return block to toggle
     }
 
     // ── Close Actions ────────────────────────────────────────────────────

@@ -38,8 +38,6 @@ object AppConfig {
         "car-behind",
         "highway-car",
         "highway-car-2",
-        "minimal-jam-lead",
-        // Jam test profile: follow this vehicle as the primary user car.
         "minimal-jam-car-5"
     )
 
@@ -56,7 +54,8 @@ object AppConfig {
         "minimal-jam-car-1",
         "minimal-jam-car-2",
         "minimal-jam-car-3",
-        "minimal-jam-car-4"
+        "minimal-jam-car-4",
+        "minimal-jam-lead"
     )
 
     // ========== Default Positions ==========
@@ -155,6 +154,7 @@ object AppConfig {
      * MQTT topic for traffic jam alerts.
      */
     const val MQTT_TOPIC_TRAFFIC_JAM_ALERT = "alerts/traffic_jam"
+    const val MQTT_TOPIC_TRAFFIC_JAM_PATTERN = "alerts/traffic_jam/#"
 
     /**
      * MQTT topic for emergency vehicle proximity alerts.

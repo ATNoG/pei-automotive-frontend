@@ -35,7 +35,7 @@
     <string name="speed_limit_warning">Warning, you are exceeding the speed limit</string>
     <string name="overtaking_warning">Warning, vehicle overtaking</string>
     <string name="accident_warning">Warning! Accident ahead in %1$s.</string>
-    <string name="traffic_jam_warning">Warning! Traffic jam ahead in %1$s.</string>
+    <string name="traffic_jam_warning">Warning! Traffic jam in %1$s.</string>
     <string name="traffic_jam_warning_short">Traffic jam %1$s</string>
     <string name="traffic_jam_warning_generic">Warning, traffic jam ahead</string>
     <string name="highway_entry_warning">Highway alert detected</string>

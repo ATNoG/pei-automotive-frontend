@@ -527,11 +527,21 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     override fun onCarUpdate(data: MqttEventRouter.CarUpdateData) {
         runOnUiThread {
+            val normalizedCarId = data.carId.trim()
             when {
-                data.carId in USER_CAR_IDS -> handleUserCarUpdate(data)
-                data.carId in OTHER_CAR_IDS -> handleOtherCarUpdate(data)
-                data.carId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data)
-                else -> Log.d(TAG, "Unknown car_id ${data.carId}, ignoring")
+                normalizedCarId in USER_CAR_IDS -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
+                else -> {
+                    // Debug: Show actual bytes to detect hidden characters
+                    val bytes = data.carId.toByteArray().joinToString(",")
+                    Log.d(
+                        TAG,
+                        "Unknown car_id raw='${data.carId}' normalized='$normalizedCarId' " +
+                            "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
+                            "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
+                    )
+                }
             }
         }
     }
@@ -817,9 +827,17 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val jam = json.optJSONObject("jam")
             val jamId = jam?.optString("jam_id")?.takeIf { it.isNotBlank() }
                 ?: json.optString("jam_id", "")
-            val jamLat = jam?.optDouble("center_latitude", Double.NaN) ?: Double.NaN
-            val jamLon = jam?.optDouble("center_longitude", Double.NaN) ?: Double.NaN
-            val jamActive = jam?.optBoolean("active", true) ?: true
+            val jamLat = jam?.optDouble("center_latitude", Double.NaN)
+                ?.takeUnless { it.isNaN() }
+                ?: json.optDouble("center_latitude", Double.NaN)
+            val jamLon = jam?.optDouble("center_longitude", Double.NaN)
+                ?.takeUnless { it.isNaN() }
+                ?: json.optDouble("center_longitude", Double.NaN)
+            val jamActive = if (jam != null) {
+                jam.optBoolean("active", true)
+            } else {
+                json.optBoolean("active", true)
+            }
 
             val (messageText, ttsText) = if (!distanceM.isNaN() && distanceM >= 0.0) {
                 val distanceText = UiController.formatDistance(distanceM, getString(R.string.ahead))
@@ -842,6 +860,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     } else {
                         mapController.removeAccidentMarker(markerId)
                     }
+                } else {
+                    Log.d(
+                        TAG,
+                        "Traffic jam marker skipped (missing jam_id/coordinates): jamId=$jamId, lat=$jamLat, lon=$jamLon"
+                    )
                 }
 
                 inAppNotificationManager.show(

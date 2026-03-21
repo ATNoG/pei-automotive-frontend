@@ -7,6 +7,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.example.myapplication.MapController
 import com.example.myapplication.R
@@ -49,7 +50,11 @@ class AlertSettingsDialog(
         switchLightMode.isChecked = prefs.getBoolean("lightMode", false)
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("lightMode", isChecked).apply()
+            AppCompatDelegate.setDefaultNightMode(
+                if (isChecked) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+            )
             mapController.setMapStyle(isChecked)
+            activity.recreate()
         }
     }
 

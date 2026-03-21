@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
@@ -12,6 +12,15 @@
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        
+        <!-- ========== Material Design Surface Colors ========== -->
+        <item name="colorSurface">@color/surface_panel</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        <!-- ========== Material Design 3 Colors ========== -->
+        <item name="colorSurfaceContainer">@color/surface_panel</item>
+        <item name="colorSurfaceContainerLow">@color/surface_card</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_dialog</item>
 
         <!-- ========== Custom Surface / Background ========== -->
         <item name="colorSurfaceCard">@color/surface_card</item>

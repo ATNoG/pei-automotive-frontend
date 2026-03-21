@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AlertSettingsDialog
@@ -73,8 +74,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var hasRealStationAssignment = false // true when data came from station_assigner, not client-side fallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply colorblind theme before inflating any views
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+
+        // Apply explicit app light/dark preference before view inflation.
+        val isLightMode = appPrefs.getBoolean("lightMode", false)
+        AppCompatDelegate.setDefaultNightMode(
+            if (isLightMode) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+        )
+
+        // Apply colorblind theme before inflating any views
         if (appPrefs.getBoolean("colorBlindMode", false)) {
             setTheme(R.style.Theme_MyApplication_ColorBlind)
         }
@@ -143,13 +151,6 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 initialPosition.longitude,
                 0f
             )
-
-            // Apply saved map style preference
-            val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
-            val isLightMode = prefs.getBoolean("lightMode", false)
-            if (isLightMode) {
-                mapController.setMapStyle(true)
-            }
         }
     }
 

@@ -176,7 +176,11 @@ class MapController(
         map.uiSettings.setCompassGravity(android.view.Gravity.BOTTOM or android.view.Gravity.END)
         map.uiSettings.setAllGesturesEnabled(true)
         
-        map.setStyle(Style.Builder().fromUri(STYLE_URL_DARK)) { style ->
+        val prefs = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        val initialLightMode = prefs.getBoolean("lightMode", false)
+        val initialStyleUrl = if (initialLightMode) STYLE_URL_LIGHT else STYLE_URL_DARK
+
+        map.setStyle(Style.Builder().fromUri(initialStyleUrl)) { style ->
             // Performance optimization: Remove unnecessary labels and POIs
             optimizeMapLayers(style)
             
@@ -540,6 +544,12 @@ class MapController(
     fun updateArrowPosition(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
         val map = mapLibreMap ?: return
 
+        // Persist latest requested user-car state so style reloads can restore marker position
+        // even if an in-flight animation gets cancelled by setMapStyle().
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = bearing
+
         // 1. Cancel previous animation
         currentAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
         // If you switch to Choreographer, you'd use: Choreographer.getInstance().removeFrameCallback(frameCallback)
@@ -737,6 +747,9 @@ class MapController(
     // --- single location helper ---
     fun setSingleLocation(lat: Double, lon: Double, bearing: Float) {
         stopRouteSimulation()
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = bearing
         updateArrowPosition(lat, lon, bearing)
     }
 
@@ -1237,6 +1250,8 @@ class MapController(
             // Restore current position if available
             if (userCarVisualLat != 0.0 && userCarVisualLon != 0.0) {
                 updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
+            } else if (userCarLat != 0.0 && userCarLon != 0.0) {
+                updateArrowPosition(userCarLat, userCarLon, userCarBearing)
             }
             
             // Restore other cars positions if any

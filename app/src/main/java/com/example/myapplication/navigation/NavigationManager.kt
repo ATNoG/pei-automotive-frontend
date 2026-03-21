@@ -479,10 +479,10 @@ class NavigationManager {
         val distanceToNextSegmentStart = calculateDistanceAlongRoute(currentPos, nextStep.location, route)
         val totalSegmentLength = calculateDistanceAlongRoute(currentStep.location, nextStep.location, route)
         
-            if (totalSegmentLength > 0) {
-                val remainingPercentage = distanceToNextSegmentStart / totalSegmentLength
-                if (remainingPercentage < 0.7f) {
-                    return true
+        if (totalSegmentLength > 0) {
+            val remainingPercentage = distanceToNextSegmentStart / totalSegmentLength
+            if (remainingPercentage < 0.7f) {
+                return true
                 }
             }
 

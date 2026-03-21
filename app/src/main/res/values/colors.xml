@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8" ?>
 <resources>
 
     <!-- ========== Material Theme Base Colors ========== -->
@@ -19,10 +19,10 @@
     <color name="surface_dialog_alert">#FF2D2D44</color>
     <color name="surface_route_info">#FF2A2A2A</color>
     <color name="surface_panel">#FF222222</color>
-    <color name="surface_panel_header">#FF202020</color>
+    <color name="surface_panel_header">#FF282a2d</color>
     <color name="surface_panel_lane">#FF505050</color>
-    <color name="surface_panel_speed">#FF303030</color>
-    <color name="surface_weather_badge">#FF4A4A4A</color>
+    <color name="surface_panel_speed">#FF4f4f53</color>
+    <color name="surface_weather_badge">#FF282a2d</color>
     <color name="surface_button_neutral">#FF333333</color>
     <color name="surface_eta_flag">#FFCACACA</color>
 
@@ -123,10 +123,10 @@
     <color name="surface_dialog_alert_cb">#FF2D2D44</color>
     <color name="surface_route_info_cb">#FF2A2A2A</color>
     <color name="surface_panel_cb">#FF222222</color>
-    <color name="surface_panel_header_cb">#FF202020</color>
+    <color name="surface_panel_header_cb">#FF282a2d</color>
     <color name="surface_panel_lane_cb">#FF505050</color>
-    <color name="surface_panel_speed_cb">#FF303030</color>
-    <color name="surface_weather_badge_cb">#FF4A4A4A</color>
+    <color name="surface_panel_speed_cb">#FF4f4f53</color>
+    <color name="surface_weather_badge_cb">#FF282a2d</color>
     <color name="surface_button_neutral_cb">#FF333333</color>
     <color name="surface_eta_flag_cb">#FFCACACA</color>
 
@@ -142,9 +142,15 @@
     <color name="accent_blue_cb">#FF2196F3</color>
 
     <!-- ========== Status / Alert ========== -->
-    <color name="status_success_cb">#FF33B5E5</color>       <!-- sky blue instead of green -->
-    <color name="status_danger_cb">#76A900</color>        <!-- orange instead of red -->
-    <color name="status_danger_light_cb">#FFFFBB33</color>  <!-- light orange -->
+    <color
+        name="status_success_cb"
+    >#FF33B5E5</color>       <!-- sky blue instead of green -->
+    <color
+        name="status_danger_cb"
+    >#76A900</color>        <!-- orange instead of red -->
+    <color
+        name="status_danger_light_cb"
+    >#FFFFBB33</color>  <!-- light orange -->
     <color name="status_warning_cb">#FFFFC107</color>       <!-- amber -->
     <color name="notification_info_cb">#FF2196F3</color>
     <color name="notification_success_cb">#FF33B5E5</color>
@@ -157,7 +163,9 @@
     <!-- ========== Speed ========== -->
     <color name="speed_warning_cb">#FFEA69</color>
     <color name="speed_limit_border_cb">#2271B2</color>
-    <color name="speed_alert_overlay_cb">#44FF8800</color>  <!-- orange overlay -->
+    <color
+        name="speed_alert_overlay_cb"
+    >#44FF8800</color>  <!-- orange overlay -->
     <color name="speed_alert_bg_cb">#FFFF8800</color>        <!-- orange -->
 
     <!-- ========== Stroke / Divider ========== -->
@@ -172,7 +180,9 @@
 
     <!-- ========== Marker / Arrow ========== -->
     <color name="arrow_other_car_cb">#FFFF5722</color>
-    <color name="arrow_ev_red_cb">#FFFF8800</color>         <!-- orange instead of red -->
+    <color
+        name="arrow_ev_red_cb"
+    >#FFFF8800</color>         <!-- orange instead of red -->
     <color name="arrow_ev_blue_cb">#FF2979FF</color>
 
     <!-- ========== Map / Route ========== -->
@@ -193,7 +203,9 @@
     <color name="car_view_user_car_cb">#3DB7E9</color>
     <color name="car_view_other_car_cb">#FF757575</color>
     <color name="car_view_ev_car_cb">#ffffff</color>
-    <color name="car_view_user_stroke_cb">#FF29B6F6</color> <!-- blue stroke to match CB user car -->
+    <color
+        name="car_view_user_stroke_cb"
+    >#FF29B6F6</color> <!-- blue stroke to match CB user car -->
     <color name="car_view_other_stroke_cb">#FF9E9E9E</color>
     <color name="car_view_shadow_cb">#AA000000</color>
     <color name="car_view_ev_shadow_cb">#AA0000FF</color>
@@ -207,11 +219,19 @@
     <color name="overtaking_road_near_cb">#FF3E3E3E</color>
     <color name="overtaking_indicator_blue_light_cb">#FF2979FF</color>
     <color name="overtaking_indicator_blue_dark_cb">#FF1565C0</color>
-    <color name="overtaking_indicator_red_light_cb">#FFFFBB33</color>  <!-- orange -->
-    <color name="overtaking_indicator_red_dark_cb">#FFE65100</color>    <!-- dark orange -->
+    <color
+        name="overtaking_indicator_red_light_cb"
+    >#FFFFBB33</color>  <!-- orange -->
+    <color
+        name="overtaking_indicator_red_dark_cb"
+    >#FFE65100</color>    <!-- dark orange -->
     <color name="overtaking_car_blue_cb">#FF448AFF</color>
-    <color name="overtaking_car_red_cb">#FFFFBB33</color>              <!-- orange -->
+    <color
+        name="overtaking_car_red_cb"
+    >#FFFFBB33</color>              <!-- orange -->
     <color name="overtaking_car_blue_dark_cb">#FF1565C0</color>
-    <color name="overtaking_car_red_dark_cb">#FFB54C00</color>          <!-- dark orange -->
+    <color
+        name="overtaking_car_red_dark_cb"
+    >#FFB54C00</color>          <!-- dark orange -->
 
 </resources>

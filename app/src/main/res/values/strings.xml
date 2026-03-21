@@ -4,6 +4,8 @@
     <string name="map_style">Map Style</string>
     <string name="theme_mode">Theme Mode</string>
     <string name="language">Language</string>
+    <string name="colorblind">Colorblind Mode</string>
+    <string name="accessibility">Accessibility</string>
     <string name="alerts">Alerts</string>
     <string name="alert_accident">Accident</string>
     <string name="alert_speeding">Speeding</string>
@@ -12,7 +14,7 @@
     <string name="alert_emergency_vehicle">Emergency Vehicle</string>
     <string name="alert_navigation">Navigation</string>
     <string name="alert_highway_entry">Highway Entry</string>
-    <string name="start_route">Start a Route</string>
+    <string name="start_route">▶ Start a Route</string>
     <string name="arrival">arrival</string>
     <string name="distance_unit">km</string>
     <string name="speed_unit">Km/h</string>

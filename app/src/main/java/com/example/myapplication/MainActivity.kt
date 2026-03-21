@@ -89,15 +89,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
-        uiController = UiController(this)
+        uiController = UiController(this) { onWeatherSourceChanged() }
         overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
         inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
-        alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController) {
-            onWeatherSourceChanged()
-        }
+        alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
         vehicleTracker = VehicleTracker(

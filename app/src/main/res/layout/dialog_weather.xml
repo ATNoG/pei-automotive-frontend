@@ -88,6 +88,51 @@
                     android:orientation="vertical"
                     android:padding="20dp">
 
+                    <!-- Data Source Toggle -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="10dp"
+                        android:paddingBottom="10dp"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:layout_marginBottom="16dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Data Source"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorTextPrimary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="OWM"
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorTextSecondary"
+                            android:layout_marginEnd="8dp" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                            android:id="@+id/switchWeatherSource"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ditto"
+                            android:textSize="12sp"
+                            android:textColor="?attr/colorTextSecondary"
+                            android:layout_marginStart="8dp" />
+
+                    </LinearLayout>
+
                     <!-- Weather Details Section header -->
                     <TextView
                         android:layout_width="wrap_content"

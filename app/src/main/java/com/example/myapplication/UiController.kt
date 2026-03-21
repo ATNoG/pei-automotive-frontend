@@ -38,7 +38,10 @@ import kotlin.math.roundToInt
  * Transient notifications (accidents, connection status, weather alerts, etc.) are
  * handled exclusively by [InAppNotificationManager] and are NOT part of this class.
  */
-class UiController(private val activity: Activity) {
+class UiController(
+    private val activity: Activity,
+    private val onWeatherSourceChanged: (() -> Unit)? = null
+) {
 
     companion object {
         private const val TAG = "UiController"
@@ -203,7 +206,7 @@ class UiController(private val activity: Activity) {
         Log.d(TAG, "Ditto weather received: station=${data.stationName}, temp=${data.temperature}, wind=${data.windIntensity}")
         cachedDittoData = data
         if (weatherSourcePrefs.getSource() == WeatherSourcePreferenceManager.Source.DITTO) {
-            txtTemperature?.text = "${data.temperature.toInt()}°C"
+            txtTemperature?.text = if (isValidIpma(data.temperature)) "${data.temperature.toInt()}°C" else "--°C"
             txtWeatherEmoji?.text = getDittoWeatherEmoji(data)
             rebuildWeatherCardExtrasFromDitto(data)
         }
@@ -344,14 +347,20 @@ class UiController(private val activity: Activity) {
         field: WeatherCardPreferenceManager.Field,
         data: MqttEventRouter.StationAssignmentData
     ): String? = when (field) {
-        WeatherCardPreferenceManager.Field.WIND ->
-            "${data.windIntensity.toInt()} km/h ${windDirectionEnumToString(data.windDirection)}"
-        WeatherCardPreferenceManager.Field.HUMIDITY -> "${data.humidity}"
+        WeatherCardPreferenceManager.Field.WIND -> {
+            if (isValidIpma(data.windIntensity)) {
+                val dir = windDirectionEnumToString(data.windDirection)
+                if (dir.isNotEmpty()) "${data.windIntensity.toInt()} km/h $dir"
+                else "${data.windIntensity.toInt()} km/h"
+            } else null
+        }
+        WeatherCardPreferenceManager.Field.HUMIDITY ->
+            if (data.humidity >= 0) "${data.humidity}" else null
         WeatherCardPreferenceManager.Field.PRESSURE ->
-            if (data.pressure > 0) "${data.pressure.toInt()}" else null
-        WeatherCardPreferenceManager.Field.FEELS_LIKE -> null // Not available from Ditto
-        WeatherCardPreferenceManager.Field.VISIBILITY -> null // Not available from Ditto
-        WeatherCardPreferenceManager.Field.UV_INDEX -> null   // Not available from Ditto
+            if (isValidIpma(data.pressure)) "${data.pressure.toInt()}" else null
+        WeatherCardPreferenceManager.Field.FEELS_LIKE -> null
+        WeatherCardPreferenceManager.Field.VISIBILITY -> null
+        WeatherCardPreferenceManager.Field.UV_INDEX -> null
     }
 
     /**
@@ -373,14 +382,30 @@ class UiController(private val activity: Activity) {
      * Infer a weather emoji from Ditto station data (no condition string available).
      * Uses precipitation, wind, and radiation as heuristics.
      */
-    private fun getDittoWeatherEmoji(data: MqttEventRouter.StationAssignmentData): String = when {
-        data.accumulatedPrecipitation > 5.0 -> "🌧️"
-        data.accumulatedPrecipitation > 0.0 -> "🌦️"
-        data.windIntensity > 50.0 -> "💨"
-        data.radiation > 600.0 -> "☀️"
-        data.radiation > 200.0 -> "🌤️"
-        data.radiation > 50.0 -> "⛅"
-        else -> "☁️"
+    /**
+     * Infer a weather emoji from Ditto station data.
+     * Since IPMA doesn't provide a condition string, this uses available
+     * measurements as heuristics. It cannot distinguish e.g. fog from overcast,
+     * so the result is approximate — but there's no better alternative with this data.
+     */
+    private fun getDittoWeatherEmoji(data: MqttEventRouter.StationAssignmentData): String {
+        val hasPrecip = isValidIpma(data.accumulatedPrecipitation) && data.accumulatedPrecipitation > 0
+        val hasWind = isValidIpma(data.windIntensity)
+        val hasRadiation = isValidIpma(data.radiation)
+        val hasTemp = isValidIpma(data.temperature)
+
+        return when {
+            hasPrecip && data.accumulatedPrecipitation > 5.0 ->
+                if (hasTemp && data.temperature <= 1.0) "❄️" else "🌧️"
+            hasPrecip ->
+                if (hasTemp && data.temperature <= 1.0) "🌨️" else "🌦️"
+            hasWind && data.windIntensity > 50.0 -> "💨"
+            hasRadiation && data.radiation > 600.0 -> "☀️"
+            hasRadiation && data.radiation > 200.0 -> "🌤️"
+            hasRadiation && data.radiation > 50.0 -> "⛅"
+            hasRadiation -> "☁️"
+            else -> "🌡️" // not enough data to determine conditions
+        }
     }
 
     private fun windDegreesToDirection(deg: Int): String {
@@ -429,6 +454,11 @@ class UiController(private val activity: Activity) {
         else -> "🌡️"
     }
 
+    /**
+     * Returns true if an IPMA value is valid (not the -99 sentinel for "no data").
+     */
+    private fun isValidIpma(value: Double): Boolean = value > -90
+
     @SuppressLint("SetTextI18n")
     private fun showDittoWeatherDialog() {
         val data = cachedDittoData ?: run {
@@ -442,23 +472,42 @@ class UiController(private val activity: Activity) {
 
         // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
-            "${data.temperature.toInt()}°C"
+            if (isValidIpma(data.temperature)) "${data.temperature.toInt()}°C" else "N/A"
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogCondition)?.text =
             data.stationName.ifEmpty { "Station ${data.stationId}" }
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogEmoji)?.text =
             getDittoWeatherEmoji(data)
 
         // ── Detail rows — fill what Ditto provides, "N/A" for unavailable ─
+        val windText = buildString {
+            if (isValidIpma(data.windIntensity)) {
+                append("${data.windIntensity.toInt()} km/h")
+                val dir = windDirectionEnumToString(data.windDirection)
+                if (dir.isNotEmpty()) append("  $dir")
+            } else {
+                append("N/A")
+            }
+        }
         dialogView.findViewById<TextView>(R.id.txtFeelsLike)?.text = "N/A"
-        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text =
-            "${data.windIntensity.toInt()} km/h  ${windDirectionEnumToString(data.windDirection)}"
-        dialogView.findViewById<TextView>(R.id.txtHumidity)?.text = "${data.humidity}%"
+        dialogView.findViewById<TextView>(R.id.txtWindSpeed)?.text = windText
+        dialogView.findViewById<TextView>(R.id.txtHumidity)?.text =
+            if (data.humidity >= 0) "${data.humidity}%" else "N/A"
         dialogView.findViewById<TextView>(R.id.txtPressure)?.text =
-            if (data.pressure > 0) "${data.pressure.toInt()} hPa" else "N/A"
+            if (isValidIpma(data.pressure)) "${data.pressure.toInt()} hPa" else "N/A"
         dialogView.findViewById<TextView>(R.id.txtVisibility)?.text = "N/A"
         dialogView.findViewById<TextView>(R.id.txtUvIndex)?.text = "N/A"
 
-        // ── In-card toggles ───────────────────────────────────────────────
+        // ── Determine which fields are unavailable from Ditto ─────────────
+        val unavailableFields = mutableSetOf(
+            WeatherCardPreferenceManager.Field.FEELS_LIKE,
+            WeatherCardPreferenceManager.Field.VISIBILITY,
+            WeatherCardPreferenceManager.Field.UV_INDEX
+        )
+        if (!isValidIpma(data.windIntensity)) unavailableFields.add(WeatherCardPreferenceManager.Field.WIND)
+        if (data.humidity < 0) unavailableFields.add(WeatherCardPreferenceManager.Field.HUMIDITY)
+        if (!isValidIpma(data.pressure)) unavailableFields.add(WeatherCardPreferenceManager.Field.PRESSURE)
+
+        // ── In-card toggles — disable unavailable fields ──────────────────
         val cardSwitches = listOf(
             R.id.switchCardFeelsLike to WeatherCardPreferenceManager.Field.FEELS_LIKE,
             R.id.switchCardWind to WeatherCardPreferenceManager.Field.WIND,
@@ -468,14 +517,28 @@ class UiController(private val activity: Activity) {
             R.id.switchCardUvIndex to WeatherCardPreferenceManager.Field.UV_INDEX
         )
         cardSwitches.forEach { (viewId, field) ->
+            val isAvailable = field !in unavailableFields
             dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
-                isChecked = weatherCardPrefs.isEnabled(field)
-                setOnCheckedChangeListener { _, checked ->
-                    weatherCardPrefs.setEnabled(field, checked)
-                    rebuildWeatherCardExtrasFromDitto(data)
+                if (isAvailable) {
+                    isChecked = weatherCardPrefs.isEnabled(field)
+                    setOnCheckedChangeListener { _, checked ->
+                        weatherCardPrefs.setEnabled(field, checked)
+                        rebuildWeatherCardExtrasFromDitto(data)
+                    }
+                } else {
+                    isChecked = false
+                    isEnabled = false
                 }
             }
+            // Dim the parent card for unavailable fields
+            if (!isAvailable) {
+                val switchView = dialogView.findViewById<View>(viewId)
+                (switchView?.parent?.parent as? View)?.alpha = 0.4f
+            }
         }
+
+        // ── Data source toggle ────────────────────────────────────────────
+        setupWeatherSourceToggle(dialogView, rootView)
 
         // ── Alerts section — not available from Ditto ─────────────────────
         dialogView.findViewById<LinearLayout>(R.id.alertsSection)?.visibility = View.GONE
@@ -488,6 +551,20 @@ class UiController(private val activity: Activity) {
             rootView.removeView(dialogView)
         }
         dialogView.findViewById<View>(R.id.weatherDialogCard)?.setOnClickListener { /* consume */ }
+    }
+
+    private fun setupWeatherSourceToggle(dialogView: View, rootView: ViewGroup) {
+        val switchSource = dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchWeatherSource)
+        switchSource?.apply {
+            isChecked = weatherSourcePrefs.getSource() == WeatherSourcePreferenceManager.Source.DITTO
+            setOnCheckedChangeListener { _, isChecked ->
+                val source = if (isChecked) WeatherSourcePreferenceManager.Source.DITTO
+                             else WeatherSourcePreferenceManager.Source.OPEN_WEATHER_MAP
+                weatherSourcePrefs.setSource(source)
+                rootView.removeView(dialogView)
+                onWeatherSourceChanged?.invoke()
+            }
+        }
     }
 
     fun setupWeatherCardClick() {
@@ -561,6 +638,8 @@ class UiController(private val activity: Activity) {
             }
         }
 
+        // ── Data source toggle ────────────────────────────────────────────
+        setupWeatherSourceToggle(dialogView, rootView)
 
         // ── Alerts ────────────────────────────────────────────────────────
         val alertsSection = dialogView.findViewById<LinearLayout>(R.id.alertsSection)

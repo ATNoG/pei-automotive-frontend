@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.content.ContextCompat
 
 /**
  * Custom view that displays a 3D-style overtaking animation
@@ -16,6 +17,12 @@ class OvertakingAnimationView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
+    private val isColorBlind = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        .getBoolean("colorBlindMode", false)
+
+    private fun cbColor(normal: Int, cb: Int): Int =
+        ContextCompat.getColor(context, if (isColorBlind) cb else normal)
+
     // 1. IMPROVEMENT: Use Gradient for the road to simulate "fog" and distance
     // We initialize shaders in onSizeChanged to get correct dimensions
     private val roadPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -23,13 +30,13 @@ class OvertakingAnimationView @JvmOverloads constructor(
     }
     
     private val laneDividerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FFFFFF") // White with slight transparency
+        color = cbColor(R.color.overtaking_road_line, R.color.overtaking_road_line_cb)
         alpha = 200
         style = Paint.Style.FILL
     }
     
     private val roadEdgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#E0E0E0")
+        color = cbColor(R.color.overtaking_dashed_line, R.color.overtaking_dashed_line_cb)
         strokeWidth = 6f // Thicker edge
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
@@ -38,30 +45,27 @@ class OvertakingAnimationView @JvmOverloads constructor(
     // 2. IMPROVEMENT: Car paints now use Shadows and Gradients
     private val blueCarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        // Add a subtle drop shadow
-        setShadowLayer(12f, 0f, 10f, Color.BLACK)
+        setShadowLayer(12f, 0f, 10f, ContextCompat.getColor(context, R.color.black))
     }
     
     private val redCarPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        setShadowLayer(12f, 0f, 10f, Color.BLACK)
+        setShadowLayer(12f, 0f, 10f, ContextCompat.getColor(context, R.color.black))
     }
     
     private val carWindowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        // Darker window for modern look
-        color = Color.parseColor("#37474F") 
+        color = cbColor(R.color.overtaking_car_window, R.color.overtaking_car_window_cb)
         style = Paint.Style.FILL
     }
     
     // 3. IMPROVEMENT: Modern Grass/Background color (Darker, less saturated)
     private val grassPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#1b2e1b") // Very dark green, almost black (Night mode style)
+        color = cbColor(R.color.overtaking_grass, R.color.overtaking_grass_cb)
         style = Paint.Style.FILL
     }
     
-    // Shadow paint for under the car
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.BLACK
+        color = ContextCompat.getColor(context, R.color.black)
         alpha = 100
         maskFilter = BlurMaskFilter(15f, BlurMaskFilter.Blur.NORMAL)
     }
@@ -81,24 +85,22 @@ class OvertakingAnimationView @JvmOverloads constructor(
             // Road Gradient: Darker at top (distance), Lighter at bottom
             roadPaint.shader = LinearGradient(
                 w / 2f, h * 0.1f, w / 2f, h.toFloat(),
-                Color.parseColor("#121212"), // Deep dark gray at horizon
-                Color.parseColor("#3E3E3E"), // Lighter gray near user
+                cbColor(R.color.overtaking_road_horizon, R.color.overtaking_road_horizon_cb),
+                cbColor(R.color.overtaking_road_near, R.color.overtaking_road_near_cb),
                 Shader.TileMode.CLAMP
             )
             
-            // Blue Car Gradient (Metallic look)
             blueCarPaint.shader = LinearGradient(
-                0f, 0f, 0f, 100f, // Coordinates adjusted dynamically in drawCar
-                Color.parseColor("#2979FF"), // Lighter Blue
-                Color.parseColor("#1565C0"), // Darker Blue
+                0f, 0f, 0f, 100f,
+                cbColor(R.color.overtaking_indicator_blue_light, R.color.overtaking_indicator_blue_light_cb),
+                cbColor(R.color.overtaking_indicator_blue_dark, R.color.overtaking_indicator_blue_dark_cb),
                 Shader.TileMode.MIRROR
             )
 
-            // Red Car Gradient
             redCarPaint.shader = LinearGradient(
                 0f, 0f, 0f, 100f,
-                Color.parseColor("#FF5252"), // Lighter Red
-                Color.parseColor("#D32F2F"), // Darker Red
+                cbColor(R.color.overtaking_indicator_red_light, R.color.overtaking_indicator_red_light_cb),
+                cbColor(R.color.overtaking_indicator_red_dark, R.color.overtaking_indicator_red_dark_cb),
                 Shader.TileMode.MIRROR
             )
         }
@@ -199,8 +201,8 @@ class OvertakingAnimationView @JvmOverloads constructor(
         // 4. IMPROVEMENT: Update Shader locally to match car size (Vertical Gradient)
         val shader = LinearGradient(
             0f, carTop, 0f, carBottom,
-            if(carType=="blue") Color.parseColor("#448AFF") else Color.parseColor("#FF5252"),
-            if(carType=="blue") Color.parseColor("#1565C0") else Color.parseColor("#B71C1C"),
+            if(carType=="blue") cbColor(R.color.overtaking_car_blue, R.color.overtaking_car_blue_cb) else cbColor(R.color.overtaking_car_red, R.color.overtaking_car_red_cb),
+            if(carType=="blue") cbColor(R.color.overtaking_car_blue_dark, R.color.overtaking_car_blue_dark_cb) else cbColor(R.color.overtaking_car_red_dark, R.color.overtaking_car_red_dark_cb),
             Shader.TileMode.CLAMP
         )
         carPaint.shader = shader
@@ -234,7 +236,7 @@ class OvertakingAnimationView @JvmOverloads constructor(
         
         // Rear lights (Glow effect)
         val lightPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.RED
+            color = ContextCompat.getColor(context, R.color.status_danger)
             style = Paint.Style.FILL
             // Add glow
             maskFilter = BlurMaskFilter(6f, BlurMaskFilter.Blur.SOLID)

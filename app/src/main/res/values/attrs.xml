@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ========== Surface / Background ========== -->
+    <attr name="colorSurfaceCard" format="color" />
+    <attr name="colorSurfaceOverlay" format="color" />
+    <attr name="colorSurfaceDialog" format="color" />
+    <attr name="colorSurfaceDialogHeader" format="color" />
+    <attr name="colorSurfaceDialogCard" format="color" />
+    <attr name="colorSurfaceDialogAlert" format="color" />
+    <attr name="colorSurfaceRouteInfo" format="color" />
+    <attr name="colorSurfacePanel" format="color" />
+    <attr name="colorSurfacePanelHeader" format="color" />
+    <attr name="colorSurfacePanelLane" format="color" />
+    <attr name="colorSurfacePanelSpeed" format="color" />
+    <attr name="colorSurfaceWeatherBadge" format="color" />
+    <attr name="colorSurfaceButtonNeutral" format="color" />
+    <attr name="colorSurfaceEtaFlag" format="color" />
+
+    <!-- ========== Text ========== -->
+    <attr name="colorTextPrimary" format="color" />
+    <attr name="colorTextSecondary" format="color" />
+    <attr name="colorTextTertiary" format="color" />
+    <attr name="colorTextHint" format="color" />
+    <attr name="colorTextDescription" format="color" />
+    <attr name="colorTextOnLight" format="color" />
+
+    <!-- ========== Accent / Brand ========== -->
+    <attr name="colorAccentBlue" format="color" />
+
+    <!-- ========== Status / Alert ========== -->
+    <attr name="colorStatusSuccess" format="color" />
+    <attr name="colorStatusWarning" format="color" />
+    <attr name="colorStatusDanger" format="color" />
+    <attr name="colorStatusDangerLight" format="color" />
+    <attr name="colorNotificationInfo" format="color" />
+    <attr name="colorNotificationSuccess" format="color" />
+    <attr name="colorNotificationWarning" format="color" />
+    <attr name="colorNotificationError" format="color" />
+    <attr name="colorNotificationAccident" format="color" />
+    <attr name="colorNotificationWeather" format="color" />
+    <attr name="colorNotificationEmergency" format="color" />
+    <attr name="colorSpeedWarning" format="color" />
+    <attr name="colorSpeedLimitBorder" format="color" />
+    <attr name="colorSpeedAlertOverlay" format="color" />
+    <attr name="colorSpeedAlertBackground" format="color" />
+
+    <!-- ========== Stroke / Divider ========== -->
+    <attr name="colorCardStroke" format="color" />
+    <attr name="colorCardStrokeLight" format="color" />
+    <attr name="colorDivider" format="color" />
+    <attr name="colorDividerLight" format="color" />
+
+    <!-- ========== Icons ========== -->
+    <attr name="colorIconDefault" format="color" />
+    <attr name="colorIconMuted" format="color" />
+
+</resources>

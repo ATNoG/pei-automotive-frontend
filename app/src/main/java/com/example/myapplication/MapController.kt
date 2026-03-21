@@ -48,6 +48,12 @@ class MapController(
     private val mapView: MapView
 ) : OnMapReadyCallback {
 
+    private val isColorBlind = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        .getBoolean("colorBlindMode", false)
+
+    private fun cbColor(normal: Int, cb: Int): Int =
+        ContextCompat.getColor(context, if (isColorBlind) cb else normal)
+
     private val mainHandler = Handler(Looper.getMainLooper())
     private var mapLibreMap: MapLibreMap? = null
     private var styleLoadedCallback: (() -> Unit)? = null
@@ -222,10 +228,11 @@ class MapController(
     // --- arrow symbol setup ---
     private fun addArrowImageToStyle(style: Style) {
         try {
-            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.navigation_arrow)
+            val drawableId = if (isColorBlind) R.drawable.nav_arrow_cb else R.drawable.navigation_arrow
+            val bmp = BitmapFactory.decodeResource(context.resources, drawableId)
             if (bmp != null) {
                 style.addImage(ARROW_IMAGE_ID, bmp)
-                Log.d(TAG, "User car arrow image loaded")
+                Log.d(TAG, "User car arrow image loaded (cb=$isColorBlind)")
             } else {
                 Log.e(TAG, "Failed to load user car arrow image")
             }
@@ -265,10 +272,11 @@ class MapController(
     // --- other car symbol setup ---
     private fun addOtherCarImageToStyle(style: Style) {
         try {
-            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.other_navigation_arrow)
+            val drawableId = if (isColorBlind) R.drawable.nav_arrow_others_cb else R.drawable.other_navigation_arrow
+            val bmp = BitmapFactory.decodeResource(context.resources, drawableId)
             if (bmp != null) {
                 style.addImage(OTHER_CAR_IMAGE_ID, bmp)
-                Log.d(TAG, "Other car arrow image loaded")
+                Log.d(TAG, "Other car arrow image loaded (cb=$isColorBlind)")
             } else {
                 Log.e(TAG, "Failed to load other car arrow image")
             }
@@ -306,10 +314,11 @@ class MapController(
     private fun addEVImageToStyle(style: Style) {
         try {
             // Try to load the dedicated EV navigation arrow PNG first
-            val bmp = BitmapFactory.decodeResource(context.resources, R.drawable.ev_navigation_arrow)
+            val drawableId = if (isColorBlind) R.drawable.nav_arrow_ev_cb else R.drawable.nav_arrow_ev
+            val bmp = BitmapFactory.decodeResource(context.resources, drawableId)
             if (bmp != null) {
                 style.addImage(EV_IMAGE_ID, bmp)
-                Log.d(TAG, "EV navigation arrow image loaded (PNG)")
+                Log.d(TAG, "EV navigation arrow image loaded (cb=$isColorBlind)")
             } else {
                 // Fallback to vector drawable
                 val vectorBmp = BitmapFactory.decodeResource(context.resources, R.drawable.ic_ev_arrow)
@@ -808,7 +817,7 @@ class MapController(
                 val layer = style.getLayer(id)
                 if (layer is LineLayer) {
                     layer.setProperties(
-                        lineColor("#FFD27A"),
+                        lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_brightening, R.color.route_brightening_cb))),
                         lineWidth(2.5f)
                     )
                 }
@@ -941,7 +950,7 @@ class MapController(
         // Add route casing (outer line for border effect)
         val routeCasingLayer = LineLayer(ROUTE_CASING_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor("#1565C0"),  // Dark blue border
+                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_border, R.color.route_border_cb))),  // Dark blue border
                 lineWidth(12f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
@@ -952,7 +961,7 @@ class MapController(
         // Add traveled route layer (gray, below remaining route)
         val routeTraveledLayer = LineLayer(ROUTE_TRAVELED_LAYER_ID, ROUTE_TRAVELED_SOURCE_ID).apply {
             setProperties(
-                lineColor("#666666"),  // Gray for traveled portion
+                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_traveled, R.color.route_traveled_cb))),  // Gray for traveled portion
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND),
@@ -964,7 +973,7 @@ class MapController(
         // Add route line (inner, bright line - remaining route)
         val routeLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor("#FF4081"),  // Magenta/pink for remaining route
+                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_remaining, R.color.route_remaining_cb))),  // Magenta/pink for remaining route
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)

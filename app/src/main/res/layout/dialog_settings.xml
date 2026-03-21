@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#80000000"
+    android:background="?attr/colorSurfaceOverlay"
     android:clickable="true">
 
     <androidx.cardview.widget.CardView
@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#2D2D2D"
+            android:background="?attr/colorSurfaceDialog"
             android:maxHeight="600dp">
 
             <!-- Fixed Header (matches weather dialog header style) -->
@@ -29,7 +29,7 @@
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
                 android:padding="14dp"
-                android:background="#252525">
+                android:background="?attr/colorSurfaceDialogHeader">
 
                 <TextView
                     android:layout_width="0dp"
@@ -38,7 +38,7 @@
                     android:text="@string/settings_title"
                     android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="#FFFFFF" />
+                    android:textColor="?attr/colorTextPrimary" />
 
                 <ImageButton
                     android:id="@+id/btnCloseSettings"
@@ -46,7 +46,7 @@
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_close"
-                    app:tint="#FFFFFF"
+                    app:tint="?attr/colorIconDefault"
                     android:contentDescription="@string/settings_close" />
 
             </LinearLayout>
@@ -70,7 +70,7 @@
                         android:text="@string/map_style"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp" />
 
                     <!-- Dark / Light Mode Row -->
@@ -93,7 +93,7 @@
                             android:layout_weight="1"
                             android:text="@string/theme_mode"
                             android:textSize="14sp"
-                            android:textColor="#FFFFFF" />
+                            android:textColor="?attr/colorTextPrimary" />
 
                         <!-- 🌙 dark emoji -->
                         <TextView
@@ -126,7 +126,7 @@
                         android:text="@string/language"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp"
                         android:layout_marginTop="20dp" />
 
@@ -150,7 +150,7 @@
                             android:layout_weight="1"
                             android:text="English"
                             android:textSize="14sp"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/colorTextPrimary"
                             android:background="?attr/selectableItemBackground"
                             android:layout_marginEnd="8dp" />
 
@@ -161,9 +161,48 @@
                             android:layout_weight="1"
                             android:text="Português"
                             android:textSize="14sp"
-                            android:textColor="#FFFFFF"
+                            android:textColor="?attr/colorTextPrimary"
                             android:background="?attr/selectableItemBackground"
                             android:layout_marginStart="8dp" />
+
+                    </LinearLayout>
+                  
+                    <!-- Accessibility Section Header -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/accessibility"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorTextPrimary"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Colorblind Mode Row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:layout_marginBottom="20dp">
+                         
+                        <TextView
+                          android:layout_width="0dp"
+                          android:layout_height="wrap_content"
+                          android:layout_weight="1"
+                          android:text="@string/colorblind"
+                          android:textSize="14sp"
+                          android:textColor="?attr/colorTextPrimary" />
+
+                        <androidx.appcompat.widget.SwitchCompat
+                          android:id="@+id/switchColorBlind"
+                          android:layout_width="wrap_content"
+                          android:layout_height="wrap_content"
+                          android:checked="false" />
 
                     </LinearLayout>
 
@@ -174,7 +213,7 @@
                         android:text="@string/alerts"
                         android:textSize="14sp"
                         android:textStyle="bold"
-                        android:textColor="#FFFFFF"
+                        android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp" />
 
                     <!-- Alert Grid Container (populated programmatically as 2-column grid) -->

@@ -176,7 +176,11 @@ class MapController(
         map.uiSettings.setCompassGravity(android.view.Gravity.BOTTOM or android.view.Gravity.END)
         map.uiSettings.setAllGesturesEnabled(true)
         
-        map.setStyle(Style.Builder().fromUri(STYLE_URL_DARK)) { style ->
+        val prefs = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        val initialLightMode = prefs.getBoolean("lightMode", false)
+        val initialStyleUrl = if (initialLightMode) STYLE_URL_LIGHT else STYLE_URL_DARK
+
+        map.setStyle(Style.Builder().fromUri(initialStyleUrl)) { style ->
             // Performance optimization: Remove unnecessary labels and POIs
             optimizeMapLayers(style)
             
@@ -540,6 +544,12 @@ class MapController(
     fun updateArrowPosition(lat: Double, lon: Double, bearing: Float, animateMs: Long = 800) {
         val map = mapLibreMap ?: return
 
+        // Persist latest requested user-car state so style reloads can restore marker position
+        // even if an in-flight animation gets cancelled by setMapStyle().
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = bearing
+
         // 1. Cancel previous animation
         currentAnimationRunnable?.let { mainHandler.removeCallbacks(it) }
         // If you switch to Choreographer, you'd use: Choreographer.getInstance().removeFrameCallback(frameCallback)
@@ -737,6 +747,9 @@ class MapController(
     // --- single location helper ---
     fun setSingleLocation(lat: Double, lon: Double, bearing: Float) {
         stopRouteSimulation()
+        userCarLat = lat
+        userCarLon = lon
+        userCarBearing = bearing
         updateArrowPosition(lat, lon, bearing)
     }
 
@@ -817,7 +830,7 @@ class MapController(
                 val layer = style.getLayer(id)
                 if (layer is LineLayer) {
                     layer.setProperties(
-                        lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_brightening, R.color.route_brightening_cb))),
+                        lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_brightening))),
                         lineWidth(2.5f)
                     )
                 }
@@ -950,7 +963,7 @@ class MapController(
         // Add route casing (outer line for border effect)
         val routeCasingLayer = LineLayer(ROUTE_CASING_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_border, R.color.route_border_cb))),  // Dark blue border
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_border))),  // Dark blue border
                 lineWidth(12f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
@@ -961,7 +974,7 @@ class MapController(
         // Add traveled route layer (gray, below remaining route)
         val routeTraveledLayer = LineLayer(ROUTE_TRAVELED_LAYER_ID, ROUTE_TRAVELED_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_traveled, R.color.route_traveled_cb))),  // Gray for traveled portion
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_traveled))),  // Gray for traveled portion
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND),
@@ -973,7 +986,7 @@ class MapController(
         // Add route line (inner, bright line - remaining route)
         val routeLayer = LineLayer(ROUTE_LAYER_ID, ROUTE_SOURCE_ID).apply {
             setProperties(
-                lineColor(String.format("#%06X", 0xFFFFFF and cbColor(R.color.route_remaining, R.color.route_remaining_cb))),  // Magenta/pink for remaining route
+                lineColor(String.format("#%06X", 0xFFFFFF and ContextCompat.getColor(context, R.color.route_remaining))),  // Magenta/pink for remaining route
                 lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND),
                 lineJoin(Property.LINE_JOIN_ROUND)
@@ -1237,6 +1250,8 @@ class MapController(
             // Restore current position if available
             if (userCarVisualLat != 0.0 && userCarVisualLon != 0.0) {
                 updateArrowPosition(userCarVisualLat, userCarVisualLon, userCarVisualBearing)
+            } else if (userCarLat != 0.0 && userCarLon != 0.0) {
+                updateArrowPosition(userCarLat, userCarLon, userCarBearing)
             }
             
             // Restore other cars positions if any

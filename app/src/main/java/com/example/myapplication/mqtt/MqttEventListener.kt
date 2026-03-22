@@ -78,4 +78,11 @@ interface MqttEventListener {
 
     /** MQTT connection or subscription failed. */
     fun onMqttError(error: String)
+
+    /**
+     * A traffic jam alert was received.
+     *
+     * @param payload The raw JSON payload.
+     */
+    fun onTrafficJamAlert(payload: String)
 }

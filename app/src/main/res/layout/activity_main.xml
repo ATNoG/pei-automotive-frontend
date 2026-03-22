@@ -431,7 +431,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/settings_title"
-            android:textColor="#FFFFFF"
+            android:textColor="?attr/colorTextPrimary"
             android:textSize="20sp"
             android:fontFamily="DM Mono"
             android:layout_marginStart="12dp"

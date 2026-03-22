@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.Light.NoActionBar">
         <!-- Primary brand color. -->
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorPrimaryVariant">@color/purple_700</item>
@@ -12,6 +12,15 @@
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        
+        <!-- ========== Material Design Surface Colors ========== -->
+        <item name="colorSurface">@color/surface_panel</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+
+        <!-- ========== Material Design 3 Colors ========== -->
+        <item name="colorSurfaceContainer">@color/surface_panel</item>
+        <item name="colorSurfaceContainerLow">@color/surface_card</item>
+        <item name="colorSurfaceContainerHigh">@color/surface_dialog</item>
 
         <!-- ========== Custom Surface / Background ========== -->
         <item name="colorSurfaceCard">@color/surface_card</item>
@@ -79,33 +88,6 @@
 
     <!-- Colorblind-safe theme -->
     <style name="Theme.MyApplication.ColorBlind">
-        <!-- ========== Custom Surface / Background ========== -->
-        <item name="colorSurfaceCard">@color/surface_card_cb</item>
-        <item name="colorSurfaceOverlay">@color/surface_overlay_cb</item>
-        <item name="colorSurfaceDialog">@color/surface_dialog_cb</item>
-        <item name="colorSurfaceDialogHeader">@color/surface_dialog_header_cb</item>
-        <item name="colorSurfaceDialogCard">@color/surface_dialog_card_cb</item>
-        <item name="colorSurfaceDialogAlert">@color/surface_dialog_alert_cb</item>
-        <item name="colorSurfaceRouteInfo">@color/surface_route_info_cb</item>
-        <item name="colorSurfacePanel">@color/surface_panel_cb</item>
-        <item name="colorSurfacePanelHeader">@color/surface_panel_header_cb</item>
-        <item name="colorSurfacePanelLane">@color/surface_panel_lane_cb</item>
-        <item name="colorSurfacePanelSpeed">@color/surface_panel_speed_cb</item>
-        <item name="colorSurfaceWeatherBadge">@color/surface_weather_badge_cb</item>
-        <item name="colorSurfaceButtonNeutral">@color/surface_button_neutral_cb</item>
-        <item name="colorSurfaceEtaFlag">@color/surface_eta_flag_cb</item>
-
-        <!-- ========== Text ========== -->
-        <item name="colorTextPrimary">@color/text_primary_cb</item>
-        <item name="colorTextSecondary">@color/text_secondary_cb</item>
-        <item name="colorTextTertiary">@color/text_tertiary_cb</item>
-        <item name="colorTextHint">@color/text_hint_cb</item>
-        <item name="colorTextDescription">@color/text_description_cb</item>
-        <item name="colorTextOnLight">@color/text_on_light_cb</item>
-
-        <!-- ========== Accent / Brand ========== -->
-        <item name="colorAccentBlue">@color/accent_blue_cb</item>
-
         <!-- ========== Status / Alert ========== -->
         <item name="colorStatusSuccess">@color/status_success_cb</item>
         <item name="colorStatusWarning">@color/status_warning_cb</item>
@@ -123,14 +105,7 @@
         <item name="colorSpeedAlertOverlay">@color/speed_alert_overlay_cb</item>
         <item name="colorSpeedAlertBackground">@color/speed_alert_bg_cb</item>
 
-        <!-- ========== Stroke / Divider ========== -->
-        <item name="colorCardStroke">@color/card_stroke_cb</item>
-        <item name="colorCardStrokeLight">@color/card_stroke_light_cb</item>
-        <item name="colorDivider">@color/divider_cb</item>
-        <item name="colorDividerLight">@color/divider_light_cb</item>
-
         <!-- ========== Icons ========== -->
         <item name="colorIconDefault">@color/icon_default_cb</item>
-        <item name="colorIconMuted">@color/icon_muted_cb</item>
     </style>
 </resources>

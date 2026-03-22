@@ -37,7 +37,8 @@ object AppConfig {
         "ev-test-regular",
         "car-behind",
         "highway-car",
-        "highway-car-2"
+        "highway-car-2",
+        "minimal-jam-car-5"
     )
 
     /**
@@ -49,7 +50,12 @@ object AppConfig {
         "accident-car",
         "car-ahead",
         "entering-car",
-        "entering-car-2"
+        "entering-car-2",
+        "minimal-jam-car-1",
+        "minimal-jam-car-2",
+        "minimal-jam-car-3",
+        "minimal-jam-car-4",
+        "minimal-jam-lead"
     )
 
     // ========== Default Positions ==========
@@ -143,6 +149,12 @@ object AppConfig {
      * MQTT topic for highway entry alerts.
      */
     const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
+
+    /**
+     * MQTT topic for traffic jam alerts.
+     */
+    const val MQTT_TOPIC_TRAFFIC_JAM_ALERT = "alerts/traffic_jam"
+    const val MQTT_TOPIC_TRAFFIC_JAM_PATTERN = "alerts/traffic_jam/#"
 
     /**
      * MQTT topic for emergency vehicle proximity alerts.

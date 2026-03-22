@@ -9,7 +9,7 @@
     <androidx.cardview.widget.CardView
         android:id="@+id/settingsCard"
         android:layout_width="480dp"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:layout_gravity="center"
         android:layout_margin="24dp"
         android:elevation="8dp"
@@ -17,10 +17,9 @@
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:orientation="vertical"
-            android:background="?attr/colorSurfaceDialog"
-            android:maxHeight="600dp">
+            android:background="?attr/colorSurfaceDialog">
 
             <!-- Fixed Header (matches weather dialog header style) -->
             <LinearLayout
@@ -54,7 +53,8 @@
             <!-- Scrollable Content -->
             <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:fillViewport="true">
 
                 <LinearLayout

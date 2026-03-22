@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AlertSettingsDialog
@@ -73,8 +74,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var hasRealStationAssignment = false // true when data came from station_assigner, not client-side fallback
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Apply colorblind theme before inflating any views
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+
+        // Apply explicit app light/dark preference before view inflation.
+        val isLightMode = appPrefs.getBoolean("lightMode", false)
+        AppCompatDelegate.setDefaultNightMode(
+            if (isLightMode) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+        )
+
+        // Apply colorblind theme before inflating any views
         if (appPrefs.getBoolean("colorBlindMode", false)) {
             setTheme(R.style.Theme_MyApplication_ColorBlind)
         }
@@ -143,13 +151,6 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 initialPosition.longitude,
                 0f
             )
-
-            // Apply saved map style preference
-            val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
-            val isLightMode = prefs.getBoolean("lightMode", false)
-            if (isLightMode) {
-                mapController.setMapStyle(true)
-            }
         }
     }
 
@@ -520,13 +521,27 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         handleHighwayEntryAlert(payload)
     }
 
+    override fun onTrafficJamAlert(payload: String) {
+        handleTrafficJamAlert(payload)
+    }
+
     override fun onCarUpdate(data: MqttEventRouter.CarUpdateData) {
         runOnUiThread {
+            val normalizedCarId = data.carId.trim()
             when {
-                data.carId in USER_CAR_IDS -> handleUserCarUpdate(data)
-                data.carId in OTHER_CAR_IDS -> handleOtherCarUpdate(data)
-                data.carId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data)
-                else -> Log.d(TAG, "Unknown car_id ${data.carId}, ignoring")
+                normalizedCarId in USER_CAR_IDS -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
+                else -> {
+                    // Debug: Show actual bytes to detect hidden characters
+                    val bytes = data.carId.toByteArray().joinToString(",")
+                    Log.d(
+                        TAG,
+                        "Unknown car_id raw='${data.carId}' normalized='$normalizedCarId' " +
+                            "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
+                            "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
+                    )
+                }
             }
         }
     }
@@ -782,6 +797,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 else -> "Highway Entry Alert"
             }
             val messageText = "Highway entry detected: $status"
+            val ttsText = when (status) {
+                "unsafe" -> getString(R.string.highway_entry_warning_unsafe)
+                "safe" -> getString(R.string.highway_entry_warning_safe)
+                else -> getString(R.string.highway_entry_warning)
+            }
 
             runOnUiThread {
                 inAppNotificationManager.show(
@@ -790,9 +810,77 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     message = messageText,
                     duration = InAppNotificationManager.DEFAULT_DURATION_MS
                 )
+                alertNotificationManager.speakForAlert(
+                    AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+                    ttsText
+                )
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
+        }
+    }
+
+    private fun handleTrafficJamAlert(message: String) {
+        try {
+            val json = org.json.JSONObject(message)
+            val distanceM = json.optDouble("distance_m", Double.NaN)
+            val jam = json.optJSONObject("jam")
+            val jamId = jam?.optString("jam_id")?.takeIf { it.isNotBlank() }
+                ?: json.optString("jam_id", "")
+            val jamLat = jam?.optDouble("center_latitude", Double.NaN)
+                ?.takeUnless { it.isNaN() }
+                ?: json.optDouble("center_latitude", Double.NaN)
+            val jamLon = jam?.optDouble("center_longitude", Double.NaN)
+                ?.takeUnless { it.isNaN() }
+                ?: json.optDouble("center_longitude", Double.NaN)
+            val jamActive = if (jam != null) {
+                jam.optBoolean("active", true)
+            } else {
+                json.optBoolean("active", true)
+            }
+
+            val (messageText, ttsText) = if (!distanceM.isNaN() && distanceM >= 0.0) {
+                val distanceText = UiController.formatDistance(distanceM, getString(R.string.ahead))
+                Pair(
+                    getString(R.string.traffic_jam_warning_short, distanceText),
+                    getString(R.string.traffic_jam_warning, distanceText)
+                )
+            } else {
+                Pair(
+                    getString(R.string.traffic_jam_warning_generic),
+                    getString(R.string.traffic_jam_warning_generic)
+                )
+            }
+
+            runOnUiThread {
+                if (!jamId.isNullOrBlank() && !jamLat.isNaN() && !jamLon.isNaN()) {
+                    val markerId = "jam-$jamId"
+                    if (jamActive) {
+                        mapController.addAccidentMarker(markerId, jamLat, jamLon)
+                    } else {
+                        mapController.removeAccidentMarker(markerId)
+                    }
+                } else {
+                    Log.d(
+                        TAG,
+                        "Traffic jam marker skipped (missing jam_id/coordinates): jamId=$jamId, lat=$jamLat, lon=$jamLon"
+                    )
+                }
+
+                inAppNotificationManager.show(
+                    type = InAppNotificationManager.Type.WARNING,
+                    title = "🚦 Traffic Jam Alert",
+                    message = messageText,
+                    duration = InAppNotificationManager.DEFAULT_DURATION_MS
+                )
+
+                alertNotificationManager.speakForAlert(
+                    AlertPreferenceManager.AlertType.TRAFFIC_JAM,
+                    ttsText
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing traffic jam alert: ${e.message}")
         }
     }
 

@@ -786,8 +786,8 @@ class UiController(
         val strokeColor = when (firstWord) {
             "yellow" -> Color.parseColor("#FFD54F")
             "orange" -> Color.parseColor("#FB8C00")
-            "red" -> Color.parseColor("#E53935")
-            else -> Color.parseColor("#33FFFFFF")
+            "red"    -> Color.parseColor("#E53935")
+            else     -> Color.parseColor("#33FFFFFF")
         }
 
         return GradientDrawable().apply {

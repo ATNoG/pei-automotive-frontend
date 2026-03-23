@@ -12,7 +12,8 @@ import java.util.UUID
 class MqttManager(
     private val context: Context,
     private val brokerAddress: String,
-    private val brokerPort: Int
+    private val brokerPort: Int,
+    private val accessToken: String? = null
 ) {
     private val clientId = "android-${UUID.randomUUID()}"
     private val serverUri = "tcp://$brokerAddress:$brokerPort"
@@ -41,6 +42,10 @@ class MqttManager(
                     isCleanSession = true
                     connectionTimeout = 30
                     keepAliveInterval = 60
+                    if (accessToken != null) {
+                        userName = "jwt"
+                        password = accessToken.toCharArray()
+                    }
                 }
 
                 client?.connect(options)

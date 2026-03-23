@@ -73,4 +73,13 @@ dependencies {
 
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation("org.json:json:20231013")
+
+    // QR code generation
+    implementation("com.google.zxing:core:3.5.3")
+
+    // Encrypted storage
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    // OkHttp for HTTP calls to Keycloak
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

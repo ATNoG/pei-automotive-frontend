@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
@@ -15,6 +16,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.auth.KeycloakClient
+import com.example.myapplication.auth.TokenStore
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AlertSettingsDialog
 import com.example.myapplication.config.AppConfig
@@ -28,6 +31,8 @@ import com.example.myapplication.navigation.NavigationManager
 import com.example.myapplication.navigation.models.*
 import com.example.myapplication.navigation.routing.OsrmApiClient
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
@@ -152,6 +157,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 0f
             )
         }
+        startTokenRefreshScheduler()
     }
 
     private fun setupNavigation() {
@@ -489,7 +495,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     private fun setupMqtt() {
-        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt())
+        val token = com.example.myapplication.auth.TokenStore.getAccessToken(this)
+        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
         mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
@@ -941,5 +948,25 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         val config = resources.configuration
         config.setLocale(locale)
         resources.updateConfiguration(config, resources.displayMetrics)
+    }
+
+    private fun startTokenRefreshScheduler() {
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(60_000L) // check every minute
+                if (!TokenStore.isAccessTokenValid(this@MainActivity)) {
+                    val refreshToken = TokenStore.getRefreshToken(this@MainActivity) ?: continue
+                    val newTokens = KeycloakClient.refreshToken(refreshToken)
+                    if (newTokens != null) {
+                        TokenStore.save(
+                            this@MainActivity,
+                            newTokens.accessToken,
+                            newTokens.refreshToken,
+                            newTokens.expiresIn
+                        )
+                    }
+                }
+            }
+        }
     }
 }

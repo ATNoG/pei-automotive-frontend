@@ -56,4 +56,6 @@
     <string name="weather_details">Detalhes do Clima</string>
     <string name="weather_toggle_card">Alterne a carta para fixá-la à carta de previsão do tempo.</string>
     <string name="navigation_error">Erro: %1$s</string>
+    <string name="logout">Terminar sessão</string>
+    <string name="unknown_user">Utilizador desconhecido</string>
 </resources>

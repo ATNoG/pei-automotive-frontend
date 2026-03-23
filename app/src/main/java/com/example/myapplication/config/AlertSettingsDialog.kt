@@ -44,6 +44,7 @@ class AlertSettingsDialog(
         setupLanguageSelection(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
+        setupLogoutButton(settingsView)
         setupCloseActions(settingsView, rootView)
     }
 
@@ -261,6 +262,21 @@ class AlertSettingsDialog(
         }
 
         return block to toggle
+    }
+
+    private fun setupLogoutButton(settingsView: View) {
+        val btnLogout = settingsView.findViewById<Button>(R.id.btnLogout)
+        btnLogout?.setOnClickListener {
+            // 1. Clear saved tokens
+            com.example.myapplication.auth.TokenStore.clear(activity)
+            
+            // 2. Redirect to LoginActivity and clear the back stack
+            val intent = android.content.Intent(activity, com.example.myapplication.auth.LoginActivity::class.java).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            activity.startActivity(intent)
+            activity.finish()
+        }
     }
 
     // ── Close Actions ────────────────────────────────────────────────────

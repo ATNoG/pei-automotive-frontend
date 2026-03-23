@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.util.Log
@@ -28,6 +29,8 @@ import com.example.myapplication.navigation.NavigationManager
 import com.example.myapplication.navigation.models.*
 import com.example.myapplication.navigation.routing.OsrmApiClient
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
@@ -152,6 +155,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 0f
             )
         }
+        startTokenRefreshScheduler()
     }
 
     private fun setupNavigation() {
@@ -489,7 +493,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     private fun setupMqtt() {
-        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt())
+        val token = com.example.myapplication.auth.TokenStore.getAccessToken(this)
+        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
         mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
@@ -941,5 +946,32 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         val config = resources.configuration
         config.setLocale(locale)
         resources.updateConfiguration(config, resources.displayMetrics)
+    }
+
+    private fun startTokenRefreshScheduler() {
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(60_000L) // check every minute
+                if (!com.example.myapplication.auth.TokenStore.isAccessTokenValid(this@MainActivity)) {
+                    val refreshToken = com.example.myapplication.auth.TokenStore.getRefreshToken(this@MainActivity)
+                    if (refreshToken != null) {
+                        val newTokens = com.example.myapplication.auth.KeycloakClient.refreshToken(refreshToken)
+                        if (newTokens != null) {
+                            com.example.myapplication.auth.TokenStore.save(
+                                this@MainActivity,
+                                newTokens.accessToken,
+                                newTokens.refreshToken,
+                                newTokens.expiresIn
+                            )
+                        } else {
+                            // Refresh token also expired — force re-login
+                            com.example.myapplication.auth.TokenStore.clear(this@MainActivity)
+                            startActivity(Intent(this@MainActivity, com.example.myapplication.auth.LoginActivity::class.java))
+                            finish()
+                        }
+                    }
+                }
+            }
+        }
     }
 }

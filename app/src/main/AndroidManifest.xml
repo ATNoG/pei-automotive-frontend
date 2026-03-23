@@ -12,15 +12,22 @@
         android:theme="@style/Theme.MyApplication"
         android:usesCleartextTraffic="true">
 
+        <!-- LoginActivity is now the entry point -->
         <activity
-            android:name="com.example.myapplication.MainActivity"
-            android:exported="true">
+            android:name="com.example.myapplication.auth.LoginActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.APP_AUTOMOTIVE" />
             </intent-filter>
         </activity>
+
+        <!-- MainActivity is no longer the launcher -->
+        <activity
+            android:name="com.example.myapplication.MainActivity"
+            android:exported="false" />
 
     </application>
 

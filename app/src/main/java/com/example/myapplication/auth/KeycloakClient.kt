@@ -6,11 +6,12 @@ import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import com.example.myapplication.BuildConfig
 
 object KeycloakClient {
 
     // Replace with your actual server IP and realm name
-    private const val BASE_URL  = "http://192.168.93.77:8080/realms/automotive-app/protocol/openid-connect"
+    private val BASE_URL  = "${BuildConfig.KEYCLOAK_BASE_URL}/realms/automotive-app/protocol/openid-connect"
     private const val CLIENT_ID = "automotive-app"
 
     private val http = OkHttpClient()

@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import com.example.myapplication.MapController
 import com.example.myapplication.R
+import com.example.myapplication.auth.LoginActivity
+import com.example.myapplication.auth.TokenStore
 
 /**
  * Encapsulates the Settings dialog UI and alert preference wiring.
@@ -265,13 +267,22 @@ class AlertSettingsDialog(
     }
 
     private fun setupLogoutButton(settingsView: View) {
+        val fullNameTextView = settingsView.findViewById<TextView>(R.id.fullNameTextView)
+        val usernameTextView = settingsView.findViewById<TextView>(R.id.usernameTextView)
         val btnLogout = settingsView.findViewById<Button>(R.id.btnLogout)
+        
+        val fullName = TokenStore.getFullName(activity)
+        val username = TokenStore.getUsername(activity)
+        
+        fullNameTextView?.text = fullName ?: activity.getString(R.string.unknown_user)
+        usernameTextView?.text = username?.let { "@$it" } ?: ""
+
         btnLogout?.setOnClickListener {
             // 1. Clear saved tokens
-            com.example.myapplication.auth.TokenStore.clear(activity)
+            TokenStore.clear(activity)
             
             // 2. Redirect to LoginActivity and clear the back stack
-            val intent = android.content.Intent(activity, com.example.myapplication.auth.LoginActivity::class.java).apply {
+            val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
             activity.startActivity(intent)

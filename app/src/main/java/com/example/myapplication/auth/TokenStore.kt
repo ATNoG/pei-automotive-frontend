@@ -65,4 +65,31 @@ object TokenStore {
             null
         }
     }
+
+    fun getFullName(ctx: Context): String? {
+        val token = getAccessToken(ctx) ?: return null
+        return try {
+            val payloadB64 = token.split(".")[1]
+            val decoded = String(Base64.decode(payloadB64, Base64.URL_SAFE or Base64.NO_PADDING))
+            val json = JSONObject(decoded)
+            json.optString("name", null)?.takeIf { it.isNotBlank() }
+                ?: listOfNotNull(
+                    json.optString("given_name", null)?.takeIf { it.isNotBlank() },
+                    json.optString("family_name", null)?.takeIf { it.isNotBlank() }
+                ).joinToString(" ").takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun getUsername(ctx: Context): String? {
+        val token = getAccessToken(ctx) ?: return null
+        return try {
+            val payloadB64 = token.split(".")[1]
+            val decoded = String(Base64.decode(payloadB64, Base64.URL_SAFE or Base64.NO_PADDING))
+            JSONObject(decoded).optString("preferred_username", null)
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

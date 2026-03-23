@@ -10,7 +10,7 @@ import org.json.JSONObject
 object KeycloakClient {
 
     // Replace with your actual server IP and realm name
-    private const val BASE_URL  = "http://192.168.40.224:8080/realms/automotive-app/protocol/openid-connect"
+    private const val BASE_URL  = "http://192.168.93.77:8080/realms/automotive-app/protocol/openid-connect"
     private const val CLIENT_ID = "automotive-app"
 
     private val http = OkHttpClient()

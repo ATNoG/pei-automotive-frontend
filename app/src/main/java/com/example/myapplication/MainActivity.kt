@@ -16,6 +16,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.auth.KeycloakClient
+import com.example.myapplication.auth.TokenStore
 import com.example.myapplication.config.AlertPreferenceManager
 import com.example.myapplication.config.AlertSettingsDialog
 import com.example.myapplication.config.AppConfig
@@ -952,23 +954,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         lifecycleScope.launch {
             while (isActive) {
                 delay(60_000L) // check every minute
-                if (!com.example.myapplication.auth.TokenStore.isAccessTokenValid(this@MainActivity)) {
-                    val refreshToken = com.example.myapplication.auth.TokenStore.getRefreshToken(this@MainActivity)
-                    if (refreshToken != null) {
-                        val newTokens = com.example.myapplication.auth.KeycloakClient.refreshToken(refreshToken)
-                        if (newTokens != null) {
-                            com.example.myapplication.auth.TokenStore.save(
-                                this@MainActivity,
-                                newTokens.accessToken,
-                                newTokens.refreshToken,
-                                newTokens.expiresIn
-                            )
-                        } else {
-                            // Refresh token also expired — force re-login
-                            com.example.myapplication.auth.TokenStore.clear(this@MainActivity)
-                            startActivity(Intent(this@MainActivity, com.example.myapplication.auth.LoginActivity::class.java))
-                            finish()
-                        }
+                if (!TokenStore.isAccessTokenValid(this@MainActivity)) {
+                    val refreshToken = TokenStore.getRefreshToken(this@MainActivity) ?: continue
+                    val newTokens = KeycloakClient.refreshToken(refreshToken)
+                    if (newTokens != null) {
+                        TokenStore.save(
+                            this@MainActivity,
+                            newTokens.accessToken,
+                            newTokens.refreshToken,
+                            newTokens.expiresIn
+                        )
                     }
                 }
             }

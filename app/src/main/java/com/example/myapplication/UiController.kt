@@ -457,9 +457,9 @@ class UiController(
         val card = dialogView.findViewById<View>(R.id.weatherDialogCard) ?: return
         val metrics = activity.resources.displayMetrics
         val density = metrics.density
-        val sideMarginPx = (24 * density).toInt()
+        val sideMarginPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_margin)
         val verticalMarginPx = (36 * density).toInt()
-        val targetWidthPx = (480 * density).toInt()
+        val targetWidthPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_width)
 
         val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
         val maxHeightByRatio = (metrics.heightPixels * 0.70f).toInt()

@@ -8,12 +8,12 @@
 
     <androidx.cardview.widget.CardView
         android:id="@+id/settingsCard"
-        android:layout_width="480dp"
+        android:layout_width="@dimen/dialog_width"
         android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:layout_margin="24dp"
+        android:layout_margin="@dimen/dialog_margin"
         android:elevation="8dp"
-        app:cardCornerRadius="16dp">
+        app:cardCornerRadius="@dimen/card_corner_radius">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -35,7 +35,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/settings_title"
-                    android:textSize="22sp"
+                    android:textSize="@dimen/text_medium"
                     android:textStyle="bold"
                     android:textColor="?attr/colorTextPrimary" />
 
@@ -68,7 +68,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/map_style"
-                        android:textSize="14sp"
+                        android:textSize="@dimen/text_small"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp" />
@@ -92,7 +92,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="@string/theme_mode"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/text_small"
                             android:textColor="?attr/colorTextPrimary" />
 
                         <!-- 🌙 dark emoji -->
@@ -100,7 +100,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="🌙"
-                            android:textSize="18sp"
+                            android:textSize="@dimen/text_regular"
                             android:layout_marginEnd="8dp" />
 
                         <androidx.appcompat.widget.SwitchCompat
@@ -114,7 +114,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="☀️"
-                            android:textSize="18sp"
+                            android:textSize="@dimen/text_regular"
                             android:layout_marginStart="8dp" />
 
                     </LinearLayout>
@@ -124,7 +124,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/language"
-                        android:textSize="14sp"
+                        android:textSize="@dimen/text_small"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp"
@@ -149,7 +149,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="English"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/text_small"
                             android:textColor="?attr/colorTextPrimary"
                             android:background="?attr/selectableItemBackground"
                             android:layout_marginEnd="8dp" />
@@ -160,7 +160,7 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:text="Português"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/text_small"
                             android:textColor="?attr/colorTextPrimary"
                             android:background="?attr/selectableItemBackground"
                             android:layout_marginStart="8dp" />
@@ -172,7 +172,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/accessibility"
-                        android:textSize="14sp"
+                        android:textSize="@dimen/text_small"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp" />
@@ -195,7 +195,7 @@
                           android:layout_height="wrap_content"
                           android:layout_weight="1"
                           android:text="@string/colorblind"
-                          android:textSize="14sp"
+                          android:textSize="@dimen/text_small"
                           android:textColor="?attr/colorTextPrimary" />
 
                         <androidx.appcompat.widget.SwitchCompat
@@ -211,7 +211,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/alerts"
-                        android:textSize="14sp"
+                        android:textSize="@dimen/text_small"
                         android:textStyle="bold"
                         android:textColor="?attr/colorTextPrimary"
                         android:layout_marginBottom="12dp" />

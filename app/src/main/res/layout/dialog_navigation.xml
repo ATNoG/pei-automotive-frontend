@@ -14,8 +14,8 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         app:cardBackgroundColor="?attr/colorSurfaceDialogCard"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="16dp">
+        app:cardCornerRadius="@dimen/dialog_margin"
+        app:cardElevation="@dimen/card_corner_radius">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -29,7 +29,7 @@
                 android:gravity="center_vertical"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp">
+                android:layout_marginBottom="@dimen/dialog_margin">
                 
                 <ImageView
                     android:src="@drawable/ic_navigation"
@@ -61,8 +61,8 @@
             <TextView
                 android:text="@string/destination_selection"
                 android:textColor="?attr/colorTextTertiary"
-                android:textSize="14sp"
-                android:layout_marginBottom="16dp"
+                android:textSize="@dimen/text_small"
+                android:layout_marginBottom="@dimen/card_corner_radius"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
 
@@ -71,11 +71,11 @@
                 android:id="@+id/btnDestMercadoSantiago"
                 android:text="Mercado Santiago"
                 android:textAllCaps="false"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_regular"
                 android:textColor="?attr/colorTextPrimary"
                 android:layout_width="match_parent"
                 android:layout_height="72dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_corner_radius"
                 android:backgroundTint="?attr/colorAccentBlue" />
 
             <!-- Route Info Preview (shown after selection) -->
@@ -84,10 +84,10 @@
                 android:visibility="gone"
                 android:orientation="horizontal"
                 android:background="?attr/colorSurfaceRouteInfo"
-                android:padding="16dp"
+                android:padding="@dimen/card_corner_radius"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="@dimen/card_corner_radius"
                 android:gravity="center_vertical">
 
                 <LinearLayout
@@ -100,7 +100,7 @@
                         android:id="@+id/txtRouteDestination"
                         android:text="Mercado Santiago"
                         android:textColor="?attr/colorTextPrimary"
-                        android:textSize="16sp"
+                        android:textSize="@dimen/text_medium_small"
                         android:textStyle="bold"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />

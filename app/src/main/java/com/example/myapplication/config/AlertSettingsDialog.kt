@@ -61,9 +61,9 @@ class AlertSettingsDialog(
         val card = settingsView.findViewById<View>(R.id.settingsCard) ?: return
         val metrics = activity.resources.displayMetrics
         val density = metrics.density
-        val sideMarginPx = (MODAL_SIDE_MARGIN_DP * density).toInt()
+        val sideMarginPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_margin)
         val verticalMarginPx = (MODAL_VERTICAL_MARGIN_DP * density).toInt()
-        val targetWidthPx = (MODAL_TARGET_WIDTH_DP * density).toInt()
+        val targetWidthPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_width)
 
         val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
         val maxHeightByRatio = (metrics.heightPixels * MODAL_MAX_HEIGHT_RATIO).toInt()

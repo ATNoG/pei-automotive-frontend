@@ -260,7 +260,7 @@ class InAppNotificationManager(private val activity: Activity) {
 
         // Dismiss button intentionally removed — notifications are dismissed by swipe or auto-dismiss.
 
-        // Wire swipe-to-dismiss    
+        // Wire swipe-to-dismiss
         setupSwipeDismiss(view, rootView, notification)
 
         // Schedule auto-dismiss after enter animation + display duration

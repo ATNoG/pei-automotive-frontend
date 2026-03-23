@@ -453,6 +453,29 @@ class UiController(
      */
     private fun isValidIpma(value: Double): Boolean = value > -90
 
+    private fun configureWeatherModalBounds(dialogView: View) {
+        val card = dialogView.findViewById<View>(R.id.weatherDialogCard) ?: return
+        val metrics = activity.resources.displayMetrics
+        val density = metrics.density
+        val sideMarginPx = (24 * density).toInt()
+        val verticalMarginPx = (36 * density).toInt()
+        val targetWidthPx = (480 * density).toInt()
+
+        val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
+        val maxHeightByRatio = (metrics.heightPixels * 0.70f).toInt()
+        val maxHeightByMargins = (metrics.heightPixels - (verticalMarginPx * 2)).coerceAtLeast(verticalMarginPx)
+        val modalHeight = minOf(maxHeightByRatio, maxHeightByMargins)
+
+        (card.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { lp ->
+            lp.width = minOf(targetWidthPx, maxWidth)
+            lp.height = modalHeight
+            lp.gravity = android.view.Gravity.CENTER
+            lp.topMargin = verticalMarginPx
+            lp.bottomMargin = verticalMarginPx
+            card.layoutParams = lp
+        }
+    }
+
     @SuppressLint("SetTextI18n")
     private fun showDittoWeatherDialog() {
         val data = cachedDittoData ?: run {
@@ -463,6 +486,7 @@ class UiController(
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
+        configureWeatherModalBounds(dialogView)
 
         // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
@@ -592,6 +616,7 @@ class UiController(
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
+        configureWeatherModalBounds(dialogView)
 
         // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =

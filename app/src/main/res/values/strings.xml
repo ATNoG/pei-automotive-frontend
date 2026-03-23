@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Automotive App</string>
     <string name="settings_title">Settings</string>
     <string name="map_style">Map Style</string>
     <string name="theme_mode">Theme Mode</string>

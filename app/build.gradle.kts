@@ -39,7 +39,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Connects to services running on the dev machine via Android emulator's host alias.
+            // Docker containers on host:1884 and host:8081 are reachable at 10.0.2.2 from the emulator.
+            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.0.2.2\"")
+            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.0.2.2:8081\"")
+        }
         release {
+            // Uses VM addresses from local.properties (staging environment).
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

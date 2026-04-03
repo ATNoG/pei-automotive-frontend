@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <uses-feature android:name="android.hardware.type.automotive" android:required="true" />
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -12,23 +14,24 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.MyApplication"
+        android:allowBackup="false"
+        android:supportsRtl="true"
         android:usesCleartextTraffic="true">
 
         <!-- LoginActivity is now the entry point -->
         <activity
-            android:name="com.example.myapplication.auth.LoginActivity"
+            android:name="pt.it.automotive.app.auth.LoginActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.APP_AUTOMOTIVE" />
             </intent-filter>
         </activity>
 
         <!-- MainActivity is no longer the launcher -->
         <activity
-            android:name="com.example.myapplication.MainActivity"
+            android:name="pt.it.automotive.app.MainActivity"
             android:exported="false" />
 
     </application>

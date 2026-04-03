@@ -13,7 +13,7 @@ if (localPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.myapplication"
+    namespace = "pt.it.automotive.app"
     compileSdk = 36
 
     buildFeatures {
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "pt.it.automotive.app"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

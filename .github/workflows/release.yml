@@ -13,7 +13,7 @@ on:
 
 jobs:
   build:
-    name: Build staging release APK
+    name: Build debug and staging APKs
     runs-on: ubuntu-latest
 
     steps:
@@ -29,31 +29,33 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Create local.properties
+      - name: Write local.properties
         run: |
           cat > local.properties << EOF
           sdk.dir=$ANDROID_HOME
           MAPTILER_API_KEY=${{ secrets.MAPTILER_API_KEY }}
           OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
-          MQTT_BROKER_ADDRESS=10.255.28.243
           MQTT_BROKER_PORT=1884
-          KEYCLOAK_BASE_URL=http://10.255.28.243:8081
           EOF
 
-      - name: Build release APK
-        run: ./gradlew assembleRelease
+      - name: Build APKs
+        run: ./gradlew assembleDebug assembleStaging
 
-      - name: Rename APK
+      - name: Rename APKs
         run: |
           TAG=${{ github.event.inputs.tag || github.ref_name }}
-          mv app/build/outputs/apk/release/app-release-unsigned.apk \
-             app/build/outputs/apk/release/pei-automotive-${TAG}.apk
+          mv app/build/outputs/apk/debug/app-debug.apk \
+             app/build/outputs/apk/debug/pei-automotive-${TAG}-debug.apk
+          mv app/build/outputs/apk/staging/app-staging.apk \
+             app/build/outputs/apk/staging/pei-automotive-${TAG}-staging.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pei-automotive-apk
-          path: app/build/outputs/apk/release/pei-automotive-*.apk
+          name: pei-automotive-apks
+          path: |
+            app/build/outputs/apk/debug/pei-automotive-*-debug.apk
+            app/build/outputs/apk/staging/pei-automotive-*-staging.apk
           retention-days: 30
 
       - name: Create GitHub Release
@@ -61,5 +63,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ github.ref_name }}
-          files: app/build/outputs/apk/release/pei-automotive-*.apk
+          files: |
+            app/build/outputs/apk/debug/pei-automotive-*-debug.apk
+            app/build/outputs/apk/staging/pei-automotive-*-staging.apk
           generate_release_notes: true

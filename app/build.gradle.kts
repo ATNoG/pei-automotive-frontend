@@ -31,11 +31,11 @@ android {
 
         // Read from local.properties and expose to BuildConfig
         buildConfigField("String", "MAPTILER_API_KEY", "\"${localProperties.getProperty("MAPTILER_API_KEY", "")}\"")
-        buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"${localProperties.getProperty("MQTT_BROKER_ADDRESS", "192.168.50.89")}\"")
+        buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"${localProperties.getProperty("MQTT_BROKER_ADDRESS", "")}\"")
         buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
         buildConfigField("String", "OPENWEATHER_API_KEY", "\"${localProperties.getProperty("OPENWEATHER_API_KEY", "")}\"")
         buildConfigField("String", "OPENROUTESERVICE_API_KEY", "\"${localProperties.getProperty("OPENROUTESERVICE_API_KEY", "")}\"")
-        buildConfigField("String", "KEYCLOAK_BASE_URL", "\"${localProperties.getProperty("KEYCLOAK_BASE_URL", "http://localhost:8080")}\"")
+        buildConfigField("String", "KEYCLOAK_BASE_URL", "\"${localProperties.getProperty("KEYCLOAK_BASE_URL", "")}\"")
     }
 
     buildTypes {
@@ -53,10 +53,6 @@ android {
                 "proguard-rules.pro"
             )
         }
-    }
-
-    buildFeatures {
-        buildConfig = true
     }
 
     compileOptions {

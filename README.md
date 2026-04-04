@@ -2,74 +2,75 @@
 
 Frontend system for the [**Automotive App Project**](https://github.com/ATNoG/pei-automotive).
 
-This repo is an Android Automotive app designed for in-vehicle use, who connects to the backend's message broker to receive alerts and updates to then display them accordingly.
+Android Automotive OS app that connects to the backend MQTT broker to receive and display vehicle alerts in real time.
 
 ## Overview
 
-This Android application is built specifically for automotive environments (**Android Automotive OS**). 
-
-It connects to the **mosquitto MQTT broker** to get the cars positions and display them on the map. It also listens to the `alerts/*` topics to show them to the user in an intuitive way.
-
-We implemented a routing system to optimize the route between two points and allow the user to navigate through the map.
+Built specifically for **Android Automotive OS**. Connects to the Mosquitto MQTT broker to track car positions on a map and display `alerts/*` events. Includes turn-by-turn routing via OpenRouteService.
 
 ## User Interface
 
 <img src="ui.png">
 
-The UI has a full-screen map view optimized for automotive displays.
+Full-screen map view with a right-side panel showing:
+- Route info (time and distance remaining)
+- Top-down view of nearby vehicles
+- Current speed and speed limit
 
-On the right-side, there is an information panel with essential driving data:
- - It has the current route information (time and distance left). 
- - A top view of nearby cars.
- - The current speed and speed limit.
+## Pre-built APKs
 
-## Requirements
+Each [GitHub Release](https://github.com/ATNoG/pei-automotive-frontend/releases) ships two APKs:
 
-To build this, we will assume you already followed the build process for the [backend](https://github.com/ATNoG/pei-automotive-backend) and have the cloud2edge system and the Docker services running.
+| APK | Connects to |
+|-----|-------------|
+| `pei-automotive-vX.Y.Z-debug.apk` | `10.0.2.2` — Android emulator host alias. Use with `docker compose up` running locally. |
+| `pei-automotive-vX.Y.Z-staging.apk` | `10.255.28.243` — deployed staging VM. |
 
-For this app to work, you must:
- - Have **Android Studio** installed.
- - Have an Android Automotive OS compatible device or emulator (we personally use the [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit)).
- - Make sure that device where the backend is running is in the same network as the device where the frontend will be running.
- - Have a **MapTiler** API Key (get yours at https://cloud.maptiler.com/).
- - Have an **OpenWeatherMap** API Key (get yours at https://openweathermap.org/api).
+## Build from source
 
-## Build
+### Requirements
 
-### 1. Clone this repo
+- Android Studio
+- Android Automotive OS device or emulator (we use [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit))
+- [MapTiler](https://cloud.maptiler.com/) API key
+- [OpenWeatherMap](https://openweathermap.org/api) API key
+- Backend running — see [pei-automotive-backend](https://github.com/ATNoG/pei-automotive-backend)
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/ATNoG/pei-automotive-frontend.git
 cd pei-automotive-frontend
 ```
 
-### 2. Create your configuration file:
-```bash
-vim local.properties
-```
-
-Here you must add your API keys and add the private network IP address of the machine where the backend is running:
+### 2. Create `local.properties`
 
 ```properties
-# MapTiler API Key
-MAPTILER_API_KEY=your_actual_maptiler_api_key_here
-# OpenWeatherMap API Key
-OPENWEATHER_API_KEY=your_openweathermap_api_key_here
-# MQTT Broker Configuration
-MQTT_BROKER_ADDRESS=your_private_network_ip_address
+MAPTILER_API_KEY=your_maptiler_key
+OPENWEATHER_API_KEY=your_openweather_key
 MQTT_BROKER_PORT=1884
 ```
 
-### 3. Open and run the app
+Network addresses are baked in per build variant — no need to set them here.
 
-Open the app in Android Studio, select your device or emulator and run the app.
+### 3. Select a build variant and run
 
-And that's it! On the Docker logs, you should see a new device connected to the MQTT broker. Now, we can start using the app.
+Open the **Build Variants** panel (**View → Tool Windows → Build Variants**) and pick:
+
+- **`debug`** — connects to `10.0.2.2` (emulator host alias). Start the backend with `docker compose up` and run this variant on the emulator.
+- **`staging`** — connects to `10.255.28.243` (staging VM).
+
+Then hit **Shift+F10**.
+
+> **First-time setup:** delete `.idea/` before opening the project if you cloned it fresh or after a package rename — Android Studio caches the old app ID and will fail to launch otherwise.
+> ```bash
+> rm -rf .idea/
+> ```
 
 ## Usage
 
-Here you just need to refer to the [testing](https://github.com/ATNoG/pei-automotive-backend?tab=readme-ov-file#testing) section of the backend and follow the instructions and the tests simulations should appear in the app.
+See the [testing section](https://github.com/ATNoG/pei-automotive-backend?tab=readme-ov-file#testing) of the backend repo to simulate vehicles and trigger alerts in the app.
 
 ## License
 
-See [LICENSE](LICENSE) file for details.
+See [LICENSE](LICENSE) for details.

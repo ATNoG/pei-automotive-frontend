@@ -89,7 +89,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Apply colorblind theme before inflating any views
         if (appPrefs.getBoolean("colorBlindMode", false)) {
-            setTheme(R.style.Theme_MyApplication_ColorBlind)
+            setTheme(R.style.Theme_Automotive_ColorBlind)
         }
 
         super.onCreate(savedInstanceState)

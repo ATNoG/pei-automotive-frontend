@@ -110,6 +110,9 @@ class UiController(
     private var cachedDittoData: MqttEventRouter.StationAssignmentData? = null
     private val weatherSourcePrefs = WeatherSourcePreferenceManager(activity)
 
+    // ── Current speed tracking ───────────────────────────────────────────
+    private var currentSpeed: Double = 0.0
+
     // ====================================================================
     //  Speed
     // ====================================================================
@@ -120,6 +123,7 @@ class UiController(
     }
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
+        currentSpeed = speedKmh.toDouble()
         txtCurrentSpeed?.text = speedKmh.toString()
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
@@ -588,7 +592,15 @@ class UiController(
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
-                showWeatherDialog()
+                if (currentSpeed >= 20.0) {
+                    android.widget.Toast.makeText(
+                        activity,
+                        "Cannot open weather while driving (speed >= 20 km/h)",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    showWeatherDialog()
+                }
             }
         }
     }

@@ -379,7 +379,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             isFocusable = true
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
-                showSettingsDialog()
+                if (currentSpeed >= 20.0) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        "Cannot open settings while driving (speed >= 20 km/h)",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                } else {
+                    showSettingsDialog()
+                }
             }
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")

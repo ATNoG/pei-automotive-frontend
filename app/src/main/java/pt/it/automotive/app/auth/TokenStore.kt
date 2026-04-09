@@ -9,10 +9,11 @@ import org.json.JSONObject
 
 object TokenStore {
 
-    private const val PREFS_NAME   = "auth_tokens"
-    private const val KEY_ACCESS   = "access_token"
-    private const val KEY_REFRESH  = "refresh_token"
-    private const val KEY_EXPIRY   = "token_expiry_ms"
+    private const val PREFS_NAME    = "auth_tokens"
+    private const val KEY_ACCESS    = "access_token"
+    private const val KEY_REFRESH   = "refresh_token"
+    private const val KEY_EXPIRY    = "token_expiry_ms"
+    private const val KEY_REMEMBER  = "remember_me"
 
     private fun prefs(ctx: Context): SharedPreferences {
         val masterKey = MasterKey.Builder(ctx)
@@ -27,14 +28,23 @@ object TokenStore {
         )
     }
 
-    fun save(ctx: Context, accessToken: String, refreshToken: String, expiresInSeconds: Int) {
+    fun save(ctx: Context, accessToken: String, refreshToken: String, expiresInSeconds: Int, rememberMe: Boolean = isRememberMe(ctx)) {
         // Subtract 60s so we refresh before the token actually expires
         val expiryMs = System.currentTimeMillis() + (expiresInSeconds * 1000L) - 60_000
         prefs(ctx).edit()
             .putString(KEY_ACCESS, accessToken)
             .putString(KEY_REFRESH, refreshToken)
             .putLong(KEY_EXPIRY, expiryMs)
+            .putBoolean(KEY_REMEMBER, rememberMe)
             .apply()
+    }
+
+    fun isRememberMe(ctx: Context): Boolean =
+        prefs(ctx).getBoolean(KEY_REMEMBER, false)
+
+    /** Call on app start: if the user didn't choose remember me, wipe tokens so they re-login. */
+    fun clearIfNotRememberMe(ctx: Context) {
+        if (!isRememberMe(ctx)) clear(ctx)
     }
 
     fun getAccessToken(ctx: Context): String? =
@@ -77,6 +87,7 @@ object TokenStore {
                     json.optString("given_name", null)?.takeIf { it.isNotBlank() },
                     json.optString("family_name", null)?.takeIf { it.isNotBlank() }
                 ).joinToString(" ").takeIf { it.isNotBlank() }
+                ?: json.optString("preferred_username", null)?.takeIf { it.isNotBlank() }
         } catch (e: Exception) {
             null
         }

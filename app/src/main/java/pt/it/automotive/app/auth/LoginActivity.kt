@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Bundle
+import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -23,11 +24,15 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var userCodeText: TextView
     private lateinit var verificationUriText: TextView
     private lateinit var statusText: TextView
+    private lateinit var rememberMeCheckbox: CheckBox
 
     private var pollingJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // If no remember me, clear any stored tokens so the user must log in again on each app launch
+        TokenStore.clearIfNotRememberMe(this)
 
         // If we already have a valid token, skip login entirely
         if (TokenStore.isAccessTokenValid(this)) {
@@ -37,10 +42,11 @@ class LoginActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_login)
 
-        qrImageView       = findViewById(R.id.qrCode)
-        userCodeText      = findViewById(R.id.userCode)
+        qrImageView         = findViewById(R.id.qrCode)
+        userCodeText        = findViewById(R.id.userCode)
         verificationUriText = findViewById(R.id.verificationUri)
-        statusText        = findViewById(R.id.statusText)
+        statusText          = findViewById(R.id.statusText)
+        rememberMeCheckbox  = findViewById(R.id.rememberMe)
 
         startDeviceFlow()
     }
@@ -50,7 +56,7 @@ class LoginActivity : AppCompatActivity() {
         lifecycleScope.launch {
             statusText.text = "Connecting to auth server…"
             try {
-                val deviceCode = KeycloakClient.requestDeviceCode()
+                val deviceCode = KeycloakClient.requestDeviceCode(rememberMeCheckbox.isChecked)
 
                 // Show QR code
                 showQrCode(deviceCode.verificationUriComplete)
@@ -90,7 +96,8 @@ class LoginActivity : AppCompatActivity() {
                             this@LoginActivity,
                             result.tokens.accessToken,
                             result.tokens.refreshToken,
-                            result.tokens.expiresIn
+                            result.tokens.expiresIn,
+                            rememberMe = rememberMeCheckbox.isChecked
                         )
                         launchMain()
                         return@launch

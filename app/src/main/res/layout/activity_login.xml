@@ -93,6 +93,16 @@
             android:fontFamily="monospace"
             android:layout_marginBottom="32dp"/>
 
+        <CheckBox
+            android:id="@+id/rememberMe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remember me on this device"
+            android:textColor="#bbbbbb"
+            android:textSize="15sp"
+            android:buttonTint="#4fc3f7"
+            android:layout_marginBottom="20dp"/>
+
         <!-- Status feedback -->
         <TextView
             android:id="@+id/statusText"

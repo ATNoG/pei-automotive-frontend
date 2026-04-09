@@ -43,10 +43,11 @@ object KeycloakClient {
 
     // ── API calls ─────────────────────────────────────────────────────────────
 
-    suspend fun requestDeviceCode(): DeviceCodeResponse = withContext(Dispatchers.IO) {
+    suspend fun requestDeviceCode(rememberMe: Boolean = false): DeviceCodeResponse = withContext(Dispatchers.IO) {
+        val scope = if (rememberMe) "openid car_id offline_access" else "openid car_id"
         val body = FormBody.Builder()
             .add("client_id", CLIENT_ID)
-            .add("scope", "openid car_id")
+            .add("scope", scope)
             .build()
         val response = http.newCall(
             Request.Builder().url("$BASE_URL/auth/device").post(body).build()

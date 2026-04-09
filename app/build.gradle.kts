@@ -13,7 +13,7 @@ if (localPropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.myapplication"
+    namespace = "pt.it.automotive.app"
     compileSdk = 36
 
     buildFeatures {
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "pt.it.automotive.app"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -30,26 +30,35 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // Read from local.properties and expose to BuildConfig
+        //// maptiller api
         buildConfigField("String", "MAPTILER_API_KEY", "\"${localProperties.getProperty("MAPTILER_API_KEY", "")}\"")
-        buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"${localProperties.getProperty("MQTT_BROKER_ADDRESS", "192.168.50.89")}\"")
-        buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
+        //// openweather api
         buildConfigField("String", "OPENWEATHER_API_KEY", "\"${localProperties.getProperty("OPENWEATHER_API_KEY", "")}\"")
+        //// openrouter api (like wtf is this but ok)
         buildConfigField("String", "OPENROUTESERVICE_API_KEY", "\"${localProperties.getProperty("OPENROUTESERVICE_API_KEY", "")}\"")
-        buildConfigField("String", "KEYCLOAK_BASE_URL", "\"${localProperties.getProperty("KEYCLOAK_BASE_URL", "http://localhost:8080")}\"")
+
+        buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
     }
 
     buildTypes {
-        release {
+        debug {
+            // Local emulator: 10.0.2.2 is the host machine alias inside the Android emulator.
+            // Run the backend with `docker compose up` and this APK connects automatically.
+            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.0.2.2\"")
+            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.0.2.2:8081\"")
+        }
+        create("staging") {
+            // Staging VM. Signed with the debug keystore so it can be installed directly from
+            // Android Studio; the CI workflow also produces this APK for distribution.
+            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.255.28.243\"")
+            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.255.28.243:8081\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
-    }
-
-    buildFeatures {
-        buildConfig = true
     }
 
     compileOptions {

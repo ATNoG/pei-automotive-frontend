@@ -6,7 +6,7 @@ This repo is an Android Automotive app designed for in-vehicle use, who connects
 
 ## Overview
 
-This Android application is built specifically for automotive environments (**Android Automotive OS**). 
+This Android application is built specifically for automotive environments (**Android Automotive OS**).
 
 It connects to the **mosquitto MQTT broker** to get the cars positions and display them on the map. It also listens to the `alerts/*` topics to show them to the user in an intuitive way.
 
@@ -19,20 +19,22 @@ We implemented a routing system to optimize the route between two points and all
 The UI has a full-screen map view optimized for automotive displays.
 
 On the right-side, there is an information panel with essential driving data:
- - It has the current route information (time and distance left). 
- - A top view of nearby cars.
- - The current speed and speed limit.
+
+- It has the current route information (time and distance left).
+- A top view of nearby cars.
+- The current speed and speed limit.
 
 ## Requirements
 
 To build this, we will assume you already followed the build process for the [backend](https://github.com/ATNoG/pei-automotive-backend) and have the cloud2edge system and the Docker services running.
 
 For this app to work, you must:
- - Have **Android Studio** installed.
- - Have an Android Automotive OS compatible device or emulator (we personally use the [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit)).
- - Make sure that device where the backend is running is in the same network as the device where the frontend will be running.
- - Have a **MapTiler** API Key (get yours at https://cloud.maptiler.com/).
- - Have an **OpenWeatherMap** API Key (get yours at https://openweathermap.org/api).
+
+- Have **Android Studio** installed.
+- Have an Android Automotive OS compatible device or emulator (we personally use the [Snapp Automotive's build for the Vim3 Pro](https://www.snappautomotive.io/developer-kit)).
+- Make sure that device where the backend is running is in the same network as the device where the frontend will be running.
+- Have a **MapTiler** API Key (get yours at https://cloud.maptiler.com/).
+- Have an **OpenWeatherMap** API Key (get yours at https://openweathermap.org/api).
 
 ## Build
 
@@ -44,6 +46,7 @@ cd pei-automotive-frontend
 ```
 
 ### 2. Create your configuration file:
+
 ```bash
 vim local.properties
 ```

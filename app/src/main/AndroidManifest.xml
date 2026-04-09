@@ -11,12 +11,12 @@
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
-        android:theme="@style/Theme.MyApplication"
+        android:theme="@style/Theme.AutomotiveApp"
         android:usesCleartextTraffic="true">
 
         <!-- LoginActivity is now the entry point -->
         <activity
-            android:name="com.example.myapplication.auth.LoginActivity"
+            android:name="pt.it.automotive.app.auth.LoginActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -28,7 +28,7 @@
 
         <!-- MainActivity is no longer the launcher -->
         <activity
-            android:name="com.example.myapplication.MainActivity"
+            android:name="pt.it.automotive.app.MainActivity"
             android:exported="false" />
 
     </application>

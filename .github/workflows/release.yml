@@ -2,13 +2,13 @@ name: Release APK
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v1.0.0)'
-        required: true
+        description: 'Release tag override (e.g. v1.0.0); defaults to auto-generated'
+        required: false
         type: string
 
 jobs:
@@ -21,6 +21,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Compute release tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "value=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            DATE=$(date -u +%Y.%m.%d)
+            echo "value=v${DATE}-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -45,7 +56,7 @@ jobs:
 
       - name: Rename APKs
         run: |
-          TAG=${{ github.event.inputs.tag || github.ref_name }}
+          TAG=${{ steps.tag.outputs.value }}
           mv app/build/outputs/apk/debug/app-debug.apk \
              app/build/outputs/apk/debug/pei-automotive-${TAG}-debug.apk
           mv app/build/outputs/apk/staging/app-staging.apk \
@@ -61,12 +72,12 @@ jobs:
           retention-days: 30
 
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.tag.outputs.value }}
+          name: ${{ steps.tag.outputs.value }}
           body: |
-            ## PEI Automotive — ${{ github.ref_name }}
+            ## PEI Automotive — ${{ steps.tag.outputs.value }}
 
             Android Automotive OS app for real-time vehicle telematics and safety alerting, targeting Android Automotive OS and backed by Eclipse Ditto / Hono on a Cloud2Edge Kubernetes cluster.
 
@@ -74,8 +85,8 @@ jobs:
 
             | Variant | File | Backend target |
             |---------|------|----------------|
-            | **debug** | `pei-automotive-${{ github.ref_name }}-debug.apk` | Android emulator — connects to `10.0.2.2` (host bridge) |
-            | **staging** | `pei-automotive-${{ github.ref_name }}-staging.apk` | Cloud2Edge staging VM at `10.255.28.243` |
+            | **debug** | `pei-automotive-${{ steps.tag.outputs.value }}-debug.apk` | Android emulator — connects to `10.0.2.2` (host bridge) |
+            | **staging** | `pei-automotive-${{ steps.tag.outputs.value }}-staging.apk` | Cloud2Edge staging VM at `10.255.28.243` |
 
             Both APKs are signed with the Android debug keystore and can be sideloaded directly.
 

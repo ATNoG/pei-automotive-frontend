@@ -44,7 +44,7 @@ object KeycloakClient {
     // ── API calls ─────────────────────────────────────────────────────────────
 
     suspend fun requestDeviceCode(rememberMe: Boolean = false): DeviceCodeResponse = withContext(Dispatchers.IO) {
-        val scope = if (rememberMe) "openid car_id offline_access" else "openid car_id"
+        val scope = if (rememberMe) "openid profile car_id offline_access" else "openid profile car_id"
         val body = FormBody.Builder()
             .add("client_id", CLIENT_ID)
             .add("scope", scope)

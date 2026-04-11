@@ -1,11 +1,11 @@
-package com.example.myapplication.navigation.geocoding
+package pt.it.automotive.app.navigation.geocoding
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.myapplication.R
+import pt.it.automotive.app.R
 
 /**
  * Adapter for displaying geocoding search results in a RecyclerView

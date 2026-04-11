@@ -1,7 +1,7 @@
-package com.example.myapplication.navigation.geocoding
+package pt.it.automotive.app.navigation.geocoding
 
 import android.util.Log
-import com.example.myapplication.navigation.models.LatLng
+import pt.it.automotive.app.navigation.models.LatLng
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject

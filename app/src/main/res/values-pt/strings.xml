@@ -59,4 +59,6 @@
     <string name="search_destination">Pesquisar por um destino…</string>
     <string name="no_results">Nenhum resultado encontrado</string>
     <string name="searching">A pesquisar…</string>
+    <string name="logout">Terminar sessão</string>
+    <string name="unknown_user">Utilizador desconhecido</string>
 </resources>

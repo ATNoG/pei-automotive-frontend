@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center"
+    android:background="#1a1a1a"
+    android:padding="48dp">
+
+    <!-- Left side: QR code -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <ImageView
+            android:id="@+id/qrCode"
+            android:layout_width="280dp"
+            android:layout_height="280dp"
+            android:contentDescription="Login QR Code"
+            android:background="#ffffff"
+            android:padding="12dp"/>
+
+    </LinearLayout>
+
+    <!-- Right side: instructions -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:paddingStart="32dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sign in or create an account"
+            android:textColor="#ffffff"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scan the QR code with your phone to sign in or register"
+            android:textColor="#bbbbbb"
+            android:textSize="18sp"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Divider -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444444"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Or visit this address on your phone:"
+            android:textColor="#bbbbbb"
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/verificationUri"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#4fc3f7"
+            android:textSize="15sp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="And enter this code:"
+            android:textColor="#bbbbbb"
+            android:textSize="15sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:id="@+id/userCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#ffffff"
+            android:textSize="36sp"
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:layout_marginBottom="32dp"/>
+
+        <CheckBox
+            android:id="@+id/rememberMe"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remember me on this device"
+            android:textColor="#bbbbbb"
+            android:textSize="15sp"
+            android:buttonTint="#4fc3f7"
+            android:layout_marginBottom="20dp"/>
+
+        <!-- Status feedback -->
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Generating login code…"
+            android:textColor="#888888"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Automotive App</string>
     <string name="settings_title">Settings</string>
     <string name="map_style">Map Style</string>
     <string name="theme_mode">Theme Mode</string>
@@ -58,4 +58,6 @@
     <string name="search_destination">Search for a destination…</string>
     <string name="no_results">No results found</string>
     <string name="searching">Searching…</string>
+    <string name="logout">Logout</string>
+    <string name="unknown_user">Unknown user</string>
 </resources>

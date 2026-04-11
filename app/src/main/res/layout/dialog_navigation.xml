@@ -13,15 +13,21 @@
         android:layout_width="450dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="24dp"
         app:cardBackgroundColor="?attr/colorSurfaceDialogCard"
         app:cardCornerRadius="@dimen/dialog_margin"
         app:cardElevation="@dimen/card_corner_radius">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="28dp">
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="28dp">
 
             <!-- Header -->
             <LinearLayout
@@ -57,26 +63,50 @@
                     app:tint="?attr/colorIconMuted" />
             </LinearLayout>
 
-            <!-- Destination Selection -->
-            <TextView
-                android:text="@string/destination_selection"
-                android:textColor="?attr/colorTextTertiary"
-                android:textSize="@dimen/text_small"
-                android:layout_marginBottom="@dimen/card_corner_radius"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <!-- Mercado Santiago Button (only option) -->
-            <Button
-                android:id="@+id/btnDestMercadoSantiago"
-                android:text="Mercado Santiago"
-                android:textAllCaps="false"
-                android:textSize="@dimen/text_regular"
+            <!-- Search Input -->
+            <EditText
+                android:id="@+id/edtSearchDestination"
+                android:hint="@string/search_destination"
+                android:inputType="text|textNoSuggestions"
                 android:textColor="?attr/colorTextPrimary"
+                android:textColorHint="?attr/colorTextTertiary"
+                android:textSize="14sp"
                 android:layout_width="match_parent"
-                android:layout_height="72dp"
+                android:layout_height="40dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
                 android:layout_marginBottom="@dimen/card_corner_radius"
-                android:backgroundTint="?attr/colorAccentBlue" />
+                android:background="?attr/colorSurfaceButtonNeutral"
+                android:maxLines="1"
+                android:imeOptions="flagNoExtractUi|actionDone"
+                android:importantForAutofill="no" />
+
+            <!-- Search Results Container -->
+            <FrameLayout
+                android:id="@+id/searchResultsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                android:layout_marginBottom="@dimen/card_corner_radius"
+                android:visibility="gone">
+
+                <!-- Results RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvSearchResults"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="?attr/colorSurfaceButtonNeutral" />
+
+                <!-- Empty State / Loading -->
+                <TextView
+                    android:id="@+id/txtSearchEmpty"
+                    android:text="@string/no_results"
+                    android:textColor="?attr/colorTextTertiary"
+                    android:textSize="14sp"
+                    android:gravity="center"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+            </FrameLayout>
 
             <!-- Route Info Preview (shown after selection) -->
             <LinearLayout
@@ -150,6 +180,7 @@
             </LinearLayout>
 
         </LinearLayout>
+        </ScrollView>
 
     </androidx.cardview.widget.CardView>
 

@@ -16,6 +16,23 @@ import pt.it.automotive.app.navigation.models.LatLng
  */
 object AppConfig {
 
+    // ========== SUMO Simulation ==========
+
+    /**
+     * The SUMO vehicle the user is "riding in". Camera follows this car,
+     * and safety alerts (speed, accident, overtaking) are gated to it.
+     * Must match the bridge.py thing_id suffix: sumo-{slugify(vid)}.
+     * Vehicle 0 departs first so it is the most stable choice.
+     */
+    const val SUMO_USER_CAR_ID = "sumo-0"
+
+    /**
+     * Prefix shared by all SUMO-generated vehicles. Any car_id that starts
+     * with this but is not SUMO_USER_CAR_ID is shown as an "other car" on
+     * the map (no camera follow, no alert routing).
+     */
+    const val SUMO_CAR_PREFIX = "sumo-"
+
     // ========== Car Identification ==========
 
     /**
@@ -38,7 +55,8 @@ object AppConfig {
         "car-behind",
         "highway-car",
         "highway-car-2",
-        "minimal-jam-car-5"
+        "minimal-jam-car-5",
+        SUMO_USER_CAR_ID,
     )
 
     /**

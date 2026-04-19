@@ -4,10 +4,15 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -16,6 +21,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import pt.it.automotive.app.auth.KeycloakClient
 import pt.it.automotive.app.auth.TokenStore
 import pt.it.automotive.app.config.AlertPreferenceManager
@@ -25,6 +32,9 @@ import pt.it.automotive.app.config.WeatherSourcePreferenceManager
 import pt.it.automotive.app.mqtt.MqttEventListener
 import pt.it.automotive.app.mqtt.MqttEventRouter
 import pt.it.automotive.app.navigation.NavigationListener
+import pt.it.automotive.app.navigation.geocoding.GeocodeApiClient
+import pt.it.automotive.app.navigation.geocoding.GeoCodeResult
+import pt.it.automotive.app.navigation.geocoding.GeoCodeResultAdapter
 import pt.it.automotive.app.notifications.AlertNotificationManager
 import pt.it.automotive.app.notifications.InAppNotificationManager
 import pt.it.automotive.app.navigation.NavigationManager
@@ -72,6 +82,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var currentSpeed: Double = 0.0
     private var currentBearing: Float = 0f
 
+    // Last Navigation Dialog view reference
+    private var navigationDialogView: View? = null
+
     // Pending route for navigation dialog
     private var pendingRoute: NavigationRoute? = null
 
@@ -105,13 +118,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Initialize OsrmApiClient with OpenRouteService API key
         OsrmApiClient.initialize(BuildConfig.OPENROUTESERVICE_API_KEY)
+        
+        // Initialize GeocodeApiClient with MapTiler API key for location search
+        GeocodeApiClient.initialize(BuildConfig.MAPTILER_API_KEY)
 
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
-        uiController = UiController(this) { onWeatherSourceChanged() }
+        inAppNotificationManager = InAppNotificationManager(this)
+        uiController = UiController(this, inAppNotificationManager) { onWeatherSourceChanged() }
         overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
-        inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
         alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
@@ -170,7 +186,17 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.apply {
             applyPressAnimation(this@MainActivity) {
-                showNavigationDialog()
+                if (currentSpeed >= 5.0) {
+                    inAppNotificationManager.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
+                        duration = 3_000L
+                    )
+                } else {
+                    showNavigationDialog()
+                }
             }
         }
 
@@ -182,78 +208,173 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     @SuppressLint("SetTextI18n", "DefaultLocale")
     private fun showNavigationDialog() {
+        if (navigationDialogView != null) return // Already showing
+
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
-
+        
         // Add overlay to root layout
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(overlayView)
+        navigationDialogView = overlayView
 
+        val searchEdit = overlayView.findViewById<EditText>(R.id.edtSearchDestination)
+        val searchResultsContainer = overlayView.findViewById<FrameLayout>(R.id.searchResultsContainer)
+        val rvSearchResults = overlayView.findViewById<RecyclerView>(R.id.rvSearchResults)
+        val txtSearchEmpty = overlayView.findViewById<TextView>(R.id.txtSearchEmpty)
         val routeInfoPreview = overlayView.findViewById<LinearLayout>(R.id.routeInfoPreview)
         val txtRouteInfo = overlayView.findViewById<TextView>(R.id.txtRouteInfo)
+        val txtRouteDestination = overlayView.findViewById<TextView>(R.id.txtRouteDestination)
         val btnStartNavigation = overlayView.findViewById<Button>(R.id.btnStartNavigation)
+
+        // Setup RecyclerView for search results
+        val resultsAdapter = GeoCodeResultAdapter { selectedResult ->
+            onDestinationSelected(selectedResult, overlayView, routeInfoPreview, 
+                txtRouteInfo, txtRouteDestination, btnStartNavigation, searchEdit, rootView)
+        }
+        rvSearchResults?.apply {
+            adapter = resultsAdapter
+            layoutManager = LinearLayoutManager(this@MainActivity)
+        }
+
+        // Setup search input with debouncing
+        val searchHandler = Handler(Looper.getMainLooper())
+        var searchRunnable: Runnable? = null
+
+        searchEdit?.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                // Cancel previous search
+                searchRunnable?.let { searchHandler.removeCallbacks(it) }
+
+                val query = s.toString().trim()
+                
+                if (query.isEmpty()) {
+                    // Hide results if search is empty
+                    searchResultsContainer?.visibility = View.GONE
+                    rvSearchResults?.visibility = View.VISIBLE
+                    txtSearchEmpty?.visibility = View.GONE
+                    return
+                }
+
+                // Debounce search - wait 500ms before searching
+                searchRunnable = Runnable {
+                    lifecycleScope.launch {
+                        val proximity = LatLng(currentLat, currentLon)
+                        val results = GeocodeApiClient.searchLocations(query, proximity, limit = 8)
+                        
+                        runOnUiThread {
+                            if (results.isEmpty()) {
+                                rvSearchResults?.visibility = View.GONE
+                                txtSearchEmpty?.visibility = View.VISIBLE
+                                txtSearchEmpty?.text = getString(R.string.no_results)
+                            } else {
+                                rvSearchResults?.visibility = View.VISIBLE
+                                txtSearchEmpty?.visibility = View.GONE
+                                resultsAdapter.updateResults(results)
+                            }
+                            searchResultsContainer?.visibility = View.VISIBLE
+                        }
+                    }
+                }
+                searchHandler.postDelayed(searchRunnable!!, 500)
+            }
+
+            override fun afterTextChanged(s: Editable?) {}
+        })
 
         // Close button (X)
         overlayView.findViewById<ImageButton>(R.id.btnClose)?.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
-        }
-
-        // Mercado Santiago button - calculate route
-        overlayView.findViewById<Button>(R.id.btnDestMercadoSantiago)?.setOnClickListener {
-            routeInfoPreview?.visibility = View.VISIBLE
-            txtRouteInfo?.text = getString(R.string.calculating_route)
-            btnStartNavigation?.isEnabled = false
-            btnStartNavigation?.text = getString(R.string.calculating)
-
-            // Calculate route to Mercado Santiago
-            calculateRouteForDialog(mercadoSantiago) { route ->
-                if (route != null) {
-                    pendingRoute = route
-                    val distKm = String.format("%.1f", route.totalDistance / 1000)
-                    val timeMin = (route.totalDuration / 60).toInt()
-                    txtRouteInfo?.text = getString(R.string.route_info_format, distKm, timeMin.toString())
-                    btnStartNavigation?.isEnabled = true
-                    btnStartNavigation?.text = getString(R.string.start_navigation)
-
-                    // Auto-start navigation after route calculation
-                    rootView.postDelayed({
-                        if (pendingRoute != null) {
-                            rootView.removeView(overlayView)
-                            startNavigation(route)
-                        }
-                    }, 300)
-                } else {
-                    txtRouteInfo?.text = getString(R.string.error_calculating_route)
-                    btnStartNavigation?.isEnabled = false
-                    btnStartNavigation?.text = getString(R.string.try_again)
-                }
-            }
+            closeNavigationDialog()
         }
 
         // Start navigation button
         btnStartNavigation?.setOnClickListener {
             pendingRoute?.let { route ->
-                rootView.removeView(overlayView)
+                closeNavigationDialog()
                 startNavigation(route)
             }
         }
 
         // Cancel button
         overlayView.findViewById<Button>(R.id.btnCancel)?.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
+            closeNavigationDialog()
         }
 
         // Close on background click
         overlayView.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
+            closeNavigationDialog()
         }
 
         // Prevent clicks on card from closing overlay
         overlayView.findViewById<View>(R.id.dialogCard)?.setOnClickListener {
             // Do nothing - prevent propagation
+        }
+        
+        // Auto-focus search field
+        searchEdit?.requestFocus()
+    }
+
+    private fun closeNavigationDialog() {
+        navigationDialogView?.let { view ->
+            val rootView = findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
+            pendingRoute = null
+            navigationDialogView = null
+        }
+    }
+
+    private fun closeOpenMenus() {
+        alertSettingsDialog.dismiss()
+        closeNavigationDialog()
+    }
+
+    private fun onDestinationSelected(
+        destination: GeoCodeResult,
+        overlayView: View,
+        routeInfoPreview: LinearLayout?,
+        txtRouteInfo: TextView?,
+        txtRouteDestination: TextView?,
+        btnStartNavigation: Button?,
+        searchEdit: EditText?,
+        rootView: ViewGroup
+    ) {
+        // Hide search results and show route info
+        overlayView.findViewById<FrameLayout>(R.id.searchResultsContainer)?.visibility = View.GONE
+        routeInfoPreview?.visibility = View.VISIBLE
+        
+        txtRouteInfo?.text = getString(R.string.calculating_route)
+        txtRouteDestination?.text = destination.name
+        btnStartNavigation?.isEnabled = false
+        btnStartNavigation?.text = getString(R.string.calculating)
+        
+        // Clear search input
+        searchEdit?.text?.clear()
+
+        // Calculate route to selected destination
+        val destinationLatLng = LatLng(destination.latitude, destination.longitude)
+        calculateRouteForDialog(destinationLatLng) { route ->
+            if (route != null) {
+                pendingRoute = route
+                val distKm = String.format("%.1f", route.totalDistance / 1000)
+                val timeMin = (route.totalDuration / 60).toInt()
+                txtRouteInfo?.text = getString(R.string.route_info_format, distKm, timeMin.toString())
+                btnStartNavigation?.isEnabled = true
+                btnStartNavigation?.text = getString(R.string.start_navigation)
+
+                // Auto-start navigation after route calculation
+                rootView.postDelayed({
+                    if (pendingRoute != null) {
+                        closeNavigationDialog()
+                        startNavigation(route)
+                    }
+                }, 300)
+            } else {
+                txtRouteInfo?.text = getString(R.string.error_calculating_route)
+                btnStartNavigation?.isEnabled = false
+                btnStartNavigation?.text = getString(R.string.try_again)
+            }
         }
     }
 
@@ -386,7 +507,17 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             isFocusable = true
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
-                showSettingsDialog()
+                if (currentSpeed >= 5.0) {
+                    inAppNotificationManager.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
+                        duration = 3_000L
+                    )
+                } else {
+                    showSettingsDialog()
+                }
             }
         }
         Log.d("SETTINGS", "Settings button setup complete: ${settingsButton != null}")
@@ -406,6 +537,28 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     @SuppressLint("InflateParams")
     private fun showSettingsDialog() {
         alertSettingsDialog.show()
+    }
+
+    /**
+     * Update button visual states based on driving mode (currentSpeed >= 5 km/h).
+     * Disables buttons visually (reduced opacity) when driving but keeps them clickable
+     * so users get the warning notification on tap attempts.
+     */
+    private fun updateDrivingModeButtons() {
+        val isDriving = currentSpeed >= 5.0
+        
+        // Settings button - fade but keep clickable
+        findViewById<View>(R.id.btnSettings)?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
+        }
+        
+        // Navigation button - fade but keep clickable
+        findViewById<TextView>(R.id.btnStartRoute)?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
+        }
+        
+        // Weather card - fade but keep clickable
+        uiController.updateWeatherCardDriving(isDriving)
     }
 
     private var weatherUpdateJob: kotlinx.coroutines.Job? = null
@@ -660,6 +813,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentLon = data.longitude
         currentBearing = data.headingDeg
         currentSpeed = data.speedKmh
+        
+        if (currentSpeed >= 5.0) {
+            closeOpenMenus()
+        }
+
+        // Update button states based on driving mode
+        updateDrivingModeButtons()
 
         vehicleTracker.updateUserPosition(data.latitude, data.longitude, data.headingDeg)
 

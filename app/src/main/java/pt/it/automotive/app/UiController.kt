@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
+import pt.it.automotive.app.notifications.InAppNotificationManager
 import pt.it.automotive.app.config.WeatherCardPreferenceManager
 import pt.it.automotive.app.config.WeatherSourcePreferenceManager
 import pt.it.automotive.app.mqtt.MqttEventRouter
@@ -40,6 +41,7 @@ import kotlin.math.roundToInt
  */
 class UiController(
     private val activity: Activity,
+    private val inAppNotificationManager: InAppNotificationManager? = null,
     private val onWeatherSourceChanged: (() -> Unit)? = null
 ) {
 
@@ -110,6 +112,9 @@ class UiController(
     private var cachedDittoData: MqttEventRouter.StationAssignmentData? = null
     private val weatherSourcePrefs = WeatherSourcePreferenceManager(activity)
 
+    // ── Current speed tracking ───────────────────────────────────────────
+    private var currentSpeed: Double = 0.0
+
     // ====================================================================
     //  Speed
     // ====================================================================
@@ -120,6 +125,7 @@ class UiController(
     }
 
     fun updateCurrentSpeed(speedKmh: Int, speedLimit: Int? = null) {
+        currentSpeed = speedKmh.toDouble()
         txtCurrentSpeed?.text = speedKmh.toString()
 
         val isSpeeding = speedLimit != null && speedKmh > speedLimit
@@ -453,6 +459,29 @@ class UiController(
      */
     private fun isValidIpma(value: Double): Boolean = value > -90
 
+    private fun configureWeatherModalBounds(dialogView: View) {
+        val card = dialogView.findViewById<View>(R.id.weatherDialogCard) ?: return
+        val metrics = activity.resources.displayMetrics
+        val density = metrics.density
+        val sideMarginPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_margin)
+        val verticalMarginPx = (36 * density).toInt()
+        val targetWidthPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_width)
+
+        val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
+        val maxHeightByRatio = (metrics.heightPixels * 0.70f).toInt()
+        val maxHeightByMargins = (metrics.heightPixels - (verticalMarginPx * 2)).coerceAtLeast(verticalMarginPx)
+        val modalHeight = minOf(maxHeightByRatio, maxHeightByMargins)
+
+        (card.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { lp ->
+            lp.width = minOf(targetWidthPx, maxWidth)
+            lp.height = modalHeight
+            lp.gravity = android.view.Gravity.CENTER
+            lp.topMargin = verticalMarginPx
+            lp.bottomMargin = verticalMarginPx
+            card.layoutParams = lp
+        }
+    }
+
     @SuppressLint("SetTextI18n")
     private fun showDittoWeatherDialog() {
         val data = cachedDittoData ?: run {
@@ -463,6 +492,7 @@ class UiController(
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
+        configureWeatherModalBounds(dialogView)
 
         // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =
@@ -564,8 +594,26 @@ class UiController(
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
-                showWeatherDialog()
+                if (currentSpeed >= 5.0) {
+                    inAppNotificationManager?.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
+                        duration = 3_000L
+                    )
+                } else {
+                    showWeatherDialog()
+                }
             }
+        }
+    }
+
+    /** Update weather card visual state based on driving speed (>= 5 km/h threshold).
+     *  Keeps card clickable so warning notification can be shown. */
+    fun updateWeatherCardDriving(isDriving: Boolean) {
+        weatherCard?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
         }
     }
 
@@ -592,6 +640,7 @@ class UiController(
         val dialogView = LayoutInflater.from(activity).inflate(R.layout.dialog_weather, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(dialogView)
+        configureWeatherModalBounds(dialogView)
 
         // ── Header ────────────────────────────────────────────────────────
         dialogView.findViewById<TextView>(R.id.txtWeatherDialogTemp)?.text =

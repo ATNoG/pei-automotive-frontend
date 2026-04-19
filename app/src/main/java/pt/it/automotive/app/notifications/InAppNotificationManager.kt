@@ -229,9 +229,7 @@ class InAppNotificationManager(private val activity: Activity) {
 
         val density = activity.resources.displayMetrics.density
         val defaultWidthPx = (420 * density).toInt()
-        val insets = rootView.rootWindowInsets
-        val systemBarOffset = insets?.systemWindowInsetTop ?: 0
-        val defaultTopMarginPx = (15 * density).toInt() + systemBarOffset
+        val defaultTopMarginPx = (15 * density).toInt()
 
         val lp = buildNotificationLayoutParams(
             rootView = rootView,

@@ -81,6 +81,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var currentSpeed: Double = 0.0
     private var currentBearing: Float = 0f
 
+    // Last Navigation Dialog view reference
+    private var navigationDialogView: View? = null
+
     // Pending route for navigation dialog
     private var pendingRoute: NavigationRoute? = null
 
@@ -182,7 +185,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.apply {
             applyPressAnimation(this@MainActivity) {
-                showNavigationDialog()
+                if (currentSpeed >= 5.0) {
+                    inAppNotificationManager.show(
+                        type = InAppNotificationManager.Type.WARNING,
+                        title = "Warning",
+                        message = "Cannot start a route while driving (speed >= 5 km/h)",
+                        duration = 3_000L
+                    )
+                } else {
+                    showNavigationDialog()
+                }
             }
         }
 
@@ -194,12 +206,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     @SuppressLint("SetTextI18n", "DefaultLocale")
     private fun showNavigationDialog() {
+        if (navigationDialogView != null) return // Already showing
+
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
         
         // Add overlay to root layout
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(overlayView)
+        navigationDialogView = overlayView
 
         val searchEdit = overlayView.findViewById<EditText>(R.id.edtSearchDestination)
         val searchResultsContainer = overlayView.findViewById<FrameLayout>(R.id.searchResultsContainer)
@@ -269,28 +284,25 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Close button (X)
         overlayView.findViewById<ImageButton>(R.id.btnClose)?.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
+            closeNavigationDialog()
         }
 
         // Start navigation button
         btnStartNavigation?.setOnClickListener {
             pendingRoute?.let { route ->
-                rootView.removeView(overlayView)
+                closeNavigationDialog()
                 startNavigation(route)
             }
         }
 
         // Cancel button
         overlayView.findViewById<Button>(R.id.btnCancel)?.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
+            closeNavigationDialog()
         }
 
         // Close on background click
         overlayView.setOnClickListener {
-            pendingRoute = null
-            rootView.removeView(overlayView)
+            closeNavigationDialog()
         }
 
         // Prevent clicks on card from closing overlay
@@ -300,6 +312,20 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         
         // Auto-focus search field
         searchEdit?.requestFocus()
+    }
+
+    private fun closeNavigationDialog() {
+        navigationDialogView?.let { view ->
+            val rootView = findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(view)
+            pendingRoute = null
+            navigationDialogView = null
+        }
+    }
+
+    private fun closeOpenMenus() {
+        alertSettingsDialog.dismiss()
+        closeNavigationDialog()
     }
 
     private fun onDestinationSelected(
@@ -338,7 +364,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 // Auto-start navigation after route calculation
                 rootView.postDelayed({
                     if (pendingRoute != null) {
-                        rootView.removeView(overlayView)
+                        closeNavigationDialog()
                         startNavigation(route)
                     }
                 }, 300)
@@ -480,11 +506,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
                 if (currentSpeed >= 5.0) {
-                    android.widget.Toast.makeText(
-                        this@MainActivity,
-                        "Cannot open settings while driving (speed >= 5 km/h)",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    inAppNotificationManager.show(
+                        type = InAppNotificationManager.Type.WARNING,
+                        title = "Warning",
+                        message = "Cannot open settings while driving (speed >= 5 km/h)",
+                        duration = 3_000L
+                    )
                 } else {
                     showSettingsDialog()
                 }
@@ -749,6 +776,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentLon = data.longitude
         currentBearing = data.headingDeg
         currentSpeed = data.speedKmh
+        
+        if (currentSpeed >= 5.0) {
+            closeOpenMenus()
+        }
 
         vehicleTracker.updateUserPosition(data.latitude, data.longitude, data.headingDeg)
 

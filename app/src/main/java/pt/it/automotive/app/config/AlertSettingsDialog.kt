@@ -30,6 +30,8 @@ class AlertSettingsDialog(
     private val mapController: MapController
 ) {
 
+    private var currentSettingsView: View? = null
+
     private companion object {
         const val MODAL_SIDE_MARGIN_DP = 24
         const val MODAL_VERTICAL_MARGIN_DP = 36
@@ -43,9 +45,11 @@ class AlertSettingsDialog(
     }
 
     fun show() {
+        if (currentSettingsView != null) return
         val settingsView = activity.layoutInflater.inflate(R.layout.dialog_settings, null)
-        configureModalBounds(settingsView)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        currentSettingsView = settingsView
+        configureModalBounds(settingsView)
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
@@ -323,13 +327,21 @@ class AlertSettingsDialog(
         }
     }
 
+    fun dismiss() {
+        currentSettingsView?.let {
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(it)
+            currentSettingsView = null
+        }
+    }
+
     // ── Close Actions ────────────────────────────────────────────────────
 
     private fun setupCloseActions(settingsView: View, rootView: ViewGroup) {
-        val dismiss = { rootView.removeView(settingsView) }
+        val dismissAction = { dismiss() }
 
-        settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener { dismiss() }
-        settingsView.setOnClickListener { dismiss() }
+        settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener { dismissAction() }
+        settingsView.setOnClickListener { dismissAction() }
 
         // Prevent clicks on card from closing overlay
         settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener { }

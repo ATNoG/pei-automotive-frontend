@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private lateinit var navigationManager: NavigationManager
     private lateinit var inAppNotificationManager: InAppNotificationManager
     private lateinit var alertNotificationManager: AlertNotificationManager
+
     // Note: both managers live in pt.it.automotive.app.notifications
     private lateinit var alertPreferenceManager: AlertPreferenceManager
     private lateinit var alertSettingsDialog: AlertSettingsDialog
@@ -441,6 +442,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             WeatherSourcePreferenceManager.Source.OPEN_WEATHER_MAP -> {
                 startOpenWeatherPolling()
             }
+
             WeatherSourcePreferenceManager.Source.DITTO -> {
                 stopOpenWeatherPolling()
                 runOnUiThread {
@@ -539,14 +541,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 normalizedCarId in USER_CAR_IDS -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
+                // SUMO-generated vehicles: any sumo-N other than the user car is shown on the map.
+                normalizedCarId.startsWith(AppConfig.SUMO_CAR_PREFIX) -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 else -> {
                     // Debug: Show actual bytes to detect hidden characters
                     val bytes = data.carId.toByteArray().joinToString(",")
                     Log.d(
                         TAG,
                         "Unknown car_id raw='${data.carId}' normalized='$normalizedCarId' " +
-                            "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
-                            "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
+                                "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
+                                "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
                     )
                 }
             }
@@ -564,7 +568,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         try {
             val json = org.json.JSONObject(payload)
             val stations = json.getJSONArray("stations")
-            Log.d(TAG, "Meteo stations update: ${stations.length()} stations, finding nearest to ($currentLat, $currentLon)")
+            Log.d(
+                TAG,
+                "Meteo stations update: ${stations.length()} stations, finding nearest to ($currentLat, $currentLon)"
+            )
 
             var nearestData: MqttEventRouter.StationAssignmentData? = null
             var minDist = Double.MAX_VALUE
@@ -599,7 +606,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             }
 
             if (nearestData != null) {
-                Log.d(TAG, "Nearest station from meteo/updates: ${nearestData.stationName} (${minDist.toInt()}m away), temp=${nearestData.temperature}°C")
+                Log.d(
+                    TAG,
+                    "Nearest station from meteo/updates: ${nearestData.stationName} (${minDist.toInt()}m away), temp=${nearestData.temperature}°C"
+                )
                 lastStationAssignment = nearestData
                 runOnUiThread { uiController.updateDittoWeatherData(nearestData) }
             } else {
@@ -611,7 +621,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     override fun onStationAssignment(data: MqttEventRouter.StationAssignmentData) {
-        Log.d(TAG, "Station assignment received: car=${data.carId}, station=${data.stationId} (${data.stationName}), temp=${data.temperature}°C, wind=${data.windIntensity}km/h")
+        Log.d(
+            TAG,
+            "Station assignment received: car=${data.carId}, station=${data.stationId} (${data.stationName}), temp=${data.temperature}°C, wind=${data.windIntensity}km/h"
+        )
         lastStationAssignment = data
         hasRealStationAssignment = true
         runOnUiThread {
@@ -830,6 +843,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun handleTrafficJamAlert(message: String) {
         try {
             val json = org.json.JSONObject(message)
+            val notificationType = json.optString("notification_type", "")
+            val alertType = json.optString("alert_type", "")
+            if (notificationType == "traffic_jam_clear" || alertType == "traffic_jam_cleared") {
+                val jamId = json.optString("jam_id", "")
+                if (jamId.isNotBlank()) {
+                    runOnUiThread { mapController.removeAccidentMarker("jam-$jamId") }
+                }
+                return
+            }
+
             val distanceM = json.optDouble("distance_m", Double.NaN)
             val jam = json.optJSONObject("jam")
             val jamId = jam?.optString("jam_id")?.takeIf { it.isNotBlank() }

@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
+import pt.it.automotive.app.notifications.InAppNotificationManager
 import pt.it.automotive.app.config.WeatherCardPreferenceManager
 import pt.it.automotive.app.config.WeatherSourcePreferenceManager
 import pt.it.automotive.app.mqtt.MqttEventRouter
@@ -40,6 +41,7 @@ import kotlin.math.roundToInt
  */
 class UiController(
     private val activity: Activity,
+    private val inAppNotificationManager: InAppNotificationManager? = null,
     private val onWeatherSourceChanged: (() -> Unit)? = null
 ) {
 
@@ -592,16 +594,26 @@ class UiController(
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
-                if (currentSpeed >= 20.0) {
-                    android.widget.Toast.makeText(
-                        activity,
-                        "Cannot open weather while driving (speed >= 20 km/h)",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                if (currentSpeed >= 5.0) {
+                    inAppNotificationManager?.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
+                        duration = 3_000L
+                    )
                 } else {
                     showWeatherDialog()
                 }
             }
+        }
+    }
+
+    /** Update weather card visual state based on driving speed (>= 5 km/h threshold).
+     *  Keeps card clickable so warning notification can be shown. */
+    fun updateWeatherCardDriving(isDriving: Boolean) {
+        weatherCard?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
         }
     }
 

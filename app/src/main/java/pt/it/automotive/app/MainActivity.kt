@@ -123,10 +123,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
-        uiController = UiController(this) { onWeatherSourceChanged() }
+        inAppNotificationManager = InAppNotificationManager(this)
+        uiController = UiController(this, inAppNotificationManager) { onWeatherSourceChanged() }
         overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
-        inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
         alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
@@ -186,10 +186,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         findViewById<TextView>(R.id.btnStartRoute)?.apply {
             applyPressAnimation(this@MainActivity) {
                 if (currentSpeed >= 5.0) {
-                    inAppNotificationManager.show(
-                        type = InAppNotificationManager.Type.WARNING,
-                        title = "Warning",
-                        message = "Cannot start a route while driving (speed >= 5 km/h)",
+                    inAppNotificationManager.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
                         duration = 3_000L
                     )
                 } else {
@@ -506,10 +507,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
                 if (currentSpeed >= 5.0) {
-                    inAppNotificationManager.show(
-                        type = InAppNotificationManager.Type.WARNING,
-                        title = "Warning",
-                        message = "Cannot open settings while driving (speed >= 5 km/h)",
+                    inAppNotificationManager.showOrUpdate(
+                        tag = "driving_mode",
+                        type = InAppNotificationManager.Type.ERROR,
+                        title = "You're driving",
+                        message = "Menus are disabled while driving",
                         duration = 3_000L
                     )
                 } else {
@@ -534,6 +536,28 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     @SuppressLint("InflateParams")
     private fun showSettingsDialog() {
         alertSettingsDialog.show()
+    }
+
+    /**
+     * Update button visual states based on driving mode (currentSpeed >= 5 km/h).
+     * Disables buttons visually (reduced opacity) when driving but keeps them clickable
+     * so users get the warning notification on tap attempts.
+     */
+    private fun updateDrivingModeButtons() {
+        val isDriving = currentSpeed >= 5.0
+        
+        // Settings button - fade but keep clickable
+        findViewById<View>(R.id.btnSettings)?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
+        }
+        
+        // Navigation button - fade but keep clickable
+        findViewById<TextView>(R.id.btnStartRoute)?.apply {
+            alpha = if (isDriving) 0.4f else 1.0f
+        }
+        
+        // Weather card - fade but keep clickable
+        uiController.updateWeatherCardDriving(isDriving)
     }
 
     private var weatherUpdateJob: kotlinx.coroutines.Job? = null
@@ -780,6 +804,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         if (currentSpeed >= 5.0) {
             closeOpenMenus()
         }
+
+        // Update button states based on driving mode
+        updateDrivingModeButtons()
 
         vehicleTracker.updateUserPosition(data.latitude, data.longitude, data.headingDeg)
 

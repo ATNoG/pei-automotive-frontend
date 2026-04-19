@@ -19,6 +19,8 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.annotation.AttrRes
+import kotlin.math.max
+import kotlin.math.min
 import java.util.Locale
 
 /**
@@ -125,6 +127,7 @@ class InAppNotificationManager(private val activity: Activity) {
             if (activity.isFinishing || activity.isDestroyed) return@post
             val view = currentView
             if (view != null && currentTag == tag && view.parent != null) {
+                ensureNotificationOnTop(view)
                 // Update in place
                 view.findViewById<TextView>(R.id.notifTitle)?.text = title
                 val msgView = view.findViewById<TextView>(R.id.notifMessage)
@@ -174,6 +177,7 @@ class InAppNotificationManager(private val activity: Activity) {
                 queue.removeFirstOrNull()
             }
             queue.addLast(notification)
+            currentView?.let { ensureNotificationOnTop(it) }
             if (!isShowing) showNext()
         }
     }
@@ -224,24 +228,24 @@ class InAppNotificationManager(private val activity: Activity) {
         view.elevation = 9999f  // float above all other in-app UI
 
         val density = activity.resources.displayMetrics.density
-        val widthPx = (420 * density).toInt()
-        val topMarginPx = (15 * density).toInt()
+        val defaultWidthPx = (420 * density).toInt()
+        val defaultTopMarginPx = (15 * density).toInt()
 
-        val lp = android.widget.FrameLayout.LayoutParams(
-            widthPx,
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-            topMargin = topMarginPx
-        }
+        val lp = buildNotificationLayoutParams(
+            rootView = rootView,
+            density = density,
+            defaultWidthPx = defaultWidthPx,
+            defaultTopMarginPx = defaultTopMarginPx
+        )
 
         rootView.addView(view, lp)
         currentView = view
         currentTag = notification.tag
+        ensureNotificationOnTop(view)
 
         // Measure and then animate in from above
         view.post {
-            view.translationY = -(view.height + topMarginPx + 60).toFloat()
+            view.translationY = -(view.height + lp.topMargin + 60).toFloat()
             view.alpha = 0f
             view.animate()
                 .translationY(0f)
@@ -265,6 +269,40 @@ class InAppNotificationManager(private val activity: Activity) {
         }
         autoDismissJob = dismissRunnable
         handler.postDelayed(dismissRunnable, notification.duration + ENTER_DURATION_MS)
+    }
+
+    private fun buildNotificationLayoutParams(
+        rootView: ViewGroup,
+        density: Float,
+        defaultWidthPx: Int,
+        defaultTopMarginPx: Int
+    ): android.widget.FrameLayout.LayoutParams {
+        val settingsCard = rootView.findViewById<View>(R.id.settingsCard)
+        val hasVisibleSettings = settingsCard?.isShown == true && settingsCard.width > 0
+
+        val widthPx: Int
+        val topMarginPx: Int
+
+        if (hasVisibleSettings) {
+            val horizontalInsetPx = (20 * density).toInt()
+            val minWidthPx = (260 * density).toInt()
+            val settingsWidth = settingsCard!!.width
+            widthPx = max(min(defaultWidthPx, settingsWidth - horizontalInsetPx * 2), minWidthPx)
+
+            // Anchor near the top edge of the settings card so banner stays inside the visible modal area.
+            topMarginPx = settingsCard.y.toInt() + (10 * density).toInt()
+        } else {
+            widthPx = defaultWidthPx
+            topMarginPx = defaultTopMarginPx
+        }
+
+        return android.widget.FrameLayout.LayoutParams(
+            widthPx,
+            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+            topMargin = topMarginPx
+        }
     }
 
     // ── Swipe gesture ────────────────────────────────────────────────────
@@ -502,5 +540,15 @@ class InAppNotificationManager(private val activity: Activity) {
         } catch (e: Exception) {
             Log.w(TAG, "Could not remove notification view: ${e.message}")
         }
+    }
+
+    private fun ensureNotificationOnTop(view: View) {
+        val parent = view.parent as? ViewGroup ?: return
+        parent.bringChildToFront(view)
+        view.bringToFront()
+        view.elevation = 9999f
+        view.translationZ = 9999f
+        parent.requestLayout()
+        parent.invalidate()
     }
 }

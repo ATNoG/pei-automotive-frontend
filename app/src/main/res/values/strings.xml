@@ -55,6 +55,9 @@
     <string name="weather_details">Weather Details</string>
     <string name="weather_toggle_card">Toggle a card to pin it to the weather card.</string>
     <string name="navigation_error">Error: %1$s</string>
+    <string name="search_destination">Search for a destination…</string>
+    <string name="no_results">No results found</string>
+    <string name="searching">Searching…</string>
     <string name="logout">Logout</string>
     <string name="unknown_user">Unknown user</string>
 </resources>

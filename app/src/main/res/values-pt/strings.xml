@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Minha Aplicação</string>
+    <string name="app_name">Automotive App</string>
     <string name="settings_title">Configurações</string>
     <string name="map_style">Estilo do Mapa</string>
     <string name="theme_mode">Modo de Tema</string>
@@ -56,6 +56,9 @@
     <string name="weather_details">Detalhes do Clima</string>
     <string name="weather_toggle_card">Alterne a carta para fixá-la à carta de previsão do tempo.</string>
     <string name="navigation_error">Erro: %1$s</string>
+    <string name="search_destination">Pesquisar por um destino…</string>
+    <string name="no_results">Nenhum resultado encontrado</string>
+    <string name="searching">A pesquisar…</string>
     <string name="logout">Terminar sessão</string>
     <string name="unknown_user">Utilizador desconhecido</string>
 </resources>

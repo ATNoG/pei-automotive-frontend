@@ -1,9 +1,10 @@
 package pt.it.automotive.app.config
 
-import android.content.res.Configuration
 import android.text.TextUtils
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -33,7 +34,13 @@ class AlertSettingsDialog(
     private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null
 ) {
 
+    private var currentSettingsView: View? = null
+
     private companion object {
+        const val MODAL_SIDE_MARGIN_DP = 24
+        const val MODAL_VERTICAL_MARGIN_DP = 36
+        const val MODAL_TARGET_WIDTH_DP = 480
+        const val MODAL_MAX_HEIGHT_RATIO = 0.70f
         const val GRID_COLUMNS_TABLET = 2
         const val GRID_GAP_DP = 10
         const val CARD_PADDING_DP = 14
@@ -44,10 +51,13 @@ class AlertSettingsDialog(
     private val changedSections = mutableSetOf<PreferencesSectionType>()
 
     fun show() {
+        if (currentSettingsView != null) return
         changedSections.clear()
 
         val settingsView = activity.layoutInflater.inflate(R.layout.dialog_settings, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+        currentSettingsView = settingsView
+        configureModalBounds(settingsView)
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
@@ -56,6 +66,33 @@ class AlertSettingsDialog(
         buildAlertGrid(settingsView)
         setupLogoutButton(settingsView)
         setupCloseActions(settingsView, rootView)
+    }
+
+    /**
+     * Keep the settings card as a centered modal (not full-screen) across displays.
+     * Tuned to remain comfortable on 1024x768 @ 160 dpi while scaling to other sizes.
+     */
+    private fun configureModalBounds(settingsView: View) {
+        val card = settingsView.findViewById<View>(R.id.settingsCard) ?: return
+        val metrics = activity.resources.displayMetrics
+        val density = metrics.density
+        val sideMarginPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_margin)
+        val verticalMarginPx = (MODAL_VERTICAL_MARGIN_DP * density).toInt()
+        val targetWidthPx = activity.resources.getDimensionPixelSize(R.dimen.dialog_width)
+
+        val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
+        val maxHeightByRatio = (metrics.heightPixels * MODAL_MAX_HEIGHT_RATIO).toInt()
+        val maxHeightByMargins = (metrics.heightPixels - (verticalMarginPx * 2)).coerceAtLeast(verticalMarginPx)
+        val modalHeight = minOf(maxHeightByRatio, maxHeightByMargins)
+
+        (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+            lp.width = minOf(targetWidthPx, maxWidth)
+            lp.height = modalHeight
+            lp.gravity = Gravity.CENTER
+            lp.topMargin = verticalMarginPx
+            lp.bottomMargin = verticalMarginPx
+            card.layoutParams = lp
+        }
     }
 
     // ── Map Style ────────────────────────────────────────────────────────
@@ -316,16 +353,24 @@ class AlertSettingsDialog(
         }
     }
 
+    fun dismiss() {
+        currentSettingsView?.let {
+            val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+            rootView.removeView(it)
+            currentSettingsView = null
+        }
+    }
+
     // ── Close Actions ────────────────────────────────────────────────────
 
     private fun setupCloseActions(settingsView: View, rootView: ViewGroup) {
-        val dismiss = {
+        val dismissAction = {
             onDialogClosed?.invoke(changedSections.toSet())
-            rootView.removeView(settingsView)
+            dismiss()
         }
 
-        settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener { dismiss() }
-        settingsView.setOnClickListener { dismiss() }
+        settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener { dismissAction() }
+        settingsView.setOnClickListener { dismissAction() }
 
         // Prevent clicks on card from closing overlay
         settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener { }

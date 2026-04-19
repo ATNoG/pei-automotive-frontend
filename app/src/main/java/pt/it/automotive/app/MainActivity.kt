@@ -13,10 +13,12 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
 import pt.it.automotive.app.auth.KeycloakClient
+import pt.it.automotive.app.auth.LoginActivity
 import pt.it.automotive.app.auth.TokenStore
 import pt.it.automotive.app.config.AlertPreferenceManager
 import pt.it.automotive.app.config.AlertSettingsDialog
@@ -30,6 +32,13 @@ import pt.it.automotive.app.notifications.InAppNotificationManager
 import pt.it.automotive.app.navigation.NavigationManager
 import pt.it.automotive.app.navigation.models.*
 import pt.it.automotive.app.navigation.routing.OsrmApiClient
+import pt.it.automotive.app.preferences.AppearancePreferences
+import pt.it.automotive.app.preferences.PreferencesRepository
+import pt.it.automotive.app.preferences.PreferencesSectionType
+import pt.it.automotive.app.preferences.PreferencesSectionUpdate
+import pt.it.automotive.app.preferences.PreferencesSyncError
+import pt.it.automotive.app.preferences.UserPreferences
+import pt.it.automotive.app.preferences.WeatherField
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -60,6 +69,14 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // Note: both managers live in pt.it.automotive.app.notifications
     private lateinit var alertPreferenceManager: AlertPreferenceManager
     private lateinit var alertSettingsDialog: AlertSettingsDialog
+    private lateinit var preferencesRepository: PreferencesRepository
+
+    private var hasHandledSessionExpiry = false
+    private var lastPreferencesErrorMessage: String? = null
+    private var lastAppliedPreferences: UserPreferences? = null
+    private var initialAppearanceAtLaunch: AppearancePreferences? = null
+    private var hadPreferencesLoading = false
+    private var initialAppearanceSyncHandled = false
 
     // Initial position from config
     private val initialPosition = AppConfig.DEFAULT_INITIAL_POSITION
@@ -93,6 +110,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             setTheme(R.style.Theme_AutomotiveApp_ColorBlind)
         }
 
+        initialAppearanceAtLaunch = AppearancePreferences(
+            darkMode = !isLightMode,
+            colorblindEnabled = appPrefs.getBoolean("colorBlindMode", false),
+            language = appPrefs.getString("language", "en") ?: "en"
+        )
+
         super.onCreate(savedInstanceState)
 
         // Set app locale based on user preference
@@ -106,15 +129,30 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Initialize OsrmApiClient with OpenRouteService API key
         OsrmApiClient.initialize(BuildConfig.OPENROUTESERVICE_API_KEY)
 
+        preferencesRepository = PreferencesRepository.create(this) {
+            runOnUiThread { handleSessionExpired() }
+        }
+
         // create controllers (after setContentView so views exist)
         mapController = MapController(this, findViewById(R.id.mapView))
-        uiController = UiController(this) { onWeatherSourceChanged() }
+        uiController = UiController(
+            this,
+            onWeatherSourceChanged = { onWeatherSourceChanged() },
+            onWeatherFieldPreferenceChanged = ::onWeatherPreferenceFieldChanged,
+            onWeatherDialogClosed = ::onWeatherDialogClosed
+        )
         overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
         inAppNotificationManager = InAppNotificationManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
         alertNotificationManager.requestNotificationPermission()
-        alertSettingsDialog = AlertSettingsDialog(this, alertPreferenceManager, mapController)
+        alertSettingsDialog = AlertSettingsDialog(
+            this,
+            alertPreferenceManager,
+            mapController,
+            onPreferenceSectionChanged = ::onPreferenceSectionChanged,
+            onDialogClosed = ::onSettingsDialogClosed
+        )
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
         vehicleTracker = VehicleTracker(
@@ -148,6 +186,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
 
+        observePreferencesState()
+        preferencesRepository.loadPreferences()
+
         // wire map ready callback
         mapController.init {
             // called when style & layers are ready
@@ -159,6 +200,94 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             )
         }
         startTokenRefreshScheduler()
+    }
+
+    private fun observePreferencesState() {
+        lifecycleScope.launch {
+            preferencesRepository.state.collect { state ->
+                when (val error = state.error) {
+                    is PreferencesSyncError.SessionExpired -> handleSessionExpired()
+                    null -> lastPreferencesErrorMessage = null
+                    else -> {
+                        if (error.userMessage != lastPreferencesErrorMessage) {
+                            lastPreferencesErrorMessage = error.userMessage
+                            Toast.makeText(this@MainActivity, error.userMessage, Toast.LENGTH_LONG).show()
+                            Log.w(TAG, "Preferences sync warning: ${error.userMessage}")
+                        }
+                    }
+                }
+
+                if (state.preferences != lastAppliedPreferences) {
+                    lastAppliedPreferences = state.preferences
+                    uiController.rebuildWeatherCardExtras()
+                }
+
+                val loadFinished = hadPreferencesLoading && !state.isLoading
+                hadPreferencesLoading = state.isLoading
+
+                if (loadFinished && !initialAppearanceSyncHandled) {
+                    initialAppearanceSyncHandled = true
+                    val launchAppearance = initialAppearanceAtLaunch
+                    if (launchAppearance != null && state.preferences.appearance != launchAppearance) {
+                        recreate()
+                        return@collect
+                    }
+                }
+            }
+        }
+    }
+
+    private fun onPreferenceSectionChanged(update: PreferencesSectionUpdate) {
+        preferencesRepository.stagePreferencesUpdate(update)
+    }
+
+    private fun onSettingsDialogClosed(changedSections: Set<PreferencesSectionType>) {
+        if (changedSections.isEmpty()) return
+
+        lifecycleScope.launch {
+            changedSections
+                .filter { it != PreferencesSectionType.APPEARANCE }
+                .forEach { section ->
+                    preferencesRepository.flushSectionAwait(section)
+                }
+
+            val shouldRecreate = if (changedSections.contains(PreferencesSectionType.APPEARANCE)) {
+                preferencesRepository.flushSectionAwait(PreferencesSectionType.APPEARANCE)
+            } else {
+                false
+            }
+
+            if (shouldRecreate) {
+                recreate()
+            }
+        }
+    }
+
+    private fun onWeatherDialogClosed(hasChanges: Boolean) {
+        if (hasChanges) {
+            preferencesRepository.flushSection(PreferencesSectionType.WEATHER)
+        }
+    }
+
+    private fun onWeatherPreferenceFieldChanged(field: WeatherField, enabled: Boolean) {
+        onPreferenceSectionChanged(
+            PreferencesSectionUpdate.WeatherUpdate(
+                field = field,
+                enabled = enabled
+            )
+        )
+    }
+
+    private fun handleSessionExpired() {
+        if (hasHandledSessionExpiry) return
+        hasHandledSessionExpiry = true
+
+        TokenStore.clear(this)
+        val intent = Intent(this, LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun setupNavigation() {
@@ -936,6 +1065,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     override fun onResume() {
         super.onResume()
         mapController.onResume()
+        preferencesRepository.retryPendingUpdate()
     }
 
     override fun onPause() {
@@ -955,6 +1085,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         navigationManager.destroy()
         alertNotificationManager.shutdown()
         inAppNotificationManager.destroy()
+        preferencesRepository.clear()
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()

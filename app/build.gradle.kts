@@ -1,4 +1,46 @@
 import java.util.Properties
+import java.net.NetworkInterface
+
+fun getLocalLanIp(): String {
+    try {
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        var fallbackIp: String? = null
+        
+        for (networkInterface in interfaces) {
+            if (networkInterface.isUp && !networkInterface.isLoopback) {
+                val addresses = networkInterface.inetAddresses
+                for (address in addresses) {
+                    if (!address.isLoopbackAddress && address.hostAddress.indexOf(':') < 0) {
+                        val ip = address.hostAddress
+                        val interfaceName = networkInterface.name.lowercase()
+                        // Prioritize Wi-Fi adapters
+                        if (interfaceName.contains("wlan") || 
+                            interfaceName.contains("wifi") ||
+                            interfaceName.contains("wireless")) {
+                            println("DEBUG: getLocalLanIp() found Wi-Fi IP: $ip (${networkInterface.name})")
+                            return ip
+                        }
+                        // Keep first non-loopback as fallback
+                        if (fallbackIp == null) {
+                            fallbackIp = ip
+                            println("DEBUG: getLocalLanIp() fallback candidate: $ip (${networkInterface.name})")
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Return fallback if no Wi-Fi found
+        if (fallbackIp != null) {
+            println("DEBUG: getLocalLanIp() using fallback: $fallbackIp")
+            return fallbackIp
+        }
+    } catch (e: Exception) {
+        println("DEBUG: getLocalLanIp() exception: ${e.message}")
+    }
+    println("DEBUG: getLocalLanIp() using hardcoded fallback: 10.0.2.2")
+    return "10.0.2.2" // Fallback
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -38,14 +80,16 @@ android {
         buildConfigField("String", "OPENROUTESERVICE_API_KEY", "\"${localProperties.getProperty("OPENROUTESERVICE_API_KEY", "")}\"")
 
         buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
+
+        buildConfigField("String", "PC_LAN_IP", "\"${getLocalLanIp()}\"")
     }
 
     buildTypes {
         debug {
             // Local emulator: 10.0.2.2 is the host machine alias inside the Android emulator.
             // Run the backend with `docker compose up` and this APK connects automatically.
-            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.0.2.2\"")
-            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.0.2.2:8081\"")
+            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"${getLocalLanIp()}\"")
+            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://${getLocalLanIp()}:8081\"")
         }
         create("staging") {
             // Staging VM. Signed with the debug keystore so it can be installed directly from

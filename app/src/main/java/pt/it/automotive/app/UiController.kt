@@ -594,7 +594,9 @@ class UiController(
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
-                if (currentSpeed >= 5.0) {
+                // Check if driving mode is active using MainActivity
+                val isDriving = (activity as? MainActivity)?.isDrivingMode() ?: (currentSpeed >= 5.0)
+                if (isDriving) {
                     inAppNotificationManager?.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,

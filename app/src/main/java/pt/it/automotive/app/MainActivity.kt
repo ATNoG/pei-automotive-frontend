@@ -18,6 +18,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.content.pm.PackageManager
+import android.car.Car
+import android.car.VehiclePropertyIds
+import android.car.hardware.CarPropertyValue
+import android.car.hardware.property.CarPropertyManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.lifecycleScope
@@ -81,6 +86,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var currentLon: Double = AppConfig.DEFAULT_INITIAL_POSITION.longitude
     private var currentSpeed: Double = 0.0
     private var currentBearing: Float = 0f
+    
+    // Track the current gear purely to enable/disable UI menus
+    private var currentGearString: String = "P"
 
     // Last Navigation Dialog view reference
     private var navigationDialogView: View? = null
@@ -91,6 +99,46 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // Cached station assignment for Ditto weather source
     private var lastStationAssignment: MqttEventRouter.StationAssignmentData? = null
     private var hasRealStationAssignment = false // true when data came from station_assigner, not client-side fallback
+
+    // Car API
+    private var car: Car? = null
+    private var carPropertyManager: CarPropertyManager? = null
+
+    private val carPropertyListener = object : CarPropertyManager.CarPropertyEventCallback {
+        override fun onChangeEvent(value: CarPropertyValue<*>) {
+            if (value.propertyId == VehiclePropertyIds.GEAR_SELECTION) {
+                val gearValue = value.value as? Int ?: return
+                val gearLabel = when (gearValue) {
+                    0x0001 -> "N"
+                    0x0002 -> "R"
+                    0x0004 -> "P"
+                    0x0008 -> "D"
+                    0x0010 -> "1"
+                    0x0020 -> "2"
+                    0x0040 -> "3"
+                    0x0080 -> "4"
+                    0x0100 -> "5"
+                    0x0200 -> "6"
+                    0x0400 -> "7"
+                    0x0800 -> "8"
+                    else -> "-"
+                }
+                currentGearString = gearLabel
+                runOnUiThread {
+                    findViewById<TextView>(R.id.txtCurrentGear)?.text = gearLabel
+                    // Automatically re-evaluate button states when gear changes
+                    updateDrivingModeButtons()
+                    if (isDrivingMode()) {
+                        closeOpenMenus()
+                    }
+                }
+            }
+        }
+
+        override fun onErrorEvent(propertyId: Int, zone: Int) {
+            Log.w(TAG, "Car property error: propertyId=$propertyId, zone=$zone")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
@@ -175,6 +223,25 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             )
         }
         startTokenRefreshScheduler()
+        setupCarApi()
+    }
+
+    private fun setupCarApi() {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
+            car = Car.createCar(this, null, Car.CAR_WAIT_TIMEOUT_WAIT_FOREVER) { carObj, ready ->
+                if (ready) {
+                    carPropertyManager = carObj.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
+                    carPropertyManager?.registerCallback(
+                        carPropertyListener,
+                        VehiclePropertyIds.GEAR_SELECTION,
+                        CarPropertyManager.SENSOR_RATE_ONCHANGE
+                    )
+                } else {
+                    carPropertyManager?.unregisterCallback(carPropertyListener)
+                    carPropertyManager = null
+                }
+            }
+        }
     }
 
     private fun setupNavigation() {
@@ -186,7 +253,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.apply {
             applyPressAnimation(this@MainActivity) {
-                if (currentSpeed >= 5.0) {
+                if (isDrivingMode()) {
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
@@ -500,6 +567,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread { uiController.showNavigationError(error) }
     }
 
+    fun isDrivingMode(): Boolean {
+        // App blocks menus if speed >= 5 km/h OR if the car is actively in a driving gear
+        val gearDriving = currentGearString == "D" || currentGearString == "R" || currentGearString.matches(Regex("[1-8]"))
+        return currentSpeed >= 5.0 || gearDriving
+    }
+
     private fun setupSettingsButton() {
         val settingsButton = findViewById<View>(R.id.btnSettings)
         settingsButton?.apply {
@@ -507,7 +580,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             isFocusable = true
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
-                if (currentSpeed >= 5.0) {
+                if (isDrivingMode()) {
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
@@ -540,12 +613,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     /**
-     * Update button visual states based on driving mode (currentSpeed >= 5 km/h).
+     * Update button visual states based on driving mode.
      * Disables buttons visually (reduced opacity) when driving but keeps them clickable
      * so users get the warning notification on tap attempts.
      */
     private fun updateDrivingModeButtons() {
-        val isDriving = currentSpeed >= 5.0
+        val isDriving = isDrivingMode()
         
         // Settings button - fade but keep clickable
         findViewById<View>(R.id.btnSettings)?.apply {
@@ -814,7 +887,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentBearing = data.headingDeg
         currentSpeed = data.speedKmh
         
-        if (currentSpeed >= 5.0) {
+        if (isDrivingMode()) {
             closeOpenMenus()
         }
 
@@ -1110,6 +1183,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
 
     override fun onDestroy() {
+        carPropertyManager?.unregisterCallback(carPropertyListener)
+        car?.disconnect()
         vehicleTracker.destroy()
         mqttEventRouter.disconnect()
         navigationManager.destroy()

@@ -94,12 +94,10 @@ class AlertSettingsDialog(
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         switchLightMode.isChecked = prefs.getBoolean("lightMode", false)
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("lightMode", isChecked).apply()
-            AppCompatDelegate.setDefaultNightMode(
-                if (isChecked) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
-            )
-            mapController.setMapStyle(isChecked)
-            activity.recreate()
+            // Directly trigger the central applyTheme method from MainActivity!
+            // No recreate(), just an immediate and imperative UI update.
+            val mainActivity = activity as? pt.it.automotive.app.MainActivity
+            mainActivity?.applyTheme(!isChecked)
         }
     }
 

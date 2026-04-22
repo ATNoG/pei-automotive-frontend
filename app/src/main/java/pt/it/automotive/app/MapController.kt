@@ -150,6 +150,7 @@ class MapController(
     fun onResume() { mapView.onResume() }
     fun onPause() { mapView.onPause() }
     fun onStop() { mapView.onStop() }
+
     fun onDestroy() { 
         stopRouteSimulation()
         stopAccidentCleanupTimer()

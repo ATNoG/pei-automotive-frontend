@@ -51,7 +51,7 @@
 
         <!-- Navigation info card (weight 1.2) -->
         <FrameLayout
-            android:background="@drawable/panel_top_box"
+            android:id="@+id/navPanelBox" android:background="@drawable/panel_top_box"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1.2"
@@ -116,7 +116,7 @@
                           app:autoSizeMaxTextSize="18sp"
                     />
                     <TextView
-                        android:text="@string/arrival"
+                        android:id="@+id/txtArrivalLabel" android:text="@string/arrival"
                         android:textColor="?attr/colorTextHint"
                         android:textSize="@dimen/text_regular"
                         android:gravity="center"
@@ -153,7 +153,7 @@
                           app:autoSizeMaxTextSize="18sp"
                     />
                     <TextView
-                        android:text="@string/distance_unit"
+                        android:id="@+id/txtDistanceLabel" android:text="@string/distance_unit"
                         android:textColor="?attr/colorTextHint"
                         android:textSize="@dimen/text_regular"
                         android:gravity="center"
@@ -191,7 +191,7 @@
 
         <!-- Lane preview / TopDownCarView (weight 2) -->
         <FrameLayout
-            android:background="@drawable/panel_lane_box"
+            android:id="@+id/lanePreviewBox" android:background="@drawable/panel_lane_box"
             android:padding="8dp"
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -450,6 +450,7 @@
             android:textSize="@dimen/text_xlarge"
         />
         <TextView
+            android:id="@+id/txtSettingsLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/settings_title"

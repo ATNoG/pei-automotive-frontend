@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // Car API
     private var car: Car? = null
     private var carPropertyManager: CarPropertyManager? = null
+    private val CAR_PERMISSION_REQUEST_CODE = 1001
 
     // Track state of Day/Night mode to prevent redundant map style updates
     private var isNightMode: Boolean = false
@@ -241,37 +242,57 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             )
         }
         startTokenRefreshScheduler()
-        setupCarApi()
+        if (checkSelfPermission("android.car.permission.CAR_EXTERIOR_ENVIRONMENT") != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                arrayOf("android.car.permission.CAR_EXTERIOR_ENVIRONMENT"), 
+                CAR_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            setupCarApi()
+        }
     }
 
     fun applyTheme(isNight: Boolean) {
         isNightMode = isNight
-        
+
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
         appPrefs.edit().putBoolean("lightMode", !isNight).apply()
-        
+
         // 1. Immediately switch map
         mapController.setMapStyle(!isNight)
-        
+
         // 2. Set default night mode to update Configuration. Do NOT recreate.
         val mode = if (isNight) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
         AppCompatDelegate.setDefaultNightMode(mode)
-        
-        // 3. Force the Activity's Theme to flush and re-resolve against the new Configuration immediately.
-        // This ensures things like InAppNotificationManager get the correct Red color instead of Black.
+
+        // 3. Force the Activity's Theme to flush
         val styleRes = if (appPrefs.getBoolean("colorBlindMode", false)) {
             R.style.Theme_AutomotiveApp_ColorBlind
         } else {
             R.style.Theme_AutomotiveApp
         }
         theme.applyStyle(styleRes, true)
-        
+
         // 4. Manually update key UI views that must reflect the change instantly
-        // To do this thoroughly without recreate, we'd invalidate or manually re-fetch backgrounds.
-        // However, the primary issue is dynamic components (notifications) drawing black. 
-        // Re-applying the style fixes the context attributes instantly for all popups and notifications.
+        uiController.refreshTheme()
     }
 
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAR_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, safe to connect to the sensor!
+                setupCarApi()
+            } else {
+                Log.w(TAG, "Car exterior environment permission denied. Auto-night mode will not work.")
+            }
+        }
+    }
+    
     private fun setupCarApi() {
         if (packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
             car = Car.createCar(this, null, Car.CAR_WAIT_TIMEOUT_WAIT_FOREVER) { carObj, ready ->

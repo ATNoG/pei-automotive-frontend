@@ -969,5 +969,7 @@ class UiController(
         } else {
             rebuildWeatherCardExtras()
         }
+
+        activity.findViewById<pt.it.automotive.app.TopDownCarView>(R.id.topDownCarView)?.updateThemeColors()
     }
 }

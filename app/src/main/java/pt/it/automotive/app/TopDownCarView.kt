@@ -209,4 +209,18 @@ class TopDownCarView @JvmOverloads constructor(
         canvas.drawCircle(userScreenX, userScreenY, carRadius * scale, userCarPaint)
     }
 
+    fun updateThemeColors() {
+        // get new theme colors
+        backgroundPaint.color = ContextCompat.getColor(context, R.color.car_view_grass)
+        roadPaint.color = ContextCompat.getColor(context, R.color.car_view_asphalt)
+        roadEdgePaint.color = ContextCompat.getColor(context, R.color.car_view_edge_line)
+        centerLinePaint.color = ContextCompat.getColor(context, R.color.car_view_center_line)
+        laneDividerPaint.color = ContextCompat.getColor(context, R.color.car_view_lane_divider)
+        userCarPaint.color = cbColor(R.color.car_view_user_car, R.color.car_view_user_car_cb)
+        otherCarPaint.color = ContextCompat.getColor(context, R.color.car_view_other_car)
+        evCarPaint.color = cbColor(R.color.car_view_ev_car, R.color.car_view_ev_car_cb)
+        evCarStrokePaint.color = cbColor(R.color.car_view_user_stroke, R.color.car_view_user_stroke_cb)
+        textPaint.color = ContextCompat.getColor(context, R.color.car_view_other_stroke)
+        invalidate()
+    }
 }

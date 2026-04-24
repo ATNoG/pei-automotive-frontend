@@ -257,7 +257,7 @@ class UiController(
             // Emoji label
             val emoji = TextView(activity).apply {
                 text = field.emoji
-                textSize = 20f
+                textSize = 24f
             }
             container.addView(emoji)
 
@@ -265,7 +265,7 @@ class UiController(
             val value = getFieldValue(field, weatherData)
             val valueTv = TextView(activity).apply {
                 text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
-                textSize = 20f
+                textSize = 24f
                 setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
@@ -319,13 +319,13 @@ class UiController(
 
             val emoji = TextView(activity).apply {
                 text = field.emoji
-                textSize = 20f
+                textSize = 24f
             }
             container.addView(emoji)
 
             val valueTv = TextView(activity).apply {
                 text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
-                textSize = 20f
+                textSize = 24f
                 setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
@@ -676,6 +676,8 @@ class UiController(
         cardSwitches.forEach { (viewId, field) ->
             dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
                 isChecked = weatherCardPrefs.isEnabled(field)
+                scaleX = 1.2f
+                scaleY = 1.2f
                 setOnCheckedChangeListener { _, checked ->
                     weatherCardPrefs.setEnabled(field, checked)
                     rebuildWeatherCardExtras(weatherData)
@@ -705,28 +707,28 @@ class UiController(
                 alertCard.addView(TextView(activity).apply {
                     text = "⚠️ ${alert.event}"
                     setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
-                    textSize = 16f
+                    textSize = 28f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 })
                 val fmt = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                 alertCard.addView(TextView(activity).apply {
                     text = "🕐 ${fmt.format(java.util.Date(alert.start * 1000))} – ${fmt.format(java.util.Date(alert.end * 1000))}"
                     setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
-                    textSize = 13f
+                    textSize = 24f
                     setPadding(0, 12, 0, 0)
                 })
                 if (alert.senderName.isNotEmpty()) {
                     alertCard.addView(TextView(activity).apply {
                         text = "📢 ${alert.senderName}"
                         setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
-                        textSize = 13f
+                        textSize = 24f
                         setPadding(0, 8, 0, 0)
                     })
                 }
                 alertCard.addView(TextView(activity).apply {
                     text = alert.description
                     setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
-                    textSize = 14f
+                    textSize = 24f
                     setPadding(0, 16, 0, 0)
                 })
                 alertsContainer?.addView(alertCard)

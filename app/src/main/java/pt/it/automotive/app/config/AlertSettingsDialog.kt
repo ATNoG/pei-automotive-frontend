@@ -221,7 +221,7 @@ class AlertSettingsDialog(
 
         val nameText = TextView(activity).apply {
             text = activity.getString(alertType.displayNameResId)
-            textSize = 14f
+            textSize = 28f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
@@ -275,13 +275,15 @@ class AlertSettingsDialog(
     ): Pair<LinearLayout, SwitchCompat> {
         val label = TextView(activity).apply {
             text = activity.getString(labelRes)
-            textSize = 12f
+            textSize = 24f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
         }
 
         val toggle = SwitchCompat(activity).apply {
             isChecked = initialChecked
             setOnCheckedChangeListener { _, checked -> onChanged(checked) }
+            scaleX = 1.2f
+            scaleY = 1.2f
         }
 
         val block = LinearLayout(activity).apply {

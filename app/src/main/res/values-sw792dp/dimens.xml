@@ -1,15 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="text_xxlarge">36sp</dimen>
-    <dimen name="text_xlarge">23sp</dimen>
+    <dimen name="text_xlarge">30sp</dimen>
     <dimen name="text_large">29sp</dimen>
-    <dimen name="text_medium">23sp</dimen>
-    <dimen name="text_medium_small">16sp</dimen>
-    <dimen name="text_regular">19sp</dimen>
-    <dimen name="text_small">14sp</dimen>
-    <dimen name="text_xsmall">12sp</dimen>
+    <dimen name="text_medium">24sp</dimen>
+    <dimen name="text_medium_small">24sp</dimen>
+    <dimen name="text_regular">24sp</dimen>
+    <dimen name="text_small">24sp</dimen>
+    <dimen name="text_xsmall">24sp</dimen>
 
-    <dimen name="dialog_width">500dp</dimen>
+    <dimen name="dialog_width">600dp</dimen>
     <dimen name="dialog_margin">25dp</dimen>
 
     <dimen name="icon_size_large">84dp</dimen>

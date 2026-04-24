@@ -112,8 +112,8 @@
                           android:layout_height="wrap_content"
                           android:maxLines="1"
                           app:autoSizeTextType="uniform"
-                          app:autoSizeMinTextSize="12sp"
-                          app:autoSizeMaxTextSize="18sp"
+                          app:autoSizeMinTextSize="24sp"
+                          app:autoSizeMaxTextSize="30sp"
                     />
                     <TextView
                         android:id="@+id/txtArrivalLabel" android:text="@string/arrival"
@@ -149,8 +149,8 @@
                           android:layout_height="wrap_content"
                           android:maxLines="1"
                           app:autoSizeTextType="uniform"
-                          app:autoSizeMinTextSize="12sp"
-                          app:autoSizeMaxTextSize="18sp"
+                          app:autoSizeMinTextSize="24sp"
+                          app:autoSizeMaxTextSize="30sp"
                     />
                     <TextView
                         android:id="@+id/txtDistanceLabel" android:text="@string/distance_unit"

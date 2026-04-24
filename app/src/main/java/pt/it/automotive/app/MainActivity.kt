@@ -51,6 +51,7 @@ import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
+import android.view.Gravity
 
 class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener {
 
@@ -362,6 +363,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
         
+        configureNavigationModalBounds(overlayView)
+
         // Add overlay to root layout
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(overlayView)
@@ -1313,6 +1316,28 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     }
                 }
             }
+        }
+    }
+    private fun configureNavigationModalBounds(overlayView: View) {
+        val card = overlayView.findViewById<View>(R.id.dialogCard) ?: return
+        val metrics = resources.displayMetrics
+        val density = metrics.density
+
+        val targetWidthPx = (600 * density).toInt()
+        val sideMarginPx = (24 * density).toInt()
+        val verticalMarginPx = (36 * density).toInt()
+
+        val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
+        
+        val maxHeightByRatio = (metrics.heightPixels * 0.48f).toInt()
+        val maxHeightByMargins = (metrics.heightPixels - (verticalMarginPx * 2)).coerceAtLeast(verticalMarginPx)
+        val modalHeight = minOf(maxHeightByRatio, maxHeightByMargins)
+
+        (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+            lp.width = minOf(targetWidthPx, maxWidth)
+            lp.height = modalHeight // <--- SET THE HEIGHT
+            lp.gravity = Gravity.CENTER
+            card.layoutParams = lp
         }
     }
 }

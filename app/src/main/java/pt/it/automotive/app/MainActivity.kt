@@ -230,8 +230,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
-        val savedLat = appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
-        val savedLon = appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
+        val savedLat = try {
+            appPrefs.getString("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.latitude
+        } catch (e: ClassCastException) {
+            appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
+        }
+        val savedLon = try {
+            appPrefs.getString("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.longitude
+        } catch (e: ClassCastException) {
+            appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
+        }
         currentLat = savedLat
         currentLon = savedLon
         // wire map ready callback
@@ -962,8 +970,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentSpeed = data.speedKmh
 
         getSharedPreferences("AppSettings", MODE_PRIVATE).edit().apply {
-            putFloat("lastLat", currentLat.toFloat())
-            putFloat("lastLon", currentLon.toFloat())
+            putString("lastLat", currentLat.toString())
+            putString("lastLon", currentLon.toString())
             apply()
         }
         

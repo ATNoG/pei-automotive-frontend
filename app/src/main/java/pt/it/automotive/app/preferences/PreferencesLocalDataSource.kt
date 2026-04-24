@@ -4,7 +4,9 @@ import android.content.Context
 
 interface PreferencesLocalStore {
     fun readSnapshot(): UserPreferences?
+    fun readSnapshotForUser(currentUserId: String): UserPreferences?
     fun saveSnapshot(preferences: UserPreferences)
+    fun clearSnapshot()
     fun readUiPreferences(): UserPreferences
     fun applyToUiPreferences(preferences: UserPreferences): LocalApplyResult
 }
@@ -20,6 +22,7 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
         const val ALERT_PREFS = "AlertPreferences"
         const val WEATHER_CARD_PREFS = "WeatherCardPrefs"
         const val SNAPSHOT_PREFS = "BackendPreferencesCache"
+        const val WEATHER_SOURCE_PREFS = "WeatherSourcePrefs"
 
         const val SNAPSHOT_KEY = "snapshot_json"
 
@@ -42,6 +45,7 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
     private val alertPrefs = context.getSharedPreferences(ALERT_PREFS, Context.MODE_PRIVATE)
     private val weatherPrefs = context.getSharedPreferences(WEATHER_CARD_PREFS, Context.MODE_PRIVATE)
     private val snapshotPrefs = context.getSharedPreferences(SNAPSHOT_PREFS, Context.MODE_PRIVATE)
+    private val weatherSourcePrefs = context.getSharedPreferences(WEATHER_SOURCE_PREFS, Context.MODE_PRIVATE)
 
     override fun readSnapshot(): UserPreferences? {
         val json = snapshotPrefs.getString(SNAPSHOT_KEY, null) ?: return null
@@ -50,6 +54,24 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
 
     override fun saveSnapshot(preferences: UserPreferences) {
         snapshotPrefs.edit().putString(SNAPSHOT_KEY, PreferencesJsonMapper.serializePreferences(preferences)).apply()
+    }
+
+    override fun clearSnapshot() {
+        snapshotPrefs.edit().clear().apply()
+        appSettingsPrefs.edit().clear().apply()
+        alertPrefs.edit().clear().apply()
+        weatherPrefs.edit().clear().apply()
+        weatherSourcePrefs.edit().clear().apply()
+    }
+
+    /**
+     * Returns the cached snapshot only if it belongs to [currentUserId].
+     * Discards silently (returns null) if the cached data belongs to a different user,
+     * preventing preference bleed when a network/server error occurs on first load.
+     */
+    override fun readSnapshotForUser(currentUserId: String): UserPreferences? {
+        val snapshot = readSnapshot() ?: return null
+        return if (snapshot.userId == currentUserId) snapshot else null
     }
 
     override fun readUiPreferences(): UserPreferences {

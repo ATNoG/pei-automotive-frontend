@@ -32,13 +32,16 @@ data class PreferencesSyncState(
     val isLoading: Boolean,
     val isSyncing: Boolean,
     val hasPendingRetry: Boolean,
-    val error: PreferencesSyncError?
+    val error: PreferencesSyncError?,
+    /** True only after a successful GET from the backend — used to gate recreate() in the UI. */
+    val loadedFromBackend: Boolean = false
 )
 
 class PreferencesRepository(
     private val api: PreferencesApi,
     private val localStore: PreferencesLocalStore,
     private val tokenProvider: () -> String?,
+    private val userIdProvider: () -> String?,
     private val onAuthInvalid: () -> Unit = {},
     private val maxRetryAttempts: Int = 2,
     private val retryDelayMs: Long = 2_000L,
@@ -49,9 +52,11 @@ class PreferencesRepository(
     private val dirtySections = mutableSetOf<PreferencesSectionType>()
 
     private val _state = MutableStateFlow(
+        // Start with defaults and isLoading=true so the UI never renders stale data
+        // from a previous user session while awaiting the backend response.
         PreferencesSyncState(
-            preferences = localStore.readSnapshot() ?: localStore.readUiPreferences(),
-            isLoading = false,
+            preferences = PreferencesDefaults.create(),
+            isLoading = true,
             isSyncing = false,
             hasPendingRetry = false,
             error = null
@@ -99,6 +104,24 @@ class PreferencesRepository(
         scope.cancel()
     }
 
+    /**
+     * Clears all locally cached preferences (snapshot + UI SharedPreferences) and resets
+     * the in-memory state to defaults. Call this on logout so that the next user
+     * starts with a clean slate instead of inheriting the previous user's data.
+     */
+    fun clearLocalData() {
+        localStore.clearSnapshot()
+        _state.value = PreferencesSyncState(
+            preferences = PreferencesDefaults.create(),
+            isLoading = false,
+            isSyncing = false,
+            hasPendingRetry = false,
+            error = null
+        )
+        pendingSectionType = null
+        dirtySections.clear()
+    }
+
     internal suspend fun loadPreferencesInternal() {
         val token = tokenProvider()
         if (token.isNullOrBlank()) {
@@ -111,9 +134,15 @@ class PreferencesRepository(
             error = null
         )
 
-        val localSnapshot = localStore.readSnapshot()
-        if (localSnapshot != null) {
-            _state.value = _state.value.copy(preferences = localSnapshot)
+        // Only surface a local snapshot to the UI if it belongs to the current user.
+        // This prevents showing stale data from a previous user if clearLocalData()
+        // was not called (e.g., cold start after an abnormal termination).
+        val currentUserId = userIdProvider()
+        if (currentUserId != null) {
+            val ownedSnapshot = localStore.readSnapshotForUser(currentUserId)
+            if (ownedSnapshot != null) {
+                _state.value = _state.value.copy(preferences = ownedSnapshot)
+            }
         }
 
         when (val result = api.getPreferences(token)) {
@@ -125,7 +154,8 @@ class PreferencesRepository(
                     preferences = result.preferences,
                     isLoading = false,
                     error = null,
-                    hasPendingRetry = false
+                    hasPendingRetry = false,
+                    loadedFromBackend = true
                 )
 
                 if (applied.appearanceChanged) {
@@ -322,6 +352,7 @@ class PreferencesRepository(
                 api = PreferencesApiService(),
                 localStore = PreferencesLocalDataSource(context),
                 tokenProvider = { TokenStore.getAccessToken(context) },
+                userIdProvider = { TokenStore.getUserId(context) },
                 onAuthInvalid = onAuthInvalid
             )
         }

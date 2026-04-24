@@ -168,7 +168,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             alertPreferenceManager,
             mapController,
             onPreferenceSectionChanged = ::onPreferenceSectionChanged,
-            onDialogClosed = ::onSettingsDialogClosed
+            onDialogClosed = ::onSettingsDialogClosed,
+            onLogout = { preferencesRepository.clearLocalData() }
         )
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
@@ -242,7 +243,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 val loadFinished = hadPreferencesLoading && !state.isLoading
                 hadPreferencesLoading = state.isLoading
 
-                if (loadFinished && !initialAppearanceSyncHandled) {
+                // Only recreate the activity when the backend has confirmed data.
+                // Without this guard, a 500/network error would trigger recreate() in a loop
+                // because defaults != the appearance stored in AppSettings.
+                if (loadFinished && !initialAppearanceSyncHandled && state.loadedFromBackend) {
                     initialAppearanceSyncHandled = true
                     val launchAppearance = initialAppearanceAtLaunch
                     if (launchAppearance != null && state.preferences.appearance != launchAppearance) {
@@ -299,6 +303,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         if (hasHandledSessionExpiry) return
         hasHandledSessionExpiry = true
 
+        preferencesRepository.clearLocalData()
         TokenStore.clear(this)
         val intent = Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

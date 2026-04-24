@@ -31,7 +31,8 @@ class AlertSettingsDialog(
     private val alertPreferenceManager: AlertPreferenceManager,
     private val mapController: MapController,
     private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
-    private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null
+    private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
+    private val onLogout: (() -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
@@ -341,10 +342,13 @@ class AlertSettingsDialog(
         usernameTextView?.text = username?.let { "@$it" } ?: ""
 
         btnLogout?.setOnClickListener {
-            // 1. Clear saved tokens
+            // 1. Clear local preferences cache so the next user starts fresh
+            onLogout?.invoke()
+
+            // 2. Clear saved tokens
             TokenStore.clear(activity)
-            
-            // 2. Redirect to LoginActivity and clear the back stack
+
+            // 3. Redirect to LoginActivity and clear the back stack
             val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
             }

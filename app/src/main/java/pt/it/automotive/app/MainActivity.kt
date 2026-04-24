@@ -230,14 +230,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
-
+        val savedLat = appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
+        val savedLon = appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
+        currentLat = savedLat
+        currentLon = savedLon
         // wire map ready callback
         mapController.init {
-            // called when style & layers are ready
-            // Set initial position on the map
+            // set initial position from saved state, config if no saved state
             mapController.setSingleLocation(
-                initialPosition.latitude,
-                initialPosition.longitude,
+                currentLat,
+                currentLon,
                 0f
             )
         }
@@ -958,6 +960,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentLon = data.longitude
         currentBearing = data.headingDeg
         currentSpeed = data.speedKmh
+
+        getSharedPreferences("AppSettings", MODE_PRIVATE).edit().apply {
+            putFloat("lastLat", currentLat.toFloat())
+            putFloat("lastLon", currentLon.toFloat())
+            apply()
+        }
         
         if (isDrivingMode()) {
             closeOpenMenus()

@@ -52,6 +52,7 @@ import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
 import android.view.Gravity
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener {
 
@@ -130,7 +131,6 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 }
                 currentGearString = gearLabel
                 runOnUiThread {
-                    findViewById<TextView>(R.id.txtCurrentGear)?.text = gearLabel
                     // Automatically re-evaluate button states when gear changes
                     updateDrivingModeButtons()
                     if (isDrivingMode()) {
@@ -705,17 +705,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun updateDrivingModeButtons() {
         val isDriving = isDrivingMode()
         
-        // Settings button - fade but keep clickable
-        findViewById<View>(R.id.btnSettings)?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
-        }
+        // Settings button
+        val settingsBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
+        findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(this, settingsBg)
         
-        // Navigation button - fade but keep clickable
-        findViewById<TextView>(R.id.btnStartRoute)?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
-        }
+        // Navigation button
+        val navBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.panel_top_box
+        findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(this, navBg)
         
-        // Weather card - fade but keep clickable
+        // Weather card
         uiController.updateWeatherCardDriving(isDriving)
     }
 
@@ -1335,7 +1333,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
             lp.width = minOf(targetWidthPx, maxWidth)
-            lp.height = modalHeight // <--- SET THE HEIGHT
+            lp.height = modalHeight
             lp.gravity = Gravity.CENTER
             card.layoutParams = lp
         }

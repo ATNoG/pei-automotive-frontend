@@ -35,13 +35,13 @@ class AlertSettingsDialog(
     private companion object {
         const val MODAL_SIDE_MARGIN_DP = 24
         const val MODAL_VERTICAL_MARGIN_DP = 36
-        const val MODAL_TARGET_WIDTH_DP = 480
+        const val MODAL_TARGET_WIDTH_DP = 640
         const val MODAL_MAX_HEIGHT_RATIO = 0.70f
         const val GRID_COLUMNS_TABLET = 2
         const val GRID_GAP_DP = 10
         const val CARD_PADDING_DP = 14
-        const val CONTROL_GAP_DP = 10
-        const val CARD_TITLE_BOTTOM_GAP_DP = 10
+        const val CONTROL_GAP_DP = 16
+        const val CARD_TITLE_BOTTOM_GAP_DP = 16
     }
 
     fun show() {
@@ -91,6 +91,8 @@ class AlertSettingsDialog(
 
     private fun setupMapStyleToggle(settingsView: View) {
         val switchLightMode = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchLightMode)
+        switchLightMode.scaleX = 1.2f
+        switchLightMode.scaleY = 1.2f
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         switchLightMode.isChecked = prefs.getBoolean("lightMode", false)
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
@@ -133,6 +135,8 @@ class AlertSettingsDialog(
 
     private fun setupColorBlindToggle(settingsView: View) {
         val switchColorBlind = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchColorBlind)
+        switchColorBlind.scaleX = 1.2f
+        switchColorBlind.scaleY = 1.2f
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         switchColorBlind.isChecked = prefs.getBoolean("colorBlindMode", false)
         switchColorBlind.setOnCheckedChangeListener { _, isChecked ->
@@ -277,6 +281,10 @@ class AlertSettingsDialog(
             text = activity.getString(labelRes)
             textSize = 24f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.marginEnd = (16 * activity.resources.displayMetrics.density).toInt() }
         }
 
         val toggle = SwitchCompat(activity).apply {

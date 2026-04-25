@@ -615,7 +615,8 @@ class UiController(
      *  Keeps card clickable so warning notification can be shown. */
     fun updateWeatherCardDriving(isDriving: Boolean) {
         weatherCard?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
+            val bgRes = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
+            weatherCard?.background = ContextCompat.getDrawable(activity, bgRes)
         }
     }
 
@@ -934,10 +935,14 @@ class UiController(
         val colorTertiary = resolveThemeColor(R.attr.colorTextTertiary)
         val colorIcon = resolveThemeColor(R.attr.colorIconDefault)
 
+        val isDriving = (activity as? MainActivity)?.isDrivingMode() ?: false
+        val floatingBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
+        val navBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.panel_top_box
+
         // update backgrounds (cards, banners, panels)
-        activity.findViewById<View>(R.id.weatherBadge)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
-        activity.findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
-        activity.findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_top_box)
+        activity.findViewById<View>(R.id.weatherBadge)?.background = ContextCompat.getDrawable(activity, floatingBg)
+        activity.findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(activity, floatingBg)
+        activity.findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(activity, navBg)
         activity.findViewById<View>(R.id.lanePreviewBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_lane_box)
         activity.findViewById<View>(R.id.speedArea)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_bottom_speed)
         activity.findViewById<View>(R.id.navigationBanner)?.background = ContextCompat.getDrawable(activity, R.drawable.card_shadow)
@@ -950,7 +955,6 @@ class UiController(
         txtCurrentSpeed?.setTextColor(colorPrimary)
         txtSpeedUnit?.setTextColor(colorPrimary)
         activity.findViewById<TextView>(R.id.btnStartRoute)?.setTextColor(colorPrimary)
-        activity.findViewById<TextView>(R.id.txtCurrentGear)?.setTextColor(colorPrimary)
         txtNavArrival?.setTextColor(colorPrimary)
         txtNavDistance?.setTextColor(colorPrimary)
         activity.findViewById<TextView>(R.id.txtSettingsLabel)?.setTextColor(colorPrimary)

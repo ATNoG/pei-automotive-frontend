@@ -73,7 +73,7 @@ class PreferencesRepository(
     fun updatePreferences(section: PreferencesSectionUpdate) {
         scope.launch {
             stagePreferencesInternal(section)
-            flushSectionInternal(section.sectionType)
+            flushDirtySectionsInternal()
         }
     }
 
@@ -83,20 +83,20 @@ class PreferencesRepository(
         }
     }
 
-    fun flushSection(sectionType: PreferencesSectionType) {
+    fun flushDirtySections() {
         scope.launch {
-            flushSectionInternal(sectionType)
+            flushDirtySectionsInternal()
         }
     }
 
-    suspend fun flushSectionAwait(sectionType: PreferencesSectionType): Boolean {
-        return flushSectionInternal(sectionType)
+    suspend fun flushDirtySectionsAwait(): Boolean {
+        return flushDirtySectionsInternal()
     }
 
     fun retryPendingUpdate() {
-        val pending = pendingSectionType ?: return
+        if (dirtySections.isEmpty()) return
         scope.launch {
-            flushSectionInternal(pending)
+            flushDirtySectionsInternal()
         }
     }
 
@@ -216,8 +216,9 @@ class PreferencesRepository(
         )
     }
 
-    internal suspend fun flushSectionInternal(sectionType: PreferencesSectionType): Boolean {
-        if (!dirtySections.contains(sectionType) && pendingSectionType != sectionType) {
+    internal suspend fun flushDirtySectionsInternal(): Boolean {
+        val sectionsToFlush = dirtySections.toSet()
+        if (sectionsToFlush.isEmpty()) {
             return true
         }
 
@@ -234,7 +235,7 @@ class PreferencesRepository(
             error = null
         )
 
-        val payload = PreferencesPatchFactory.buildPatchPayload(currentPreferences, sectionType)
+        val payload = PreferencesPatchFactory.buildPatchPayload(currentPreferences, sectionsToFlush)
 
         var result: PreferencesApiResult = api.patchPreferences(token, payload)
         var attempts = 0
@@ -247,14 +248,29 @@ class PreferencesRepository(
         when (result) {
             is PreferencesApiResult.Success -> {
                 pendingSectionType = null
-                dirtySections.remove(sectionType)
-                localStore.applyToUiPreferences(result.preferences)
-                localStore.saveSnapshot(result.preferences)
+                sectionsToFlush.forEach { dirtySections.remove(it) }
+                
+                // If there are still dirty sections that were added DURING the network call,
+                // we must preserve them so they aren't overwritten by the backend's response.
+                var finalPreferences = result.preferences
+                if (dirtySections.contains(PreferencesSectionType.APPEARANCE)) {
+                    finalPreferences = finalPreferences.copy(appearance = _state.value.preferences.appearance)
+                }
+                if (dirtySections.contains(PreferencesSectionType.ALERTS)) {
+                    finalPreferences = finalPreferences.copy(alerts = _state.value.preferences.alerts)
+                }
+                if (dirtySections.contains(PreferencesSectionType.WEATHER)) {
+                    finalPreferences = finalPreferences.copy(weather = _state.value.preferences.weather)
+                }
+
+                localStore.applyToUiPreferences(finalPreferences)
+                localStore.saveSnapshot(finalPreferences)
                 _state.value = _state.value.copy(
-                    preferences = result.preferences,
+                    preferences = finalPreferences,
                     isSyncing = false,
                     hasPendingRetry = false,
-                    error = null
+                    error = null,
+                    loadedFromBackend = true
                 )
                 return true
             }
@@ -266,7 +282,7 @@ class PreferencesRepository(
 
             is PreferencesApiResult.ValidationError -> {
                 pendingSectionType = null
-                dirtySections.remove(sectionType)
+                sectionsToFlush.forEach { dirtySections.remove(it) }
                 _state.value = _state.value.copy(
                     isSyncing = false,
                     error = PreferencesSyncError.Validation(
@@ -279,7 +295,7 @@ class PreferencesRepository(
             }
 
             is PreferencesApiResult.NetworkError -> {
-                pendingSectionType = sectionType
+                pendingSectionType = sectionsToFlush.first() // kept for compatibility, though dirtySections has everything
                 _state.value = _state.value.copy(
                     isSyncing = false,
                     hasPendingRetry = true,
@@ -294,7 +310,7 @@ class PreferencesRepository(
             }
 
             is PreferencesApiResult.HttpError -> {
-                pendingSectionType = sectionType
+                pendingSectionType = sectionsToFlush.first()
                 _state.value = _state.value.copy(
                     isSyncing = false,
                     hasPendingRetry = true,

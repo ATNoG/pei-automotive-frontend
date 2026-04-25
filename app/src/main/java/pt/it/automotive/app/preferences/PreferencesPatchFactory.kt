@@ -40,49 +40,43 @@ object PreferencesPatchFactory {
 
     fun buildPatchPayload(
         mergedPreferences: UserPreferences,
-        sectionType: PreferencesSectionType
+        sectionTypes: Set<PreferencesSectionType>
     ): PreferencesPatchPayloadDto {
-        return when (sectionType) {
-            PreferencesSectionType.APPEARANCE -> {
-                PreferencesPatchPayloadDto(
-                    appearance = AppearanceDto(
-                        darkMode = mergedPreferences.appearance.darkMode,
-                        colorblindEnabled = mergedPreferences.appearance.colorblindEnabled,
-                        language = normalizeLanguage(mergedPreferences.appearance.language)
-                    )
+        return PreferencesPatchPayloadDto(
+            appearance = if (sectionTypes.contains(PreferencesSectionType.APPEARANCE)) {
+                AppearanceDto(
+                    darkMode = mergedPreferences.appearance.darkMode,
+                    colorblindEnabled = mergedPreferences.appearance.colorblindEnabled,
+                    language = normalizeLanguage(mergedPreferences.appearance.language)
                 )
-            }
+            } else null,
 
-            PreferencesSectionType.ALERTS -> {
+            alerts = if (sectionTypes.contains(PreferencesSectionType.ALERTS)) {
                 val alerts = mergedPreferences.alerts
-                PreferencesPatchPayloadDto(
-                    alerts = AlertsDto(
-                        accident = alerts.accident.toDto(),
-                        speeding = alerts.speeding.toDto(),
-                        weather = alerts.weather.toDto(),
-                        overtaking = alerts.overtaking.toDto(),
-                        emergencyVehicle = alerts.emergencyVehicle.toDto(),
-                        navigation = alerts.navigation.toDto(),
-                        traffic = alerts.traffic.toDto(),
-                        maneuver = alerts.maneuver.toDto()
-                    )
+                AlertsDto(
+                    accident = alerts.accident.toDto(),
+                    speeding = alerts.speeding.toDto(),
+                    weather = alerts.weather.toDto(),
+                    overtaking = alerts.overtaking.toDto(),
+                    emergencyVehicle = alerts.emergencyVehicle.toDto(),
+                    navigation = alerts.navigation.toDto(),
+                    traffic = alerts.traffic.toDto(),
+                    maneuver = alerts.maneuver.toDto()
                 )
-            }
+            } else null,
 
-            PreferencesSectionType.WEATHER -> {
+            weather = if (sectionTypes.contains(PreferencesSectionType.WEATHER)) {
                 val weather = mergedPreferences.weather
-                PreferencesPatchPayloadDto(
-                    weather = WeatherDto(
-                        feelsLike = weather.feelsLike,
-                        wind = weather.wind,
-                        humidity = weather.humidity,
-                        pressure = weather.pressure,
-                        visibility = weather.visibility,
-                        uvIndex = weather.uvIndex
-                    )
+                WeatherDto(
+                    feelsLike = weather.feelsLike,
+                    wind = weather.wind,
+                    humidity = weather.humidity,
+                    pressure = weather.pressure,
+                    visibility = weather.visibility,
+                    uvIndex = weather.uvIndex
                 )
-            }
-        }
+            } else null
+        )
     }
 
     private fun normalizeLanguage(language: String): String {

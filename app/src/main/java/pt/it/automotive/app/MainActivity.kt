@@ -266,19 +266,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         if (changedSections.isEmpty()) return
 
         lifecycleScope.launch {
-            changedSections
-                .filter { it != PreferencesSectionType.APPEARANCE }
-                .forEach { section ->
-                    preferencesRepository.flushSectionAwait(section)
-                }
+            val success = preferencesRepository.flushDirtySectionsAwait()
 
-            val shouldRecreate = if (changedSections.contains(PreferencesSectionType.APPEARANCE)) {
-                preferencesRepository.flushSectionAwait(PreferencesSectionType.APPEARANCE)
-            } else {
-                false
-            }
-
-            if (shouldRecreate) {
+            if (success && changedSections.contains(PreferencesSectionType.APPEARANCE)) {
                 recreate()
             }
         }
@@ -286,7 +276,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     private fun onWeatherDialogClosed(hasChanges: Boolean) {
         if (hasChanges) {
-            preferencesRepository.flushSection(PreferencesSectionType.WEATHER)
+            preferencesRepository.flushDirtySections()
         }
     }
 

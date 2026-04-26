@@ -60,7 +60,7 @@
             <!-- START ROUTE button -->
             <LinearLayout
                 android:id="@+id/startRouteContainer"
-                android:orientation="vertical"
+                android:orientation="horizontal"
                 android:padding="@dimen/card_corner_radius"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -81,13 +81,13 @@
                 />
                 <ImageView
                     android:id="@+id/imgLockNav"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:layout_marginStart="16dp"
                     android:layout_gravity="center"
                     android:src="@drawable/ic_lock" 
                     android:visibility="gone" 
-                    android:tint="?android:attr/textColorSecondary" 
+                    app:tint="?attr/colorIconDefault"
                 />
             </LinearLayout>
 
@@ -369,7 +369,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_lock" 
             android:visibility="gone" 
-            android:tint="?android:attr/textColorSecondary" 
+            app:tint="?attr/colorIconDefault"
         />
     </LinearLayout>
 
@@ -466,7 +466,7 @@
             android:layout_gravity="center"
             android:src="@drawable/ic_lock" 
             android:visibility="gone" 
-            android:tint="?android:attr/textColorSecondary" 
+            app:tint="?attr/colorIconDefault" 
         />
     </LinearLayout>
 

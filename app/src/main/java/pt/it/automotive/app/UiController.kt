@@ -937,18 +937,14 @@ class UiController(
         val colorTertiary = resolveThemeColor(R.attr.colorTextTertiary)
         val colorIcon = resolveThemeColor(R.attr.colorIconDefault)
 
-        val isDriving = (activity as? MainActivity)?.isDrivingMode() ?: false
-        val floatingBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
-        val navBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.panel_top_box
-
         // update backgrounds (cards, banners, panels)
-        activity.findViewById<View>(R.id.weatherBadge)?.background = ContextCompat.getDrawable(activity, floatingBg)
-        activity.findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(activity, floatingBg)
-        activity.findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(activity, navBg)
+        activity.findViewById<View>(R.id.weatherBadge)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
+        activity.findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
+        activity.findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_top_box)
         activity.findViewById<View>(R.id.lanePreviewBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_lane_box)
         activity.findViewById<View>(R.id.speedArea)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_bottom_speed)
         activity.findViewById<View>(R.id.navigationBanner)?.background = ContextCompat.getDrawable(activity, R.drawable.card_shadow)
-
+        
         // update background color of the whole activity (behind cards and panels)
         activity.window.decorView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
 
@@ -970,6 +966,9 @@ class UiController(
         // update icon colors
         activity.findViewById<ImageView>(R.id.imgManeuverIcon)?.setColorFilter(colorIcon)
         activity.findViewById<ImageView>(R.id.btnStopNavigation)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockNav)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockSettings)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockWeather)?.setColorFilter(colorIcon)
 
         // rebuild weather card extras to apply new text colors
         if (getWeatherSource() == WeatherSourcePreferenceManager.Source.DITTO) {

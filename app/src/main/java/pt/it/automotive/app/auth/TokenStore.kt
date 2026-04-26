@@ -103,4 +103,21 @@ object TokenStore {
             null
         }
     }
+
+    /**
+     * Returns the Keycloak user UUID (the "sub" claim) from the access token.
+     * This is the same identifier used as [user_id] in the backend database,
+     * so it can be used to validate that a cached preferences snapshot belongs
+     * to the currently authenticated user.
+     */
+    fun getUserId(ctx: Context): String? {
+        val token = getAccessToken(ctx) ?: return null
+        return try {
+            val payloadB64 = token.split(".")[1]
+            val decoded = String(Base64.decode(payloadB64, Base64.URL_SAFE or Base64.NO_PADDING))
+            JSONObject(decoded).optString("sub", null)?.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

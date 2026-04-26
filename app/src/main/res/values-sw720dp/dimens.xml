@@ -9,7 +9,7 @@
     <dimen name="text_small">24sp</dimen>
     <dimen name="text_xsmall">24sp</dimen>
 
-    <dimen name="dialog_width">500dp</dimen>
+    <dimen name="dialog_width">640dp</dimen>
     <dimen name="dialog_margin">25dp</dimen>
     
     <dimen name="icon_size_large">80dp</dimen>

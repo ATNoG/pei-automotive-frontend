@@ -219,24 +219,22 @@ class InAppNotificationManager(private val activity: Activity) {
             return
         }
 
-        val rootView = activity.findViewById<ViewGroup>(android.R.id.content) ?: run {
-            isShowing = false
-            return
-        }
+        val rootView = activity.findViewById<ViewGroup>(R.id.mainContainer) 
+            ?: activity.findViewById<ViewGroup>(android.R.id.content) 
+            ?: run {
+                isShowing = false
+                return
+            }
 
         val view = inflateNotificationView(notification)
         view.elevation = 9999f  // float above all other in-app UI
 
         val density = activity.resources.displayMetrics.density
-        val defaultWidthPx = (420 * density).toInt()
-        val defaultTopMarginPx = (15 * density).toInt()
+        val screenWidthPx = activity.resources.displayMetrics.widthPixels
+        val desiredWidthPx = (420 * density).toInt()
+        val topMarginPx = (16 * density).toInt()
 
-        val lp = buildNotificationLayoutParams(
-            rootView = rootView,
-            density = density,
-            defaultWidthPx = defaultWidthPx,
-            defaultTopMarginPx = defaultTopMarginPx
-        )
+        val lp = buildNotificationLayoutParams(rootView, desiredWidthPx, topMarginPx)
 
         rootView.addView(view, lp)
         currentView = view
@@ -256,12 +254,10 @@ class InAppNotificationManager(private val activity: Activity) {
                 .start()
         }
 
-        // Dismiss button intentionally removed — notifications are dismissed by swipe or auto-dismiss.
-
-        // Wire swipe-to-dismiss
+        // Swipe-to-dismiss
         setupSwipeDismiss(view, rootView, notification)
 
-        // Schedule auto-dismiss after enter animation + display duration
+        // Auto-dismiss
         val dismissRunnable = Runnable {
             if (view.parent != null) {
                 animateOut(view, rootView, translationX = 0f, notification.onDismissed)
@@ -273,35 +269,27 @@ class InAppNotificationManager(private val activity: Activity) {
 
     private fun buildNotificationLayoutParams(
         rootView: ViewGroup,
-        density: Float,
-        defaultWidthPx: Int,
-        defaultTopMarginPx: Int
-    ): android.widget.FrameLayout.LayoutParams {
-        val settingsCard = rootView.findViewById<View>(R.id.settingsCard)
-        val hasVisibleSettings = settingsCard?.isShown == true && settingsCard.width > 0
-
-        val widthPx: Int
-        val topMarginPx: Int
-
-        if (hasVisibleSettings) {
-            val horizontalInsetPx = (20 * density).toInt()
-            val minWidthPx = (260 * density).toInt()
-            val settingsWidth = settingsCard!!.width
-            widthPx = max(min(defaultWidthPx, settingsWidth - horizontalInsetPx * 2), minWidthPx)
-
-            // Anchor near the top edge of the settings card so banner stays inside the visible modal area.
-            topMarginPx = settingsCard.y.toInt() + (10 * density).toInt()
+        widthPx: Int,
+        topMarginPx: Int
+    ): ViewGroup.MarginLayoutParams {
+        return if (rootView is androidx.constraintlayout.widget.ConstraintLayout) {
+            androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+                widthPx,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+                topMargin = topMarginPx
+            }
         } else {
-            widthPx = defaultWidthPx
-            topMarginPx = defaultTopMarginPx
-        }
-
-        return android.widget.FrameLayout.LayoutParams(
-            widthPx,
-            android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
-            topMargin = topMarginPx
+            android.widget.FrameLayout.LayoutParams(
+                widthPx,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.TOP or android.view.Gravity.CENTER_HORIZONTAL
+                this.topMargin = topMarginPx
+            }
         }
     }
 

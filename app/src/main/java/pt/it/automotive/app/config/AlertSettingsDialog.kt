@@ -11,12 +11,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import pt.it.automotive.app.MapController
 import pt.it.automotive.app.R
 import pt.it.automotive.app.auth.LoginActivity
 import pt.it.automotive.app.auth.TokenStore
+import pt.it.automotive.app.preferences.AlertCategory
+import pt.it.automotive.app.preferences.PreferencesSectionType
+import pt.it.automotive.app.preferences.PreferencesSectionUpdate
 
 /**
  * Encapsulates the Settings dialog UI and alert preference wiring.
@@ -27,7 +29,10 @@ import pt.it.automotive.app.auth.TokenStore
 class AlertSettingsDialog(
     private val activity: AppCompatActivity,
     private val alertPreferenceManager: AlertPreferenceManager,
-    private val mapController: MapController
+    private val mapController: MapController,
+    private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
+    private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
+    private val onLogout: (() -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
@@ -44,8 +49,12 @@ class AlertSettingsDialog(
         const val CARD_TITLE_BOTTOM_GAP_DP = 16
     }
 
+    private val changedSections = mutableSetOf<PreferencesSectionType>()
+
     fun show() {
         if (currentSettingsView != null) return
+        changedSections.clear()
+
         val settingsView = activity.layoutInflater.inflate(R.layout.dialog_settings, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         currentSettingsView = settingsView
@@ -96,8 +105,12 @@ class AlertSettingsDialog(
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         switchLightMode.isChecked = prefs.getBoolean("lightMode", false)
         switchLightMode.setOnCheckedChangeListener { _, isChecked ->
-            // Directly trigger the central applyTheme method from MainActivity!
-            // No recreate(), just an immediate and imperative UI update.
+            prefs.edit().putBoolean("lightMode", isChecked).apply()
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AppearanceUpdate(darkMode = !isChecked)
+            )
+            changedSections.add(PreferencesSectionType.APPEARANCE)
+            mapController.setMapStyle(isChecked)
             val mainActivity = activity as? pt.it.automotive.app.MainActivity
             mainActivity?.applyTheme(!isChecked)
         }
@@ -111,23 +124,24 @@ class AlertSettingsDialog(
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         val currentLanguage = prefs.getString("language", "en") ?: "en"
 
-        // Highlight the current language
-        if (currentLanguage == "en") {
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        } else {
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        }
+        updateLanguageButtons(currentLanguage, btnEnglish, btnPortuguese)
 
         btnEnglish.setOnClickListener {
             prefs.edit().putString("language", "en").apply()
-            activity.recreate() // Restart activity to apply new locale
+            updateLanguageButtons("en", btnEnglish, btnPortuguese)
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AppearanceUpdate(language = "en")
+            )
+            changedSections.add(PreferencesSectionType.APPEARANCE)
         }
 
         btnPortuguese.setOnClickListener {
             prefs.edit().putString("language", "pt").apply()
-            activity.recreate() // Restart activity to apply new locale
+            updateLanguageButtons("pt", btnEnglish, btnPortuguese)
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AppearanceUpdate(language = "pt")
+            )
+            changedSections.add(PreferencesSectionType.APPEARANCE)
         }
     }
             
@@ -141,7 +155,10 @@ class AlertSettingsDialog(
         switchColorBlind.isChecked = prefs.getBoolean("colorBlindMode", false)
         switchColorBlind.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("colorBlindMode", isChecked).apply()
-            activity.recreate()
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AppearanceUpdate(colorblindEnabled = isChecked)
+            )
+            changedSections.add(PreferencesSectionType.APPEARANCE)
         }
     }
 
@@ -251,6 +268,13 @@ class AlertSettingsDialog(
             marginEndPx = controlGapPx
         ) { checked ->
             alertPreferenceManager.setAudioEnabled(alertType, checked)
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AlertUpdate(
+                    category = alertType.toAlertCategory(),
+                    audio = checked
+                )
+            )
+            changedSections.add(PreferencesSectionType.ALERTS)
         }
 
         val enableControl = createToggleBlock(
@@ -260,6 +284,13 @@ class AlertSettingsDialog(
         ) { checked ->
             alertPreferenceManager.setEnabled(alertType, checked)
             soundControl.second.isEnabled = checked
+            onPreferenceSectionChanged?.invoke(
+                PreferencesSectionUpdate.AlertUpdate(
+                    category = alertType.toAlertCategory(),
+                    alert = checked
+                )
+            )
+            changedSections.add(PreferencesSectionType.ALERTS)
         }
 
         soundControl.second.isEnabled = enableControl.second.isChecked
@@ -323,10 +354,13 @@ class AlertSettingsDialog(
         usernameTextView?.text = username?.let { "@$it" } ?: ""
 
         btnLogout?.setOnClickListener {
-            // 1. Clear saved tokens
+            // 1. Clear local preferences cache so the next user starts fresh
+            onLogout?.invoke()
+
+            // 2. Clear saved tokens
             TokenStore.clear(activity)
-            
-            // 2. Redirect to LoginActivity and clear the back stack
+
+            // 3. Redirect to LoginActivity and clear the back stack
             val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
                 flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
             }
@@ -346,12 +380,42 @@ class AlertSettingsDialog(
     // ── Close Actions ────────────────────────────────────────────────────
 
     private fun setupCloseActions(settingsView: View, rootView: ViewGroup) {
-        val dismissAction = { dismiss() }
+        val dismissAction = {
+            onDialogClosed?.invoke(changedSections.toSet())
+            dismiss()
+        }
 
         settingsView.findViewById<ImageButton>(R.id.btnCloseSettings)?.setOnClickListener { dismissAction() }
         settingsView.setOnClickListener { dismissAction() }
 
         // Prevent clicks on card from closing overlay
         settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener { }
+    }
+
+    private fun updateLanguageButtons(
+        selectedLanguage: String,
+        btnEnglish: Button,
+        btnPortuguese: Button
+    ) {
+        if (selectedLanguage.equals("pt", ignoreCase = true)) {
+            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
+            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.transparent))
+        } else {
+            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
+            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.transparent))
+        }
+    }
+
+    private fun AlertPreferenceManager.AlertType.toAlertCategory(): AlertCategory {
+        return when (this) {
+            AlertPreferenceManager.AlertType.ACCIDENT -> AlertCategory.ACCIDENT
+            AlertPreferenceManager.AlertType.SPEEDING -> AlertCategory.SPEEDING
+            AlertPreferenceManager.AlertType.WEATHER -> AlertCategory.WEATHER
+            AlertPreferenceManager.AlertType.OVERTAKING -> AlertCategory.OVERTAKING
+            AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE -> AlertCategory.EMERGENCY_VEHICLE
+            AlertPreferenceManager.AlertType.NAVIGATION -> AlertCategory.NAVIGATION
+            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY -> AlertCategory.MANEUVER
+            AlertPreferenceManager.AlertType.TRAFFIC_JAM -> AlertCategory.TRAFFIC
+        }
     }
 }

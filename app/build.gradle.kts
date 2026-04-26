@@ -40,6 +40,7 @@ android {
         buildConfigField("String", "OPENROUTESERVICE_API_KEY", "\"${localProperties.getProperty("OPENROUTESERVICE_API_KEY", "")}\"")
 
         buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
+        buildConfigField("String", "PREFERENCES_BASE_URL", "\"${localProperties.getProperty("PREFERENCES_BASE_URL", "http://10.0.2.2:8082")}\"")
     }
 
     buildTypes {
@@ -99,4 +100,7 @@ dependencies {
 
     // OkHttp for HTTP calls to Keycloak
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
 }

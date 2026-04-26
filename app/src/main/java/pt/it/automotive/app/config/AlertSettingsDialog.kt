@@ -110,7 +110,6 @@ class AlertSettingsDialog(
                 PreferencesSectionUpdate.AppearanceUpdate(darkMode = !isChecked)
             )
             changedSections.add(PreferencesSectionType.APPEARANCE)
-            mapController.setMapStyle(isChecked)
             val mainActivity = activity as? pt.it.automotive.app.MainActivity
             mainActivity?.applyTheme(!isChecked)
         }

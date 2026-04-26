@@ -615,9 +615,11 @@ class UiController(
      *  Keeps card clickable so warning notification can be shown. */
     fun updateWeatherCardDriving(isDriving: Boolean) {
         weatherCard?.apply {
-            val bgRes = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
-            weatherCard?.background = ContextCompat.getDrawable(activity, bgRes)
+            alpha = if (isDriving) 0.80f else 1.0f
+            background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
         }
+        val imgLockWeather = activity.findViewById<ImageView>(R.id.imgLockWeather)
+        imgLockWeather?.visibility = if (isDriving) View.VISIBLE else View.GONE
     }
 
     private fun showWeatherDialog() {

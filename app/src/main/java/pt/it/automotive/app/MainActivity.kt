@@ -62,6 +62,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Car IDs configuration - delegate to AppConfig for centralized management
         val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
         val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
+        const val ALPHA_LOCKED = 0.80f
+        const val ALPHA_UNLOCKED = 1.0f
     }
 
     private lateinit var mapController: MapController
@@ -706,12 +708,23 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         val isDriving = isDrivingMode()
         
         // Settings button
-        val settingsBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.weather_bg
-        findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(this, settingsBg)
-        
+        val btnSettings = findViewById<View>(R.id.btnSettings)
+        val imgLockSettings = findViewById<ImageView>(R.id.imgLockSettings)
+        btnSettings?.apply {
+            alpha = if (isDriving) ALPHA_LOCKED else ALPHA_UNLOCKED
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.weather_bg)
+        }
+        imgLockSettings?.visibility = if (isDriving) View.VISIBLE else View.GONE
+
         // Navigation button
-        val navBg = if (isDriving) R.drawable.panel_lane_box else R.drawable.panel_top_box
-        findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(this, navBg)
+        val navPanelBox = findViewById<View>(R.id.navPanelBox)
+        val imgLockNav = findViewById<ImageView>(R.id.imgLockNav)
+        navPanelBox?.apply {
+            alpha = if (isDriving) ALPHA_LOCKED else ALPHA_UNLOCKED
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.panel_top_box)
+        }
+        findViewById<TextView>(R.id.btnStartRoute)?.alpha = 1.0f
+        imgLockNav?.visibility = if (isDriving) View.VISIBLE else View.GONE
         
         // Weather card
         uiController.updateWeatherCardDriving(isDriving)

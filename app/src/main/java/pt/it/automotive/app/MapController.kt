@@ -165,6 +165,8 @@ class MapController(
         
         // Enable and configure compass - positioned on bottom right in map area
         map.uiSettings.isCompassEnabled = true
+        map.uiSettings.isLogoEnabled = false
+        map.uiSettings.isAttributionEnabled = false
         // Position: from right edge of screen minus right panel width (approximately 350px from right for visible map area)
         val screenWidth = context.resources.displayMetrics.widthPixels
         val rightPanelWidth = if (context.resources.configuration.smallestScreenWidthDp >= 600) {

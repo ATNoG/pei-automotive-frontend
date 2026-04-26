@@ -30,10 +30,7 @@
         app:layout_constraintEnd_toEndOf="parent"
     />
 
-    <!-- ══════════════════════════════════════════════════════════════
-         RIGHT PANEL  –  always 25% of screen width, full height
-         Sections fill proportional heights via layout_weight.
-         ══════════════════════════════════════════════════════════════ -->
+    <!--  RIGHT PANEL - always 25% of screen width, full height -->
     <LinearLayout
         android:id="@+id/rightPanel"
         android:orientation="vertical"
@@ -81,6 +78,16 @@
                     android:fontFamily="DM Mono"
                     android:clickable="true"
                     android:focusable="true"
+                />
+                <ImageView
+                    android:id="@+id/imgLockNav"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="16dp"
+                    android:layout_gravity="center"
+                    android:src="@drawable/ic_lock" 
+                    android:visibility="gone" 
+                    android:tint="?android:attr/textColorSecondary" 
                 />
             </LinearLayout>
 
@@ -354,6 +361,16 @@
             android:gravity="center_vertical"
             android:visibility="gone"
         />
+        <ImageView
+            android:id="@+id/imgLockWeather"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_lock" 
+            android:visibility="gone" 
+            android:tint="?android:attr/textColorSecondary" 
+        />
     </LinearLayout>
 
     <!-- NAVIGATION INSTRUCTION BANNER — centered -->
@@ -440,6 +457,16 @@
             android:textSize="@dimen/text_xlarge"
             android:fontFamily="DM Mono"
             android:layout_marginStart="12dp"
+        />
+        <ImageView
+            android:id="@+id/imgLockSettings"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_lock" 
+            android:visibility="gone" 
+            android:tint="?android:attr/textColorSecondary" 
         />
     </LinearLayout>
 

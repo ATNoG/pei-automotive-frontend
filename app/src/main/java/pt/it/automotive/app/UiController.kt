@@ -260,7 +260,7 @@ class UiController(
             // Emoji label
             val emoji = TextView(activity).apply {
                 text = field.emoji
-                textSize = 20f
+                textSize = 24f
             }
             container.addView(emoji)
 
@@ -268,8 +268,8 @@ class UiController(
             val value = getFieldValue(field, weatherData)
             val valueTv = TextView(activity).apply {
                 text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
-                textSize = 20f
-                setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+                textSize = 24f
+                setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -322,14 +322,14 @@ class UiController(
 
             val emoji = TextView(activity).apply {
                 text = field.emoji
-                textSize = 20f
+                textSize = 24f
             }
             container.addView(emoji)
 
             val valueTv = TextView(activity).apply {
                 text = if (field.unit.isNotEmpty()) "$value${field.unit}" else value
-                textSize = 20f
-                setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+                textSize = 24f
+                setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -607,7 +607,9 @@ class UiController(
     fun setupWeatherCardClick() {
         weatherCard?.apply {
             applyPressAnimation(activity) {
-                if (currentSpeed >= 5.0) {
+                // Check if driving mode is active using MainActivity
+                val isDriving = (activity as? MainActivity)?.isDrivingMode() ?: (currentSpeed >= 5.0)
+                if (isDriving) {
                     inAppNotificationManager?.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
@@ -626,8 +628,11 @@ class UiController(
      *  Keeps card clickable so warning notification can be shown. */
     fun updateWeatherCardDriving(isDriving: Boolean) {
         weatherCard?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
+            alpha = if (isDriving) 0.80f else 1.0f
+            background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
         }
+        val imgLockWeather = activity.findViewById<ImageView>(R.id.imgLockWeather)
+        imgLockWeather?.visibility = if (isDriving) View.VISIBLE else View.GONE
     }
 
     private fun showWeatherDialog() {
@@ -694,6 +699,8 @@ class UiController(
         cardSwitches.forEach { (viewId, field) ->
             dialogView.findViewById<androidx.appcompat.widget.SwitchCompat>(viewId)?.apply {
                 isChecked = weatherCardPrefs.isEnabled(field)
+                scaleX = 1.2f
+                scaleY = 1.2f
                 setOnCheckedChangeListener { _, checked ->
                     hasWeatherPrefChanges = true
                     weatherCardPrefs.setEnabled(field, checked)
@@ -724,29 +731,29 @@ class UiController(
                 }
                 alertCard.addView(TextView(activity).apply {
                     text = "⚠️ ${alert.event}"
-                    setTextColor(ContextCompat.getColor(activity, R.color.status_warning))
-                    textSize = 16f
+                    setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
+                    textSize = 28f
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 })
                 val fmt = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
                 alertCard.addView(TextView(activity).apply {
                     text = "🕐 ${fmt.format(java.util.Date(alert.start * 1000))} – ${fmt.format(java.util.Date(alert.end * 1000))}"
-                    setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
-                    textSize = 13f
+                    setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
+                    textSize = 24f
                     setPadding(0, 12, 0, 0)
                 })
                 if (alert.senderName.isNotEmpty()) {
                     alertCard.addView(TextView(activity).apply {
                         text = "📢 ${alert.senderName}"
-                        setTextColor(ContextCompat.getColor(activity, R.color.text_secondary))
-                        textSize = 13f
+                        setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
+                        textSize = 24f
                         setPadding(0, 8, 0, 0)
                     })
                 }
                 alertCard.addView(TextView(activity).apply {
                     text = alert.description
-                    setTextColor(ContextCompat.getColor(activity, R.color.text_description))
-                    textSize = 14f
+                    setTextColor(resolveThemeColor(R.attr.colorTextPrimary))
+                    textSize = 24f
                     setPadding(0, 16, 0, 0)
                 })
                 alertsContainer?.addView(alertCard)
@@ -954,5 +961,55 @@ class UiController(
         ManeuverType.ARRIVE -> R.drawable.check_flag
 
         ManeuverType.UNKNOWN -> R.drawable.ic_straight
+    }
+
+    fun refreshTheme() {
+        // current colors
+        val colorPrimary = resolveThemeColor(R.attr.colorTextPrimary)
+        val colorHint = resolveThemeColor(R.attr.colorTextHint)
+        val colorTertiary = resolveThemeColor(R.attr.colorTextTertiary)
+        val colorIcon = resolveThemeColor(R.attr.colorIconDefault)
+
+        // update backgrounds (cards, banners, panels)
+        activity.findViewById<View>(R.id.weatherBadge)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
+        activity.findViewById<View>(R.id.btnSettings)?.background = ContextCompat.getDrawable(activity, R.drawable.weather_bg)
+        activity.findViewById<View>(R.id.navPanelBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_top_box)
+        activity.findViewById<View>(R.id.lanePreviewBox)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_lane_box)
+        activity.findViewById<View>(R.id.speedArea)?.background = ContextCompat.getDrawable(activity, R.drawable.panel_bottom_speed)
+        activity.findViewById<View>(R.id.navigationBanner)?.background = ContextCompat.getDrawable(activity, R.drawable.card_shadow)
+        
+        // update background color of the whole activity (behind cards and panels)
+        activity.window.decorView.setBackgroundColor(resolveThemeColor(android.R.attr.colorBackground))
+
+        // update text colors
+        txtTemperature?.setTextColor(colorPrimary)
+        txtCurrentSpeed?.setTextColor(colorPrimary)
+        txtSpeedUnit?.setTextColor(colorPrimary)
+        activity.findViewById<TextView>(R.id.btnStartRoute)?.setTextColor(colorPrimary)
+        txtNavArrival?.setTextColor(colorPrimary)
+        txtNavDistance?.setTextColor(colorPrimary)
+        activity.findViewById<TextView>(R.id.txtSettingsLabel)?.setTextColor(colorPrimary)
+        activity.findViewById<TextView>(R.id.txtNextManeuverDistance)?.setTextColor(colorPrimary)
+
+        // update secondary text colors
+        activity.findViewById<TextView>(R.id.txtArrivalLabel)?.setTextColor(colorHint)
+        activity.findViewById<TextView>(R.id.txtDistanceLabel)?.setTextColor(colorHint)
+        activity.findViewById<TextView>(R.id.txtManeuverInstruction)?.setTextColor(colorTertiary)
+
+        // update icon colors
+        activity.findViewById<ImageView>(R.id.imgManeuverIcon)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.btnStopNavigation)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockNav)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockSettings)?.setColorFilter(colorIcon)
+        activity.findViewById<ImageView>(R.id.imgLockWeather)?.setColorFilter(colorIcon)
+
+        // rebuild weather card extras to apply new text colors
+        if (getWeatherSource() == WeatherSourcePreferenceManager.Source.DITTO) {
+            cachedDittoData?.let { rebuildWeatherCardExtrasFromDitto(it) }
+        } else {
+            rebuildWeatherCardExtras()
+        }
+
+        activity.findViewById<pt.it.automotive.app.TopDownCarView>(R.id.topDownCarView)?.updateThemeColors()
     }
 }

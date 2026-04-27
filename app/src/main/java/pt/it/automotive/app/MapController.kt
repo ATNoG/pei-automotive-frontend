@@ -150,6 +150,7 @@ class MapController(
     fun onResume() { mapView.onResume() }
     fun onPause() { mapView.onPause() }
     fun onStop() { mapView.onStop() }
+
     fun onDestroy() { 
         stopRouteSimulation()
         stopAccidentCleanupTimer()
@@ -164,6 +165,8 @@ class MapController(
         
         // Enable and configure compass - positioned on bottom right in map area
         map.uiSettings.isCompassEnabled = true
+        map.uiSettings.isLogoEnabled = false
+        map.uiSettings.isAttributionEnabled = false
         // Position: from right edge of screen minus right panel width (approximately 350px from right for visible map area)
         val screenWidth = context.resources.displayMetrics.widthPixels
         val rightPanelWidth = if (context.resources.configuration.smallestScreenWidthDp >= 600) {
@@ -589,7 +592,6 @@ class MapController(
                 userCarVisualLon = currentLon
                 userCarVisualBearing = currentBearing
 
-                // --- FIX: SAFE STYLE ACCESS ---
                 // We fetch the current style every single frame.
                 // If the style is being reloaded, map.style returns null or the NEW style,
                 // preventing the "newer style is loading" IllegalStateException.
@@ -618,11 +620,16 @@ class MapController(
 
         Choreographer.getInstance().postFrameCallback(frameCallback)
 
-        // Camera Animation (Unchanged)
+        val mapZoom = map.cameraPosition.zoom
+        val targetZoom = if (mapZoom < 10.0) 19.0 else mapZoom
+        
+        val mapTilt = map.cameraPosition.tilt
+        val targetTilt = if (mapTilt < 10.0) 60.0 else mapTilt
+
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))
-            .zoom(19.0)
-            .tilt(60.0)
+            .zoom(targetZoom)
+            .tilt(targetTilt)
             .bearing(bearing.toDouble())
             .build()
 

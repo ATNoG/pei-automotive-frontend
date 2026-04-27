@@ -20,6 +20,8 @@ android {
         buildConfig = true
     }
 
+    useLibrary("android.car")
+
     defaultConfig {
         applicationId = "pt.it.automotive.app"
         minSdk = 24

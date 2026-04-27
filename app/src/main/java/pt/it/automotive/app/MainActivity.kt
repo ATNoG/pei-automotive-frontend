@@ -18,6 +18,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.content.pm.PackageManager
+import android.car.Car
+import android.car.VehiclePropertyIds
+import android.car.hardware.CarPropertyValue
+import android.car.hardware.property.CarPropertyManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -55,6 +60,8 @@ import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
+import android.view.Gravity
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener {
 
@@ -64,6 +71,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Car IDs configuration - delegate to AppConfig for centralized management
         val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
         val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
+        const val ALPHA_LOCKED = 0.80f
+        const val ALPHA_UNLOCKED = 1.0f
     }
 
     private lateinit var mapController: MapController
@@ -98,6 +107,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private var currentLon: Double = AppConfig.DEFAULT_INITIAL_POSITION.longitude
     private var currentSpeed: Double = 0.0
     private var currentBearing: Float = 0f
+    
+    // Track the current gear purely to enable/disable UI menus
+    private var currentGearString: String = "P"
 
     // Last Navigation Dialog view reference
     private var navigationDialogView: View? = null
@@ -108,6 +120,64 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // Cached station assignment for Ditto weather source
     private var lastStationAssignment: MqttEventRouter.StationAssignmentData? = null
     private var hasRealStationAssignment = false // true when data came from station_assigner, not client-side fallback
+
+    // Car API
+    private var car: Car? = null
+    private var carPropertyManager: CarPropertyManager? = null
+    private val CAR_PERMISSION_REQUEST_CODE = 1001
+
+    // Track state of Day/Night mode to prevent redundant map style updates
+    private var isNightMode: Boolean = false
+
+    private val carPropertyListener = object : CarPropertyManager.CarPropertyEventCallback {
+        override fun onChangeEvent(value: CarPropertyValue<*>) {
+            if (value.propertyId == VehiclePropertyIds.GEAR_SELECTION) {
+                val gearValue = value.value as? Int ?: return
+                val gearLabel = when (gearValue) {
+                    0x0001 -> "N"
+                    0x0002 -> "R"
+                    0x0004 -> "P"
+                    0x0008 -> "D"
+                    0x0010 -> "1"
+                    0x0020 -> "2"
+                    0x0040 -> "3"
+                    0x0080 -> "4"
+                    0x0100 -> "5"
+                    0x0200 -> "6"
+                    0x0400 -> "7"
+                    0x0800 -> "8"
+                    else -> "-"
+                }
+                currentGearString = gearLabel
+                runOnUiThread {
+                    // Automatically re-evaluate button states when gear changes
+                    updateDrivingModeButtons()
+                    if (isDrivingMode()) {
+                        closeOpenMenus()
+                    }
+                }
+            } else if (value.propertyId == VehiclePropertyIds.NIGHT_MODE) {
+                val nightModeActive = value.value as? Boolean ?: return
+                
+                // Track physical sensor bounds to prevent recreating loops every time setupCarApi() binds 
+                val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+                val hasStoredState = appPrefs.contains("lastCarNightMode")
+                val lastCarNightMode = appPrefs.getBoolean("lastCarNightMode", false)
+                
+                // Overwrite ONLY when the car's actual physical environment changes (crossing boundaries)
+                if (!hasStoredState || lastCarNightMode != nightModeActive) {
+                    appPrefs.edit().putBoolean("lastCarNightMode", nightModeActive).apply()
+                    runOnUiThread {
+                        applyTheme(nightModeActive)
+                    }
+                }
+            }
+        }
+
+        override fun onErrorEvent(propertyId: Int, zone: Int) {
+            Log.w(TAG, "Car property error: propertyId=$propertyId, zone=$zone")
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
@@ -203,21 +273,104 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
+        val savedLat = try {
+            appPrefs.getString("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.latitude
+        } catch (e: ClassCastException) {
+            appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
+        }
+        val savedLon = try {
+            appPrefs.getString("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.longitude
+        } catch (e: ClassCastException) {
+            appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
+        }
+        currentLat = savedLat
+        currentLon = savedLon
 
         observePreferencesState()
         preferencesRepository.loadPreferences()
 
         // wire map ready callback
         mapController.init {
-            // called when style & layers are ready
-            // Set initial position on the map
+            // set initial position from saved state, config if no saved state
             mapController.setSingleLocation(
-                initialPosition.latitude,
-                initialPosition.longitude,
+                currentLat,
+                currentLon,
                 0f
             )
         }
         startTokenRefreshScheduler()
+        if (checkSelfPermission("android.car.permission.CAR_EXTERIOR_ENVIRONMENT") != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                arrayOf("android.car.permission.CAR_EXTERIOR_ENVIRONMENT"), 
+                CAR_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            setupCarApi()
+        }
+    }
+
+    fun applyTheme(isNight: Boolean) {
+        isNightMode = isNight
+
+        val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        appPrefs.edit().putBoolean("lightMode", !isNight).apply()
+
+        // 1. Immediately switch map
+        mapController.setMapStyle(!isNight)
+
+        // 2. Set default night mode to update Configuration. Do NOT recreate.
+        val mode = if (isNight) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
+        AppCompatDelegate.setDefaultNightMode(mode)
+
+        // 3. Force the Activity's Theme to flush
+        val styleRes = if (appPrefs.getBoolean("colorBlindMode", false)) {
+            R.style.Theme_AutomotiveApp_ColorBlind
+        } else {
+            R.style.Theme_AutomotiveApp
+        }
+        theme.applyStyle(styleRes, true)
+
+        // 4. Manually update key UI views that must reflect the change instantly
+        uiController.refreshTheme()
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAR_PERMISSION_REQUEST_CODE) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, safe to connect to the sensor!
+                setupCarApi()
+            } else {
+                Log.w(TAG, "Car exterior environment permission denied. Auto-night mode will not work.")
+            }
+        }
+    }
+    
+    private fun setupCarApi() {
+        if (packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
+            car = Car.createCar(this, null, Car.CAR_WAIT_TIMEOUT_WAIT_FOREVER) { carObj, ready ->
+                if (ready) {
+                    carPropertyManager = carObj.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
+                    carPropertyManager?.registerCallback(
+                        carPropertyListener,
+                        VehiclePropertyIds.GEAR_SELECTION,
+                        CarPropertyManager.SENSOR_RATE_ONCHANGE
+                    )
+                    carPropertyManager?.registerCallback(
+                        carPropertyListener,
+                        VehiclePropertyIds.NIGHT_MODE,
+                        CarPropertyManager.SENSOR_RATE_ONCHANGE
+                    )
+                } else {
+                    carPropertyManager?.unregisterCallback(carPropertyListener)
+                    carPropertyManager = null
+                }
+            }
+        }
     }
 
     private fun observePreferencesState() {
@@ -311,7 +464,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Start Route button (top right panel)
         findViewById<TextView>(R.id.btnStartRoute)?.apply {
             applyPressAnimation(this@MainActivity) {
-                if (currentSpeed >= 5.0) {
+                if (isDrivingMode()) {
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
@@ -338,6 +491,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Inflate overlay layout
         val overlayView = layoutInflater.inflate(R.layout.dialog_navigation, null)
         
+        configureNavigationModalBounds(overlayView)
+
         // Add overlay to root layout
         val rootView = findViewById<ViewGroup>(android.R.id.content)
         rootView.addView(overlayView)
@@ -625,6 +780,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread { uiController.showNavigationError(error) }
     }
 
+    fun isDrivingMode(): Boolean {
+        // App blocks menus if speed >= 5 km/h OR if the car is actively in a driving gear
+        val gearDriving = currentGearString == "D" || currentGearString == "R" || currentGearString.matches(Regex("[1-8]"))
+        return currentSpeed >= 5.0 || gearDriving
+    }
+
     private fun setupSettingsButton() {
         val settingsButton = findViewById<View>(R.id.btnSettings)
         settingsButton?.apply {
@@ -632,7 +793,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             isFocusable = true
             applyPressAnimation(this@MainActivity) {
                 Log.d("SETTINGS", "Settings button clicked")
-                if (currentSpeed >= 5.0) {
+                if (isDrivingMode()) {
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
@@ -665,24 +826,33 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     /**
-     * Update button visual states based on driving mode (currentSpeed >= 5 km/h).
+     * Update button visual states based on driving mode.
      * Disables buttons visually (reduced opacity) when driving but keeps them clickable
      * so users get the warning notification on tap attempts.
      */
     private fun updateDrivingModeButtons() {
-        val isDriving = currentSpeed >= 5.0
+        val isDriving = isDrivingMode()
         
-        // Settings button - fade but keep clickable
-        findViewById<View>(R.id.btnSettings)?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
+        // Settings button
+        val btnSettings = findViewById<View>(R.id.btnSettings)
+        val imgLockSettings = findViewById<ImageView>(R.id.imgLockSettings)
+        btnSettings?.apply {
+            alpha = if (isDriving) ALPHA_LOCKED else ALPHA_UNLOCKED
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.weather_bg)
         }
-        
-        // Navigation button - fade but keep clickable
-        findViewById<TextView>(R.id.btnStartRoute)?.apply {
-            alpha = if (isDriving) 0.4f else 1.0f
+        imgLockSettings?.visibility = if (isDriving) View.VISIBLE else View.GONE
+
+        // Navigation button
+        val navPanelBox = findViewById<View>(R.id.navPanelBox)
+        val imgLockNav = findViewById<ImageView>(R.id.imgLockNav)
+        navPanelBox?.apply {
+            alpha = if (isDriving) ALPHA_LOCKED else ALPHA_UNLOCKED
+            background = ContextCompat.getDrawable(this@MainActivity, R.drawable.panel_top_box)
         }
+        findViewById<TextView>(R.id.btnStartRoute)?.alpha = 1.0f
+        imgLockNav?.visibility = if (isDriving) View.VISIBLE else View.GONE
         
-        // Weather card - fade but keep clickable
+        // Weather card
         uiController.updateWeatherCardDriving(isDriving)
     }
 
@@ -938,8 +1108,14 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         currentLon = data.longitude
         currentBearing = data.headingDeg
         currentSpeed = data.speedKmh
+
+        getSharedPreferences("AppSettings", MODE_PRIVATE).edit().apply {
+            putString("lastLat", currentLat.toString())
+            putString("lastLon", currentLon.toString())
+            apply()
+        }
         
-        if (currentSpeed >= 5.0) {
+        if (isDrivingMode()) {
             closeOpenMenus()
         }
 
@@ -1236,6 +1412,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
 
     override fun onDestroy() {
+        carPropertyManager?.unregisterCallback(carPropertyListener)
+        car?.disconnect()
         vehicleTracker.destroy()
         mqttEventRouter.disconnect()
         navigationManager.destroy()
@@ -1277,6 +1455,28 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     }
                 }
             }
+        }
+    }
+    private fun configureNavigationModalBounds(overlayView: View) {
+        val card = overlayView.findViewById<View>(R.id.dialogCard) ?: return
+        val metrics = resources.displayMetrics
+        val density = metrics.density
+
+        val targetWidthPx = (600 * density).toInt()
+        val sideMarginPx = (24 * density).toInt()
+        val verticalMarginPx = (36 * density).toInt()
+
+        val maxWidth = (metrics.widthPixels - (sideMarginPx * 2)).coerceAtLeast(sideMarginPx)
+        
+        val maxHeightByRatio = (metrics.heightPixels * 0.48f).toInt()
+        val maxHeightByMargins = (metrics.heightPixels - (verticalMarginPx * 2)).coerceAtLeast(verticalMarginPx)
+        val modalHeight = minOf(maxHeightByRatio, maxHeightByMargins)
+
+        (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+            lp.width = minOf(targetWidthPx, maxWidth)
+            lp.height = modalHeight
+            lp.gravity = Gravity.CENTER
+            card.layoutParams = lp
         }
     }
 }

@@ -47,7 +47,7 @@
                 <TextView
                     android:text="@string/alert_navigation"
                     android:textColor="?attr/colorTextPrimary"
-                    android:textSize="24sp"
+                    android:textSize="@dimen/text_medium"
                     android:textStyle="bold"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
@@ -70,7 +70,7 @@
                 android:inputType="text|textNoSuggestions"
                 android:textColor="?attr/colorTextPrimary"
                 android:textColorHint="?attr/colorTextTertiary"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_regular"
                 android:layout_width="match_parent"
                 android:layout_height="40dp"
                 android:paddingStart="12dp"
@@ -85,8 +85,8 @@
             <FrameLayout
                 android:id="@+id/searchResultsContainer"
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginBottom="@dimen/card_corner_radius"
+                android:layout_height="0dp"  
+                android:layout_weight="1"    
                 android:visibility="gone">
 
                 <!-- Results RecyclerView -->
@@ -101,7 +101,7 @@
                     android:id="@+id/txtSearchEmpty"
                     android:text="@string/no_results"
                     android:textColor="?attr/colorTextTertiary"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_regular"
                     android:gravity="center"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -111,14 +111,12 @@
             <!-- Route Info Preview (shown after selection) -->
             <LinearLayout
                 android:id="@+id/routeInfoPreview"
-                android:visibility="gone"
-                android:orientation="horizontal"
-                android:background="?attr/colorSurfaceRouteInfo"
-                android:padding="@dimen/card_corner_radius"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/card_corner_radius"
-                android:gravity="center_vertical">
+                android:layout_height="0dp"  
+                android:layout_weight="1"    
+                android:orientation="vertical"
+                android:gravity="center"
+                android:visibility="gone">
 
                 <LinearLayout
                     android:orientation="vertical"
@@ -139,7 +137,7 @@
                         android:id="@+id/txtRouteInfo"
                         android:text="@string/calculating_route"
                         android:textColor="?attr/colorTextSecondary"
-                        android:textSize="13sp"
+                        android:textSize="@dimen/text_small"
                         android:layout_marginTop="4dp"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
@@ -157,6 +155,7 @@
                 <Button
                     android:id="@+id/btnCancel"
                     android:text="@string/cancel"
+                    android:textSize="@dimen/text_regular"
                     android:textAllCaps="false"
                     android:textColor="?attr/colorTextSecondary"
                     android:layout_width="0dp"
@@ -168,6 +167,7 @@
                 <Button
                     android:id="@+id/btnStartNavigation"
                     android:text="@string/start_navigation"
+                    android:textSize="@dimen/text_regular"
                     android:textAllCaps="false"
                     android:textColor="?attr/colorTextPrimary"
                     android:enabled="false"

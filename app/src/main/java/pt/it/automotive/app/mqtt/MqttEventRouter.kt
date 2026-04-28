@@ -80,26 +80,129 @@ class MqttEventRouter(
             Log.d(TAG, "Received topic=$topic len=${message.length}")
         }
 
+        // 1. Extract discovery_timestamp and calculate delay
+        var discoveryTimestamp: Long = 0
+        try {
+            val json = JSONObject(message)
+            if (json.has("discovery_timestamp")) {
+                discoveryTimestamp = json.getLong("discovery_timestamp")
+            }
+        } catch (e: Exception) {
+            // Ignore parsing error for raw messages
+        }
+
+        val currentTimestamp = System.currentTimeMillis()
+        val delay = if (discoveryTimestamp > 0) currentTimestamp - discoveryTimestamp else 0L
+        val isStale = delay > 2000L
+
+        // 2. Queue the message based on topic and priority
+        val alertType = determineAlertType(topic)
+        
+        if (alertType != null) {
+            // Check staleness rules
+            if (isStale) {
+                if (alertType != AlertPreferenceManager.AlertType.SPEEDING && 
+                    alertType != AlertPreferenceManager.AlertType.OVERTAKING) {
+                    Log.d(TAG, "Discarding stale general alert: $topic (delay: ${delay}ms)")
+                    return // Completely ignore stale general alerts
+                } else {
+                    Log.d(TAG, "Stale specific alert: $topic (delay: ${delay}ms) - Will mute TTS")
+                }
+            }
+            
+            // Respect AlertPreferenceManager.isEnabled
+            if (!shouldProcess(alertType)) {
+                Log.d(TAG, "Alert type disabled by user: $alertType")
+                return
+            }
+
+            enqueueAlert(alertType, topic, message, isStale)
+        } else {
+            // Immediate dispatch for non-alert messages (like car_updates)
+            dispatchMessageImmediately(topic, message, isStale)
+        }
+    }
+
+    private fun determineAlertType(topic: String): AlertPreferenceManager.AlertType? {
+        return when {
+            topic == AppConfig.MQTT_TOPIC_SPEED_ALERT -> AlertPreferenceManager.AlertType.SPEEDING
+            topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> AlertPreferenceManager.AlertType.OVERTAKING
+            topic.startsWith(AppConfig.MQTT_TOPIC_ACCIDENT_ALERT) || topic.contains("accident") -> {
+                if (topic != AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED) AlertPreferenceManager.AlertType.ACCIDENT else null
+            }
+            topic == AppConfig.MQTT_TOPIC_EV_ALERT -> AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE
+            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> AlertPreferenceManager.AlertType.HIGHWAY_ENTRY
+            topic == AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT || topic.startsWith(AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT + "/") -> AlertPreferenceManager.AlertType.TRAFFIC_JAM
+            else -> null
+        }
+    }
+
+    private data class QueuedAlert(
+        val type: AlertPreferenceManager.AlertType,
+        val topic: String,
+        val message: String,
+        val isStale: Boolean,
+        val insertTime: Long
+    ) : Comparable<QueuedAlert> {
+        override fun compareTo(other: QueuedAlert): Int {
+            // Higher priority rank comes first
+            val p = other.type.priorityRank.compareTo(this.type.priorityRank)
+            if (p != 0) return p
+            return this.insertTime.compareTo(other.insertTime)
+        }
+    }
+
+    private val alertQueue = java.util.PriorityQueue<QueuedAlert>()
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val dispatchRunnable = Runnable { dispatchQueuedAlerts() }
+    private var isDispatching = false
+
+    @Synchronized
+    private fun enqueueAlert(type: AlertPreferenceManager.AlertType, topic: String, message: String, isStale: Boolean) {
+        alertQueue.offer(QueuedAlert(type, topic, message, isStale, System.currentTimeMillis()))
+        if (!isDispatching) {
+            isDispatching = true
+            // Buffer window of 500ms to allow concurrent alerts to arrive and sort
+            handler.postDelayed(dispatchRunnable, 500)
+        }
+    }
+
+    @Synchronized
+    private fun dispatchQueuedAlerts() {
+        while (alertQueue.isNotEmpty()) {
+            val alert = alertQueue.poll()
+            if (alert != null) {
+                dispatchMessageImmediately(alert.topic, alert.message, alert.isStale)
+            }
+        }
+        isDispatching = false
+    }
+
+    private fun dispatchMessageImmediately(topic: String, message: String, isStale: Boolean) {
         when {
             topic == AppConfig.MQTT_TOPIC_SPEED_ALERT -> {
                 Log.d(TAG, "Speed alert received")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
+                if (isForUserCar(message)) {
                     listener?.onSpeedAlert()
-                    alertNotificationManager.speakForAlert(
-                        AlertPreferenceManager.AlertType.SPEEDING,
-                        alertNotificationManager.activity.getString(R.string.speed_limit_warning)
-                    )
+                    if (!isStale) {
+                        alertNotificationManager.speakForAlert(
+                            AlertPreferenceManager.AlertType.SPEEDING,
+                            alertNotificationManager.activity.getString(R.string.speed_limit_warning)
+                        )
+                    }
                 }
             }
 
             topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.OVERTAKING)) {
+                if (isForUserCar(message)) {
                     listener?.onOvertakingAlert(message)
-                    alertNotificationManager.speakForAlert(
-                        AlertPreferenceManager.AlertType.OVERTAKING,
-                        alertNotificationManager.activity.getString(R.string.overtaking_warning)
-                    )
+                    if (!isStale) {
+                        alertNotificationManager.speakForAlert(
+                            AlertPreferenceManager.AlertType.OVERTAKING,
+                            alertNotificationManager.activity.getString(R.string.overtaking_warning)
+                        )
+                    }
                 }
             }
 
@@ -110,33 +213,25 @@ class MqttEventRouter(
 
             topic.startsWith(AppConfig.MQTT_TOPIC_ACCIDENT_ALERT) || topic.contains("accident") -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Accident alert on $topic")
-                if (shouldProcess(AlertPreferenceManager.AlertType.ACCIDENT)) {
-                    listener?.onAccidentAlert(topic, message)
-                }
+                listener?.onAccidentAlert(topic, message)
             }
 
             topic == AppConfig.MQTT_TOPIC_EV_ALERT -> {
                 Log.d(TAG, "Emergency vehicle alert")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE)) {
+                if (isForUserCar(message)) {
                     listener?.onEmergencyVehicleAlert(message)
                 }
             }
 
             topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> {
                 Log.d(TAG, "Highway entry alert")
-                if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
-                    listener?.onHighwayEntryAlert(message)
-                }
+                listener?.onHighwayEntryAlert(message)
             }
 
             topic == AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT ||
                 topic.startsWith(AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT + "/") -> {
                 Log.d(TAG, "Traffic jam alert on $topic")
-                // Traffic jam alerts are road-context events; process regardless of a specific
-                // target car so shared jam zones still show up on the frontend map.
-                if (shouldProcess(AlertPreferenceManager.AlertType.TRAFFIC_JAM)) {
-                    listener?.onTrafficJamAlert(message)
-                }
+                listener?.onTrafficJamAlert(message)
             }
 
             topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {

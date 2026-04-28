@@ -33,16 +33,17 @@ class AlertPreferenceManager(context: Context) {
     enum class AlertType(
         val key: String,
         val displayNameResId: Int,
-        val defaultAudioEnabled: Boolean = false
+        val defaultAudioEnabled: Boolean = false,
+        val priorityRank: Int = 0 
     ) {
-        ACCIDENT("accident", R.string.alert_accident, defaultAudioEnabled = true),
-        SPEEDING("speeding", R.string.alert_speeding),
-        WEATHER("weather", R.string.alert_weather),
-        OVERTAKING("overtaking", R.string.alert_overtaking),
-        EMERGENCY_VEHICLE("emergency_vehicle", R.string.alert_emergency_vehicle),
-        NAVIGATION("navigation", R.string.alert_navigation),
-        HIGHWAY_ENTRY("highway_entry", R.string.alert_highway_entry),
-        TRAFFIC_JAM("traffic_jam", R.string.alert_traffic_jam)
+        ACCIDENT("accident", R.string.alert_accident, defaultAudioEnabled = true, priorityRank = 100),
+        EMERGENCY_VEHICLE("emergency_vehicle", R.string.alert_emergency_vehicle, priorityRank = 90),
+        TRAFFIC_JAM("traffic_jam", R.string.alert_traffic_jam, priorityRank = 80),
+        SPEEDING("speeding", R.string.alert_speeding, priorityRank = 70),
+        OVERTAKING("overtaking", R.string.alert_overtaking, priorityRank = 60),
+        HIGHWAY_ENTRY("highway_entry", R.string.alert_highway_entry, priorityRank = 50),
+        WEATHER("weather", R.string.alert_weather, priorityRank = 40),
+        NAVIGATION("navigation", R.string.alert_navigation, priorityRank = 30)
     }
 
     private val prefs: SharedPreferences =

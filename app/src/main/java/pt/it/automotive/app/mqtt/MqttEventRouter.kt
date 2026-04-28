@@ -99,6 +99,12 @@ class MqttEventRouter(
         val alertType = determineAlertType(topic)
         
         if (alertType != null) {
+            // Drop alerts that do not target the user's car
+            if (!isForUserCar(message)) {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Ignoring alert for other car on topic: $topic")
+                return
+            }
+
             // Check staleness rules
             if (isStale) {
                 if (alertType != AlertPreferenceManager.AlertType.SPEEDING && 

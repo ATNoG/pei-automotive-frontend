@@ -201,9 +201,6 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         super.onCreate(savedInstanceState)
 
-        // Set app locale based on user preference
-        setAppLocale()
-
         // initialize MapLibre (only required once, before creating MapView)
         MapLibre.getInstance(this, BuildConfig.MAPTILER_API_KEY, WellKnownTileServer.MapTiler)
 
@@ -1423,19 +1420,6 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()
-    }
-
-    private fun setAppLocale() {
-        val prefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
-        val language = prefs.getString("language", "en") ?: "en"
-        val locale = when (language) {
-            "pt" -> Locale("pt", "PT")
-            else -> Locale("en", "US")
-        }
-        Locale.setDefault(locale)
-        val config = resources.configuration
-        config.setLocale(locale)
-        resources.updateConfiguration(config, resources.displayMetrics)
     }
 
     private fun startTokenRefreshScheduler() {

@@ -8,8 +8,7 @@ object PreferencesPatchFactory {
                 base.copy(
                     appearance = base.appearance.copy(
                         darkMode = update.darkMode ?: base.appearance.darkMode,
-                        colorblindEnabled = update.colorblindEnabled ?: base.appearance.colorblindEnabled,
-                        language = normalizeLanguage(update.language ?: base.appearance.language)
+                        colorblindEnabled = update.colorblindEnabled ?: base.appearance.colorblindEnabled
                     )
                 )
             }
@@ -46,8 +45,7 @@ object PreferencesPatchFactory {
             appearance = if (sectionTypes.contains(PreferencesSectionType.APPEARANCE)) {
                 AppearanceDto(
                     darkMode = mergedPreferences.appearance.darkMode,
-                    colorblindEnabled = mergedPreferences.appearance.colorblindEnabled,
-                    language = normalizeLanguage(mergedPreferences.appearance.language)
+                    colorblindEnabled = mergedPreferences.appearance.colorblindEnabled
                 )
             } else null,
 
@@ -77,10 +75,6 @@ object PreferencesPatchFactory {
                 )
             } else null
         )
-    }
-
-    private fun normalizeLanguage(language: String): String {
-        return if (language.equals("pt", ignoreCase = true)) "pt" else "en"
     }
 
     private fun AlertChannelPreference.toDto(): AlertChannelDto {

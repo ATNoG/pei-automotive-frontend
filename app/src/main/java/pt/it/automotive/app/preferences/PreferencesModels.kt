@@ -11,8 +11,7 @@ data class UserPreferences(
 
 data class AppearancePreferences(
     val darkMode: Boolean,
-    val colorblindEnabled: Boolean,
-    val language: String
+    val colorblindEnabled: Boolean
 )
 
 data class AlertChannelPreference(
@@ -51,8 +50,7 @@ data class PreferencesDto(
 
 data class AppearanceDto(
     val darkMode: Boolean,
-    val colorblindEnabled: Boolean,
-    val language: String
+    val colorblindEnabled: Boolean
 )
 
 data class AlertsDto(
@@ -117,8 +115,7 @@ sealed interface PreferencesSectionUpdate {
 
     data class AppearanceUpdate(
         val darkMode: Boolean? = null,
-        val colorblindEnabled: Boolean? = null,
-        val language: String? = null
+        val colorblindEnabled: Boolean? = null
     ) : PreferencesSectionUpdate {
         override val sectionType: PreferencesSectionType = PreferencesSectionType.APPEARANCE
     }
@@ -145,8 +142,7 @@ object PreferencesDefaults {
             userId = "",
             appearance = AppearancePreferences(
                 darkMode = true,
-                colorblindEnabled = false,
-                language = "en"
+                colorblindEnabled = false
             ),
             alerts = AlertPreferences(
                 accident = AlertChannelPreference(alert = true, audio = true),

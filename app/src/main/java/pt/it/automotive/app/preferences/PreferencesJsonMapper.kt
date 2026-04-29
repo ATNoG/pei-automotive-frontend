@@ -50,8 +50,7 @@ object PreferencesJsonMapper {
             userId = domain.userId,
             appearance = AppearanceDto(
                 darkMode = domain.appearance.darkMode,
-                colorblindEnabled = domain.appearance.colorblindEnabled,
-                language = domain.appearance.language
+                colorblindEnabled = domain.appearance.colorblindEnabled
             ),
             alerts = AlertsDto(
                 accident = domain.alerts.accident.toDto(),
@@ -80,8 +79,7 @@ object PreferencesJsonMapper {
             userId = dto.userId,
             appearance = AppearancePreferences(
                 darkMode = dto.appearance.darkMode,
-                colorblindEnabled = dto.appearance.colorblindEnabled,
-                language = dto.appearance.language
+                colorblindEnabled = dto.appearance.colorblindEnabled
             ),
             alerts = AlertPreferences(
                 accident = dto.alerts.accident.toDomain(),
@@ -108,8 +106,7 @@ object PreferencesJsonMapper {
     private fun parseAppearance(json: JSONObject): AppearanceDto {
         return AppearanceDto(
             darkMode = json.optBoolean("dark_mode", true),
-            colorblindEnabled = json.optBoolean("colorblind_enabled", false),
-            language = json.optString("language", "en")
+            colorblindEnabled = json.optBoolean("colorblind_enabled", false)
         )
     }
 
@@ -148,7 +145,6 @@ object PreferencesJsonMapper {
         return JSONObject().apply {
             put("dark_mode", dto.darkMode)
             put("colorblind_enabled", dto.colorblindEnabled)
-            put("language", dto.language)
         }
     }
 

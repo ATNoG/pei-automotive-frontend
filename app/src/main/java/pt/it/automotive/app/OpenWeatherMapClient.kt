@@ -48,7 +48,8 @@ object OpenWeatherMapClient {
     ): Pair<WeatherData?, List<WeatherAlert>> = 
         withContext(Dispatchers.IO) {
         try {
-            val urlString = "$BASE_URL?lat=$lat&lon=$lon&appid=$apiKey&units=metric"
+            val langCode = java.util.Locale.getDefault().language 
+            val urlString = "$BASE_URL?lat=$lat&lon=$lon&appid=$apiKey&units=metric&lang=$langCode"
             val url = URL(urlString)
             val conn = url.openConnection() as HttpURLConnection
 

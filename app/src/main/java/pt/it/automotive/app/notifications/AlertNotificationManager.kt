@@ -229,7 +229,7 @@ class AlertNotificationManager(
                 firstNewAlert = false
                 speakForAlert(
                     AlertPreferenceManager.AlertType.WEATHER,
-                    "Weather alert: ${alert.event}"
+                    context.getString(R.string.weather_alert_tts, alert.event)
                 )
             }
         }

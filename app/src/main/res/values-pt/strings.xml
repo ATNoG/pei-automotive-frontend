@@ -61,4 +61,5 @@
     <string name="searching">A pesquisar…</string>
     <string name="logout">Terminar sessão</string>
     <string name="unknown_user">Utilizador desconhecido</string>
+    <string name="weather_alert_tts">Alerta meteorológico: %1$s</string>
 </resources>

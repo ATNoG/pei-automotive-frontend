@@ -62,7 +62,6 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupMapStyleToggle(settingsView)
-        setupLanguageSelection(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupLogoutButton(settingsView)
@@ -112,35 +111,6 @@ class AlertSettingsDialog(
             changedSections.add(PreferencesSectionType.APPEARANCE)
             val mainActivity = activity as? pt.it.automotive.app.MainActivity
             mainActivity?.applyTheme(!isChecked)
-        }
-    }
-
-    // ── Language Selection ───────────────────────────────────────────────
-
-    private fun setupLanguageSelection(settingsView: View) {
-        val btnEnglish = settingsView.findViewById<Button>(R.id.btnEnglish)
-        val btnPortuguese = settingsView.findViewById<Button>(R.id.btnPortuguese)
-        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
-        val currentLanguage = prefs.getString("language", "en") ?: "en"
-
-        updateLanguageButtons(currentLanguage, btnEnglish, btnPortuguese)
-
-        btnEnglish.setOnClickListener {
-            prefs.edit().putString("language", "en").apply()
-            updateLanguageButtons("en", btnEnglish, btnPortuguese)
-            onPreferenceSectionChanged?.invoke(
-                PreferencesSectionUpdate.AppearanceUpdate(language = "en")
-            )
-            changedSections.add(PreferencesSectionType.APPEARANCE)
-        }
-
-        btnPortuguese.setOnClickListener {
-            prefs.edit().putString("language", "pt").apply()
-            updateLanguageButtons("pt", btnEnglish, btnPortuguese)
-            onPreferenceSectionChanged?.invoke(
-                PreferencesSectionUpdate.AppearanceUpdate(language = "pt")
-            )
-            changedSections.add(PreferencesSectionType.APPEARANCE)
         }
     }
             
@@ -390,21 +360,7 @@ class AlertSettingsDialog(
         // Prevent clicks on card from closing overlay
         settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener { }
     }
-
-    private fun updateLanguageButtons(
-        selectedLanguage: String,
-        btnEnglish: Button,
-        btnPortuguese: Button
-    ) {
-        if (selectedLanguage.equals("pt", ignoreCase = true)) {
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        } else {
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        }
-    }
-
+    
     private fun AlertPreferenceManager.AlertType.toAlertCategory(): AlertCategory {
         return when (this) {
             AlertPreferenceManager.AlertType.ACCIDENT -> AlertCategory.ACCIDENT

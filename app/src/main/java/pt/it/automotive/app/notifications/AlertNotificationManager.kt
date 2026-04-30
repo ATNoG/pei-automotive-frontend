@@ -71,14 +71,17 @@ class AlertNotificationManager(
     private fun initTextToSpeech() {
         tts = TextToSpeech(activity) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                val result = tts?.setLanguage(Locale.US)
+                val currentLocale = Locale.getDefault()
+                val result = tts?.setLanguage(currentLocale)
                 ttsInitialized =
                     result != TextToSpeech.LANG_MISSING_DATA &&
                             result != TextToSpeech.LANG_NOT_SUPPORTED
                 if (ttsInitialized) {
-                    Log.d(TAG, "TTS initialised successfully")
+                    Log.d(TAG, "TTS initialised successfully for ${currentLocale.language}")
                 } else {
-                    Log.w(TAG, "TTS language not supported")
+                    Log.w(TAG, "TTS language not supported for ${currentLocale.language}, falling back to US English")
+                    tts?.setLanguage(Locale.US)
+                    ttsInitialized = true
                 }
             } else {
                 Log.e(TAG, "TTS initialisation failed")
@@ -229,7 +232,7 @@ class AlertNotificationManager(
                 firstNewAlert = false
                 speakForAlert(
                     AlertPreferenceManager.AlertType.WEATHER,
-                    "Weather alert: ${alert.event}"
+                    activity.getString(R.string.weather_alert_tts, alert.event)
                 )
             }
         }

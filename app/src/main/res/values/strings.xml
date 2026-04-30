@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Automotive App</string>
     <string name="settings_title">Settings</string>
@@ -23,13 +24,15 @@
     <string name="speed_unit">Km/h</string>
     <string name="speed_unit_short">KM/H</string>
     <string name="turn_right">Turn right</string>
-    <string name="calculating_route">Calculating route…</string>
-    <string name="calculating">Calculating…</string>
+    <string name="calculating_route">Calculating route...</string>
+    <string name="calculating">Calculating...</string>
     <string name="start_navigation">Start Navigation</string>
     <string name="error_calculating_route">Error calculating route</string>
     <string name="try_again">Try Again</string>
-    <string name="ahead">ahead</string>
     <string name="route_info_format">%1$s km · %2$s minutes</string>
+    <string name="ahead">ahead</string>
+    <string name="behind">behind</string>
+    <string name="nearby">nearby</string>
     <string name="away">away</string>
     <string name="emergency_vehicle_warning">Warning, emergency vehicle approaching</string>
     <string name="speed_limit_warning">Warning, you are exceeding the speed limit</string>
@@ -41,6 +44,22 @@
     <string name="highway_entry_warning">Highway alert detected</string>
     <string name="highway_entry_warning_safe">Safe highway entry</string>
     <string name="highway_entry_warning_unsafe">Warning, unsafe highway entry</string>
+    <string name="highway_entry_message">Highway entry detected: %1$s</string>
+    <string name="weather_alert_tts">Weather alert: %1$s</string>
+    <string name="notification_title_accident_alert">⚠️ Accident Alert</string>
+    <string name="notification_title_ev">🚨 Emergency Vehicle %1$s</string>
+    <string name="notification_title_highway_unsafe">⚠️ Unsafe Highway Entry</string>
+    <string name="notification_title_highway_safe">✅ Safe Highway Entry</string>
+    <string name="notification_title_highway">⚠️ Highway Entry Alert</string>
+    <string name="notification_title_traffic_jam">🚦 Traffic Jam Alert</string>
+    <string name="notification_title_mqtt">✔️ Connected</string>
+    <string name="notification_title_mqtt_error">❌ Connection Error</string>
+    <string name="notification_title_driving_mode">You are driving</string>
+    <string name="notification_message_mqtt">Live data feed active</string>
+    <string name="notification_message_mqtt_error">Error connecting to MQTT broker: %1$s</string>
+    <string name="notification_message_driving_mode">Menus are disabled while driving</string>
+    <string name="navigation_arrival_title">You have arrived!</string>
+    <string name="navigation_arrival_message">Navigation complete</string>
     <string name="weather_wind">💨 Wind</string>
     <string name="weather_humidity">💧 Humidity</string>
     <string name="weather_feels_like">🌡️ Feels Like</string>
@@ -48,17 +67,16 @@
     <string name="weather_visibility">👁️ Visibility</string>
     <string name="weather_uv_index">☀️ UV Index</string>
     <string name="weather_active_alert">⚠️ Active Weather Alert</string>
-    <string name="settings_close">Close</string>
-    <string name="destination_selection">Select destination:</string>
-    <string name="cancel">Cancel</string>
     <string name="weather_partly_cloudy">Partly cloudy</string>
     <string name="weather_details">Weather Details</string>
     <string name="weather_toggle_card">Toggle a card to pin it to the weather card.</string>
-    <string name="navigation_error">Error: %1$s</string>
-    <string name="search_destination">Search for a destination…</string>
+    <string name="settings_close">Close</string>
+    <string name="destination_selection">Select destination:</string>
+    <string name="cancel">Cancel</string>
+    <string name="search_destination">Search for a destination...</string>
     <string name="no_results">No results found</string>
-    <string name="searching">Searching…</string>
+    <string name="searching">Searching...</string>
+    <string name="navigation_error">Error: %1$s</string>
     <string name="logout">Logout</string>
     <string name="unknown_user">Unknown user</string>
-    <string name="weather_alert_tts">Weather alert: %1$s</string>
 </resources>

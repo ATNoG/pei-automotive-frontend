@@ -465,8 +465,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
-                        title = "You're driving",
-                        message = "Menus are disabled while driving",
+                        title = getString(R.string.notification_title_driving_mode),
+                        message = getString(R.string.notification_message_driving_mode),
                         duration = 3_000L
                     )
                 } else {
@@ -757,8 +757,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             inAppNotificationManager.show(
                 type = InAppNotificationManager.Type.SUCCESS,
-                title = "You have arrived!",
-                message = "Navigation complete",
+                title = getString(R.string.navigation_arrival_title),
+                message = getString(R.string.navigation_arrival_message),
                 duration = 5_000L,
                 onDismissed = ::stopNavigationAfterArrival
             )
@@ -794,8 +794,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     inAppNotificationManager.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
-                        title = "You're driving",
-                        message = "Menus are disabled while driving",
+                        title = getString(R.string.notification_title_driving_mode),
+                        message = getString(R.string.notification_message_driving_mode),
                         duration = 3_000L
                     )
                 } else {
@@ -1081,8 +1081,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             inAppNotificationManager.show(
                 type = InAppNotificationManager.Type.INFO,
-                title = "✔️ Connected",
-                message = "Live data feed active",
+                title = getString(R.string.notification_title_mqtt),
+                message = getString(R.string.notification_message_mqtt),
                 duration = InAppNotificationManager.SHORT_DURATION_MS
             )
         }
@@ -1092,8 +1092,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             inAppNotificationManager.show(
                 type = InAppNotificationManager.Type.ERROR,
-                title = "❌ Connection Error",
-                message = error
+                title = getString(R.string.notification_title_mqtt_error),
+                message = getString(R.string.notification_message_mqtt_error, error),
+                duration = InAppNotificationManager.LONG_DURATION_MS
             )
         }
     }
@@ -1184,7 +1185,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     val distanceText = UiController.formatDistance(data.distanceMeters, getString(R.string.ahead))
                     inAppNotificationManager.show(
                         type = InAppNotificationManager.Type.ACCIDENT,
-                        title = "⚠️ Accident Alert",
+                        title = getString(R.string.notification_title_accident_alert),
                         message = distanceText,
                         duration = 15_000L
                     )
@@ -1241,11 +1242,18 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     )
                 }
 
+                val localizedDirection = when (direction.lowercase()) {
+                    "ahead" -> getString(R.string.ahead)
+                    "behind" -> getString(R.string.behind)
+                    "nearby" -> getString(R.string.nearby)
+                    else -> direction
+                }
+
                 val evTag = "ev_$evId"
                 val shown = inAppNotificationManager.showOrUpdate(
                     tag = evTag,
                     type = InAppNotificationManager.Type.EMERGENCY,
-                    title = "🚨 Emergency Vehicle $direction",
+                    title = getString(R.string.notification_title_ev, localizedDirection),
                     message = distanceText,
                     duration = 8_000L,
                     onDismissed = { evSpokenIds.remove(evId) }
@@ -1270,11 +1278,11 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val json = org.json.JSONObject(message)
             val status = json.optString("status", "unknown")
             val title = when (status) {
-                "unsafe" -> "⚠️ Unsafe Highway Entry"
-                "safe" -> "✅ Safe Highway Entry"
-                else -> "Highway Entry Alert"
+                "unsafe" -> getString(R.string.notification_title_highway_unsafe)
+                "safe" -> getString(R.string.notification_title_highway_safe)
+                else -> getString(R.string.notification_title_highway)
             }
-            val messageText = "Highway entry detected: $status"
+            val messageText = getString(R.string.highway_entry_message, status)
             val ttsText = when (status) {
                 "unsafe" -> getString(R.string.highway_entry_warning_unsafe)
                 "safe" -> getString(R.string.highway_entry_warning_safe)
@@ -1357,7 +1365,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
                 inAppNotificationManager.show(
                     type = InAppNotificationManager.Type.WARNING,
-                    title = "🚦 Traffic Jam Alert",
+                    title = getString(R.string.notification_title_traffic_jam),
                     message = messageText,
                     duration = InAppNotificationManager.DEFAULT_DURATION_MS
                 )

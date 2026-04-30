@@ -28,7 +28,6 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
 
         const val KEY_LIGHT_MODE = "lightMode"
         const val KEY_COLORBLIND = "colorBlindMode"
-        const val KEY_LANGUAGE = "language"
 
         const val ALERT_SUFFIX_ENABLED = "_enabled"
         const val ALERT_SUFFIX_AUDIO = "_audio"
@@ -92,7 +91,6 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
         appSettingsPrefs.edit()
             .putBoolean(KEY_LIGHT_MODE, !preferences.appearance.darkMode)
             .putBoolean(KEY_COLORBLIND, preferences.appearance.colorblindEnabled)
-            .putString(KEY_LANGUAGE, normalizeLanguage(preferences.appearance.language))
             .apply()
 
         writeAlerts(preferences.alerts)
@@ -105,8 +103,7 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
         val lightMode = appSettingsPrefs.getBoolean(KEY_LIGHT_MODE, false)
         return AppearancePreferences(
             darkMode = !lightMode,
-            colorblindEnabled = appSettingsPrefs.getBoolean(KEY_COLORBLIND, false),
-            language = normalizeLanguage(appSettingsPrefs.getString(KEY_LANGUAGE, "en") ?: "en")
+            colorblindEnabled = appSettingsPrefs.getBoolean(KEY_COLORBLIND, false)
         )
     }
 
@@ -173,7 +170,4 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
             .apply()
     }
 
-    private fun normalizeLanguage(language: String): String {
-        return if (language.equals("pt", ignoreCase = true)) "pt" else "en"
-    }
 }

@@ -4,7 +4,6 @@
     <string name="settings_title">Paramètres</string>
     <string name="map_style">Style de Carte</string>
     <string name="theme_mode">Mode Thème</string>
-    <string name="language">Langue</string>
     <string name="colorblind">Mode Daltonien</string>
     <string name="accessibility">Accessibilité</string>
     <string name="alerts">Alertes</string>

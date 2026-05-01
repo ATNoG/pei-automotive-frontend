@@ -4,7 +4,6 @@
     <string name="settings_title">Ajustes</string>
     <string name="map_style">Estilo del Mapa</string>
     <string name="theme_mode">Modo de Tema</string>
-    <string name="language">Idioma</string>
     <string name="colorblind">Modo Daltonismo</string>
     <string name="accessibility">Accesibilidad</string>
     <string name="alerts">Alertas</string>

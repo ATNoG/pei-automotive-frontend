@@ -195,8 +195,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         initialAppearanceAtLaunch = AppearancePreferences(
             darkMode = !isLightMode,
-            colorblindEnabled = appPrefs.getBoolean("colorBlindMode", false),
-            language = appPrefs.getString("language", "en") ?: "en"
+            colorblindEnabled = appPrefs.getBoolean("colorBlindMode", false)
         )
 
         super.onCreate(savedInstanceState)

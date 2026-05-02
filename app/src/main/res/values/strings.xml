@@ -77,5 +77,10 @@
     <string name="searching">Searching...</string>
     <string name="navigation_error">Error: %1$s</string>
     <string name="logout">Logout</string>
+    <string name="delete_account">Delete Account</string>
     <string name="unknown_user">Unknown user</string>
+    <string name="delete_account_title">Delete Account Permanentemente?</string>
+    <string name="delete_account_message">This action is irreversible. All your data, preferences, and history will be deleted.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
 </resources>

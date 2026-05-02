@@ -330,7 +330,7 @@ class AlertSettingsDialog(
         if (username.isNullOrEmpty()) {
             usernameTextView.visibility = View.GONE
         } else {
-            usernameTextView.text = username
+            usernameTextView.text = "@$username"
             usernameTextView.visibility = View.VISIBLE
         }
 
@@ -339,15 +339,28 @@ class AlertSettingsDialog(
         }
 
         btnDeleteAccount.setOnClickListener {
-            AlertDialog.Builder(activity)
-                .setTitle("Delete Account")
-                .setMessage("Are you sure you want to permanently delete your account and all associated data? This action cannot be undone.")
-                .setPositiveButton("Delete") { _, _ ->
-                    performAccountDeletion()
-                }
-                .setNegativeButton("Cancel", null)
-                .show()
+            showDeleteAccountDialog()
         }
+    }
+
+    private fun showDeleteAccountDialog() {
+        val dialog = android.app.Dialog(activity)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_delete_account)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        val metrics = activity.resources.displayMetrics
+        val width = (metrics.widthPixels * 0.85).toInt()
+        dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel_delete)
+        val btnConfirm = dialog.findViewById<Button>(R.id.btn_confirm_delete)
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        btnConfirm.setOnClickListener {
+            performAccountDeletion()
+            dialog.dismiss()
+        }
+        dialog.show()
     }
 
     private fun performAccountDeletion() {
@@ -367,13 +380,13 @@ class AlertSettingsDialog(
     }
 
     private fun performLogout() {
-        // 1. Clear local preferences cache so the next user starts fresh
+        // clear local preferences cache so the next user starts fresh
         onLogout?.invoke()
 
-        // 2. Clear saved tokens
+        // clear saved tokens
         TokenStore.clear(activity)
 
-        // 3. Redirect to LoginActivity and clear the back stack
+        // redirect to LoginActivity and clear the back stack
         val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
             flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
         }

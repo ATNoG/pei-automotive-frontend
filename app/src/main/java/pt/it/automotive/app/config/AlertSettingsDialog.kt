@@ -10,12 +10,14 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ScrollView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import com.google.android.material.tabs.TabLayout
 import pt.it.automotive.app.MapController
 import pt.it.automotive.app.R
 import pt.it.automotive.app.auth.LoginActivity
@@ -67,6 +69,7 @@ class AlertSettingsDialog(
         configureModalBounds(settingsView)
         rootView.addView(settingsView)
 
+        setupTabs(settingsView)
         setupMapStyleToggle(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
@@ -99,6 +102,37 @@ class AlertSettingsDialog(
             lp.bottomMargin = verticalMarginPx
             card.layoutParams = lp
         }
+    }
+
+    // ── Tabs Setup ────────────────────────────────────────────────────────
+
+    private fun setupTabs(settingsView: View) {
+        val tabLayout = settingsView.findViewById<TabLayout>(R.id.settingsTabLayout)
+        val tabAccount = settingsView.findViewById<ScrollView>(R.id.tabContentAccount)
+        val tabVisual = settingsView.findViewById<ScrollView>(R.id.tabContentVisual)
+        val tabAlerts = settingsView.findViewById<ScrollView>(R.id.tabContentAlerts)
+
+        // create tabs with localized titles
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_account)))
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_visual)))
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_alerts)))
+
+        // hide/show content based on selected tab
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                tabAccount.visibility = View.GONE
+                tabVisual.visibility = View.GONE
+                tabAlerts.visibility = View.GONE
+
+                when (tab?.position) {
+                    0 -> tabAccount.visibility = View.VISIBLE
+                    1 -> tabVisual.visibility = View.VISIBLE
+                    2 -> tabAlerts.visibility = View.VISIBLE
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 
     // ── Map Style ────────────────────────────────────────────────────────

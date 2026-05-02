@@ -79,7 +79,7 @@
     <string name="logout">Esci</string>
     <string name="unknown_user">Utente sconosciuto</string>
     <string name="delete_account">Elimina Account</string>
-    <string name="delete_account_title">Elimina Account Permanentemente?</string>
+    <string name="delete_account_title">Eliminare definitivamente l'account?</string>
     <string name="delete_account_message">Questa azione è irreversibile. Tutti i tuoi dati, preferenze e cronologia saranno eliminati.</string>
     <string name="action_cancel">Annulla</string>
     <string name="action_delete">Elimina</string>

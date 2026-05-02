@@ -9,13 +9,19 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import pt.it.automotive.app.MapController
 import pt.it.automotive.app.R
 import pt.it.automotive.app.auth.LoginActivity
 import pt.it.automotive.app.auth.TokenStore
+import pt.it.automotive.app.auth.AccountApiService
+import pt.it.automotive.app.auth.AccountApiResult
 import pt.it.automotive.app.preferences.AlertCategory
 import pt.it.automotive.app.preferences.PreferencesSectionType
 import pt.it.automotive.app.preferences.PreferencesSectionUpdate
@@ -315,27 +321,64 @@ class AlertSettingsDialog(
         val fullNameTextView = settingsView.findViewById<TextView>(R.id.fullNameTextView)
         val usernameTextView = settingsView.findViewById<TextView>(R.id.usernameTextView)
         val btnLogout = settingsView.findViewById<Button>(R.id.btnLogout)
+        val btnDeleteAccount = settingsView.findViewById<Button>(R.id.btnDeleteAccount)
         
         val fullName = TokenStore.getFullName(activity)
         val username = TokenStore.getUsername(activity)
-        
-        fullNameTextView?.text = fullName ?: activity.getString(R.string.unknown_user)
-        usernameTextView?.text = username?.let { "@$it" } ?: ""
 
-        btnLogout?.setOnClickListener {
-            // 1. Clear local preferences cache so the next user starts fresh
-            onLogout?.invoke()
-
-            // 2. Clear saved tokens
-            TokenStore.clear(activity)
-
-            // 3. Redirect to LoginActivity and clear the back stack
-            val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
-                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            activity.startActivity(intent)
-            activity.finish()
+        fullNameTextView.text = fullName ?: activity.getString(R.string.unknown_user)
+        if (username.isNullOrEmpty()) {
+            usernameTextView.visibility = View.GONE
+        } else {
+            usernameTextView.text = username
+            usernameTextView.visibility = View.VISIBLE
         }
+
+        btnLogout.setOnClickListener {
+            performLogout()
+        }
+
+        btnDeleteAccount.setOnClickListener {
+            AlertDialog.Builder(activity)
+                .setTitle("Delete Account")
+                .setMessage("Are you sure you want to permanently delete your account and all associated data? This action cannot be undone.")
+                .setPositiveButton("Delete") { _, _ ->
+                    performAccountDeletion()
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        }
+    }
+
+    private fun performAccountDeletion() {
+        val token = TokenStore.getAccessToken(activity) ?: return
+        activity.lifecycleScope.launch {
+            val apiService = AccountApiService()
+            when (val result = apiService.deleteAccount(token)) {
+                is AccountApiResult.Success -> {
+                    Toast.makeText(activity, "Account deleted successfully", Toast.LENGTH_LONG).show()
+                    performLogout()
+                }
+                is AccountApiResult.Error -> {
+                    Toast.makeText(activity, "Failed to delete account: ${result.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun performLogout() {
+        // 1. Clear local preferences cache so the next user starts fresh
+        onLogout?.invoke()
+
+        // 2. Clear saved tokens
+        TokenStore.clear(activity)
+
+        // 3. Redirect to LoginActivity and clear the back stack
+        val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        activity.startActivity(intent)
+        activity.finish()
     }
 
     fun dismiss() {

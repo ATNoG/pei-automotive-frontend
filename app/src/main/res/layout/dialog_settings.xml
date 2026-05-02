@@ -104,20 +104,43 @@
                                 android:ellipsize="end" />
                         </LinearLayout>
 
-                        <!-- Logout Button -->
-                        <Button
-                            android:id="@+id/btnLogout"
+                        <!-- Buttons Group -->
+                        <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/button_logout_background"
-                            android:paddingStart="24dp"
-                            android:paddingEnd="24dp"
-                            android:text="@string/logout"
-                            android:textAllCaps="false"
-                            android:textColor="@android:color/white"
-                            android:textSize="@dimen/text_small"
-                            android:textStyle="bold"
-                            android:minHeight="64dp" />
+                            android:orientation="vertical"
+                            android:gravity="end">
+
+                            <Button
+                                android:id="@+id/btnLogout"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/button_logout_background"
+                                android:paddingStart="24dp"
+                                android:paddingEnd="24dp"
+                                android:text="@string/logout"
+                                android:textAllCaps="false"
+                                android:textColor="@android:color/white"
+                                android:textSize="@dimen/text_small"
+                                android:textStyle="bold"
+                                android:minHeight="64dp" />
+
+                            <Button
+                                android:id="@+id/btnDeleteAccount"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/button_logout_background"
+                                android:backgroundTint="#FF4444"
+                                android:layout_marginTop="8dp"
+                                android:paddingStart="24dp"
+                                android:paddingEnd="24dp"
+                                android:text="Delete Account"
+                                android:textAllCaps="false"
+                                android:textColor="@android:color/white"
+                                android:textSize="@dimen/text_small"
+                                android:textStyle="bold"
+                                android:minHeight="64dp" />
+                        </LinearLayout>
 
                     </LinearLayout>
 

@@ -261,8 +261,8 @@
             >
                 <FrameLayout
                     android:id="@+id/speedLimitContainer"
-                    android:layout_width="50dp"
-                    android:layout_height="50dp"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
                     android:layout_marginEnd="12dp"
                 >
                     <View
@@ -272,13 +272,18 @@
                     />
                     <TextView
                         android:id="@+id/txtSpeedLimit"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="center"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="6dp"
+                        android:gravity="center"
                         android:text="--"
                         android:textColor="?attr/colorTextOnLight"
-                        android:textSize="@dimen/text_xlarge"
                         android:textStyle="bold"
+                        android:fontFamily="sans-serif-condensed"
+                        app:autoSizeTextType="uniform"
+                        app:autoSizeMinTextSize="24sp"
+                        app:autoSizeMaxTextSize="@dimen/text_xlarge"
+                        app:autoSizeStepGranularity="2sp"
                     />
                 </FrameLayout>
 

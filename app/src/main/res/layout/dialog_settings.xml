@@ -59,7 +59,8 @@
                 app:tabSelectedTextColor="?attr/colorTextPrimary" 
                 app:tabTextColor="?attr/colorTextSecondary"
                 app:tabGravity="fill"
-                app:tabMode="fixed" />
+                app:tabMode="fixed" 
+                app:tabTextAppearance="@style/CustomTabTextAppearance" />
 
             <!-- FrameLayout with Tab Content -->
             <FrameLayout

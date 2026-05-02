@@ -83,4 +83,7 @@
     <string name="delete_account_message">Cette action est irréversible. Toutes vos données, préférences et historique seront supprimés.</string>
     <string name="action_cancel">Annuler</string>
     <string name="action_delete">Supprimer</string>
+    <string name="tab_account">Compte</string>
+    <string name="tab_visual">Visuel</string>
+    <string name="tab_alerts">Alertes</string>
 </resources>

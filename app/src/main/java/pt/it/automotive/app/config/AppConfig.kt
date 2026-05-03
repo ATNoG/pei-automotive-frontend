@@ -56,6 +56,8 @@ object AppConfig {
         "highway-car",
         "highway-car-2",
         "minimal-jam-car-5",
+        // proximity_filter integration test (Aveiro pair, slow car is "ours")
+        "prox-aveiro-slow",
         SUMO_USER_CAR_ID,
     )
 
@@ -73,7 +75,11 @@ object AppConfig {
         "minimal-jam-car-2",
         "minimal-jam-car-3",
         "minimal-jam-car-4",
-        "minimal-jam-lead"
+        "minimal-jam-lead",
+        // proximity_filter integration test
+        "prox-aveiro-fast",
+        "prox-lisbon-slow",
+        "prox-lisbon-fast",
     )
 
     // ========== Default Positions ==========

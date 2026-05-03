@@ -40,16 +40,16 @@
     <string name="traffic_jam_warning">Warning! Traffic jam in %1$s.</string>
     <string name="traffic_jam_warning_short">Traffic jam %1$s</string>
     <string name="traffic_jam_warning_generic">Warning, traffic jam ahead</string>
-    <string name="highway_entry_warning">Highway alert detected</string>
-    <string name="highway_entry_warning_safe">Safe highway entry</string>
-    <string name="highway_entry_warning_unsafe">Warning, unsafe highway entry</string>
-    <string name="highway_entry_message">Highway entry detected: %1$s</string>
+    <string name="highway_entry_warning">Lane Merge detected</string>
+    <string name="highway_entry_warning_safe">Safe lane merge</string>
+    <string name="highway_entry_warning_unsafe">Warning, unsafe lane merge</string>
+    <string name="highway_entry_message">Lane merge detected: %1$s</string>
     <string name="weather_alert_tts">Weather alert: %1$s</string>
     <string name="notification_title_accident_alert">⚠️ Accident Alert</string>
     <string name="notification_title_ev">🚨 Emergency Vehicle %1$s</string>
-    <string name="notification_title_highway_unsafe">⚠️ Unsafe Highway Entry</string>
-    <string name="notification_title_highway_safe">✅ Safe Highway Entry</string>
-    <string name="notification_title_highway">⚠️ Highway Entry Alert</string>
+    <string name="notification_title_highway_unsafe">⚠️ Unsafe Lane Merge</string>
+    <string name="notification_title_highway_safe">✅ Safe Lane Merge</string>
+    <string name="notification_title_highway">⚠️ Lane Merge Alert</string>
     <string name="notification_title_traffic_jam">🚦 Traffic Jam Alert</string>
     <string name="notification_title_mqtt">✔️ Connected</string>
     <string name="notification_title_mqtt_error">❌ Connection Error</string>
@@ -77,5 +77,13 @@
     <string name="searching">Searching...</string>
     <string name="navigation_error">Error: %1$s</string>
     <string name="logout">Logout</string>
+    <string name="delete_account">Delete Account</string>
     <string name="unknown_user">Unknown user</string>
+    <string name="delete_account_title">Delete Account Permanently?</string>
+    <string name="delete_account_message">This action is irreversible. All your data, preferences, and history will be deleted.</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="tab_account">Account</string>
+    <string name="tab_visual">Visual</string>
+    <string name="tab_alerts">Alerts</string>
 </resources>

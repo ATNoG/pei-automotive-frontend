@@ -40,16 +40,16 @@
     <string name="traffic_jam_warning">Attenzione! Traffico a %1$s.</string>
     <string name="traffic_jam_warning_short">Traffico a %1$s</string>
     <string name="traffic_jam_warning_generic">Attenzione, traffico avanti</string>
-    <string name="highway_entry_warning">Avviso autostrada rilevato</string>
-    <string name="highway_entry_warning_safe">Ingresso in autostrada sicuro</string>
-    <string name="highway_entry_warning_unsafe">Attenzione, ingresso in autostrada pericoloso</string>
-    <string name="highway_entry_message">Ingresso in autostrada rilevato: %1$s</string>
+    <string name="highway_entry_warning">Avviso fusione di carril rilevato</string>
+    <string name="highway_entry_warning_safe">Fusione di carril sicura</string>
+    <string name="highway_entry_warning_unsafe">Attenzione, fusione di carril pericolosa</string>
+    <string name="highway_entry_message">Fusione di carril rilevata: %1$s</string>
     <string name="weather_alert_tts">Allerta meteo: %1$s</string>
     <string name="notification_title_accident_alert">⚠️ Allarme Incidente</string>
     <string name="notification_title_ev">🚨 Veicolo di Emergenza %1$s</string>
-    <string name="notification_title_highway_unsafe">⚠️ Ingresso Pericoloso</string>
-    <string name="notification_title_highway_safe">✅ Ingresso Sicuro</string>
-    <string name="notification_title_highway">⚠️ Allarme Autostrada</string>
+    <string name="notification_title_highway_unsafe">⚠️ Fusione di Carril Insegura</string>
+    <string name="notification_title_highway_safe">✅ Fusione di Carril Segura</string>
+    <string name="notification_title_highway">⚠️ Allarme Fusione di Carril</string>
     <string name="notification_title_traffic_jam">🚦 Allarme Traffico</string>
     <string name="notification_title_mqtt">✔️ Connesso</string>
     <string name="notification_title_mqtt_error">❌ Errore di Connessione</string>
@@ -78,4 +78,12 @@
     <string name="navigation_error">Errore: %1$s</string>
     <string name="logout">Esci</string>
     <string name="unknown_user">Utente sconosciuto</string>
+    <string name="delete_account">Elimina Account</string>
+    <string name="delete_account_title">Eliminare definitivamente l\'account?</string>
+    <string name="delete_account_message">Questa azione è irreversibile. Tutti i tuoi dati, preferenze e cronologia saranno eliminati.</string>
+    <string name="action_cancel">Annulla</string>
+    <string name="action_delete">Elimina</string>
+    <string name="tab_account">Account</string>
+    <string name="tab_visual">Aspetto</string>
+    <string name="tab_alerts">Avvisi</string>
 </resources>

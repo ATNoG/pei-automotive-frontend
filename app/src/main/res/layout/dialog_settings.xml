@@ -47,195 +47,257 @@
                     android:src="@drawable/ic_close"
                     app:tint="?attr/colorIconDefault"
                     android:contentDescription="@string/settings_close" />
-
             </LinearLayout>
 
-            <!-- Scrollable Content -->
-            <ScrollView
+            <!-- TabLayout -->
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/settingsTabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="?attr/colorSurfaceDialog"
+                app:tabIndicatorColor="?attr/colorTextPrimary" 
+                app:tabSelectedTextColor="?attr/colorTextPrimary" 
+                app:tabTextColor="?attr/colorTextSecondary"
+                app:tabGravity="fill"
+                app:tabMode="fixed" 
+                app:tabTextAppearance="@style/CustomTabTextAppearance" />
+
+            <!-- FrameLayout with Tab Content -->
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
-                android:fillViewport="true">
+                android:layout_weight="1">
 
-                <LinearLayout
+                <!-- 1st tab account (visible by default) -->
+                <ScrollView
+                    android:id="@+id/tabContentAccount"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="20dp">
+                    android:layout_height="match_parent"
+                    android:fillViewport="true"
+                    android:visibility="visible">
 
-                    <!-- User Account Card -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="16dp"
-                        android:layout_marginBottom="24dp"
-                        android:background="@drawable/card_background_with_stroke">
+                        android:orientation="vertical"
+                        android:padding="20dp">
 
-                        <!-- User Info -->
+                        <!-- User Account Card -->
                         <LinearLayout
-                            android:layout_width="0dp"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical"
-                            android:layout_marginEnd="16dp">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="16dp"
+                            android:background="@drawable/card_background_with_stroke">
 
-                            <TextView
-                                android:id="@+id/fullNameTextView"
+                            <!-- User Info -->
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:layout_marginEnd="16dp">
+
+                                <TextView
+                                    android:id="@+id/fullNameTextView"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/unknown_user"
+                                    android:textColor="?attr/colorTextPrimary"
+                                    android:textSize="@dimen/text_medium"
+                                    android:textStyle="bold"
+                                    android:maxLines="1"
+                                    android:ellipsize="end" />
+
+                                <TextView
+                                    android:id="@+id/usernameTextView"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:textColor="?attr/colorTextSecondary"
+                                    android:textSize="@dimen/text_small"
+                                    android:layout_marginTop="2dp"
+                                    android:maxLines="1"
+                                    android:ellipsize="end" />
+                            </LinearLayout>
+
+                            <!-- Buttons Group -->
+                            <LinearLayout
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/unknown_user"
-                                android:textColor="?attr/colorTextPrimary"
-                                android:textSize="@dimen/text_medium" 
-                                android:textStyle="bold"
-                                android:maxLines="1"
-                                android:ellipsize="end" />
+                                android:orientation="horizontal"
+                                android:gravity="end">
 
-                            <TextView
-                                android:id="@+id/usernameTextView"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text=""
-                                android:textColor="?attr/colorTextSecondary"
-                                android:textSize="@dimen/text_small"
-                                android:layout_marginTop="2dp"
-                                android:maxLines="1"
-                                android:ellipsize="end" />
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnLogout"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginEnd="8dp"
+                                    android:background="@drawable/button_logout_background"
+                                    android:backgroundTint="@color/btn_cancel_bg"
+                                    android:paddingStart="24dp"
+                                    android:paddingEnd="24dp"
+                                    android:text="@string/logout"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/btn_cancel_text"
+                                    android:textSize="@dimen/text_small"
+                                    android:textStyle="bold"
+                                    android:minHeight="64dp" />
+
+                                <androidx.appcompat.widget.AppCompatButton
+                                    android:id="@+id/btnDeleteAccount"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/button_logout_background"
+                                    android:backgroundTint="#D32F2F"
+                                    android:paddingStart="24dp"
+                                    android:paddingEnd="24dp"
+                                    android:text="@string/delete_account"
+                                    android:textAllCaps="false"
+                                    android:textColor="@android:color/white"
+                                    android:textSize="@dimen/text_small"
+                                    android:textStyle="bold"
+                                    android:minHeight="64dp" />
+                            </LinearLayout>
                         </LinearLayout>
+                    </LinearLayout>
+                </ScrollView>
 
-                        <!-- Logout Button -->
-                        <Button
-                            android:id="@+id/btnLogout"
+                <!-- 2nd tab visual and accessibility (hidden by default) -->
+                <ScrollView
+                    android:id="@+id/tabContentVisual"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:fillViewport="true"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
+                        <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:background="@drawable/button_logout_background"
-                            android:paddingStart="24dp"
-                            android:paddingEnd="24dp"
-                            android:text="@string/logout"
-                            android:textAllCaps="false"
-                            android:textColor="@android:color/white"
+                            android:text="@string/map_style"
                             android:textSize="@dimen/text_small"
                             android:textStyle="bold"
-                            android:minHeight="64dp" />
+                            android:textColor="?attr/colorTextPrimary"
+                            android:layout_marginBottom="12dp" />
 
-                    </LinearLayout>
-
-                    <!-- Map Style Section Header -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/map_style"
-                        android:textSize="@dimen/text_small"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- Dark / Light Mode Row -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="14dp"
-                        android:paddingBottom="14dp"
-                        android:background="@drawable/card_background_with_stroke"
-                        android:layout_marginBottom="20dp">
-
-                        <!-- Label (left, takes available space) -->
-                        <TextView
-                            android:layout_width="0dp"
+                        <!-- Dark / Light Mode Row -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/theme_mode"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="14dp"
+                            android:background="@drawable/card_background_with_stroke"
+                            android:layout_marginBottom="20dp">
+
+                            <!-- Label (left, takes available space) -->
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/theme_mode"
+                                android:textSize="@dimen/text_small"
+                                android:textColor="?attr/colorTextPrimary" />
+
+                            <!-- 🌙 dark emoji -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="🌙"
+                                android:textSize="@dimen/text_regular"
+                                android:layout_marginEnd="8dp" />
+
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchLightMode"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="false" />
+
+                            <!-- ☀️ light emoji -->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="☀️"
+                                android:textSize="@dimen/text_regular"
+                                android:layout_marginStart="8dp" />
+
+                        </LinearLayout>
+
+                        <!-- Accessibility Section Header -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/accessibility"
                             android:textSize="@dimen/text_small"
-                            android:textColor="?attr/colorTextPrimary" />
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:layout_marginBottom="12dp" />
 
-                        <!-- 🌙 dark emoji -->
-                        <TextView
-                            android:layout_width="wrap_content"
+                        <LinearLayout
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="🌙"
-                            android:textSize="@dimen/text_regular"
-                            android:layout_marginEnd="8dp" />
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:padding="14dp"
+                            android:background="@drawable/card_background_with_stroke"
+                            android:layout_marginBottom="20dp">
 
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switchLightMode"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="false" />
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/colorblind"
+                                android:textSize="@dimen/text_small"
+                                android:textColor="?attr/colorTextPrimary" />
 
-                        <!-- ☀️ light emoji -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="☀️"
-                            android:textSize="@dimen/text_regular"
-                            android:layout_marginStart="8dp" />
-
+                            <androidx.appcompat.widget.SwitchCompat
+                                android:id="@+id/switchColorBlind"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:checked="false" />
+                        </LinearLayout>
                     </LinearLayout>
-                  
-                    <!-- Accessibility Section Header -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/accessibility"
-                        android:textSize="@dimen/text_small"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:layout_marginBottom="12dp" />
+                </ScrollView>
 
-                    <!-- Colorblind Mode Row -->
+                <!-- 3rd tab alerts (hidden by default) -->
+                <ScrollView
+                    android:id="@+id/tabContentAlerts"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:fillViewport="true"
+                    android:visibility="gone">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:paddingTop="14dp"
-                        android:paddingBottom="14dp"
-                        android:background="@drawable/card_background_with_stroke"
-                        android:layout_marginBottom="20dp">
-                         
+                        android:orientation="vertical"
+                        android:padding="20dp">
+
                         <TextView
-                          android:layout_width="0dp"
-                          android:layout_height="wrap_content"
-                          android:layout_weight="1"
-                          android:text="@string/colorblind"
-                          android:textSize="@dimen/text_small"
-                          android:textColor="?attr/colorTextPrimary" />
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/alerts"
+                            android:textSize="@dimen/text_small"
+                            android:textStyle="bold"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:layout_marginBottom="12dp" />
 
-                        <androidx.appcompat.widget.SwitchCompat
-                          android:id="@+id/switchColorBlind"
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:checked="false" />
-
+                        <!-- Alert Grid Container (populated programmatically as 2-column grid) -->
+                        <LinearLayout
+                            android:id="@+id/alertSettingsContainer"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
                     </LinearLayout>
-
-                    <!-- Alerts Section Header -->
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/alerts"
-                        android:textSize="@dimen/text_small"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:layout_marginBottom="12dp" />
-
-                    <!-- Alert Grid Container (populated programmatically as 2-column grid) -->
-                    <LinearLayout
-                        android:id="@+id/alertSettingsContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical" />
-
-                </LinearLayout>
-
-            </ScrollView>
+                </ScrollView>
+                
+            </FrameLayout>
 
         </LinearLayout>
 

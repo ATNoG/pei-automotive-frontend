@@ -1,6 +1,7 @@
 package pt.it.automotive.app.notifications
 
 import pt.it.automotive.app.R
+import pt.it.automotive.app.UiController
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
@@ -61,22 +62,26 @@ class InAppNotificationManager(private val activity: Activity) {
 
     data class AppNotification(
         val type: Type?,
-        val title: String?,
-        val message: String? = null,
+        var title: String?, // Changed to var so we can update it
+        var message: String? = null, // Changed to var
         val duration: Long = DEFAULT_DURATION_MS,
-        
-        // Priority System props
+
         val priority: Int = 0,
         val expirationS: Int = 0,
         val timestamp: Long = 0,
 
-        // Exception props
+
         val isVisualExempt: Boolean = false,
         val customVisualAction: (() -> Unit)? = null,
         val playAudioAction: (() -> Unit)? = null,
-        
+
         val onDismissed: (() -> Unit)? = null,
-        val tag: String? = null
+        val tag: String? = null,
+        
+        // NEW FIELDS FOR AGGREGATION
+        val groupId: String? = null, // e.g., "ACCIDENT_GROUP"
+        var aggregateCount: Int = 1,
+        var closestDistance: Double = Double.MAX_VALUE 
     )
 
     // ── Constants ────────────────────────────────────────────────────────
@@ -166,6 +171,40 @@ class InAppNotificationManager(private val activity: Activity) {
                 Log.d(TAG, "Updating existing queued alert for tag: ${notification.tag}")
                 queue[existingIndex] = notification // Replace with freshest distance/data
                 return // Done, do not add duplicate
+            }
+        }
+
+        // 4.5 Aggregation Rule
+        if (notification.groupId != null) {
+            // Check if we are currently showing an alert of this group
+            if (isShowing && currentView?.parent != null && 
+                (currentView?.tag as? String) == notification.groupId) { // Assuming you set view.tag = groupId
+                
+                // Aggregate with currently showing view
+                val currentTitleObj = currentView?.getTag(R.id.notifTitle) as? AppNotification // Store ref in view tag
+                if (currentTitleObj != null) {
+                    currentTitleObj.aggregateCount++
+                    currentTitleObj.closestDistance = minOf(currentTitleObj.closestDistance, notification.closestDistance)
+                    
+                    val updatedMessage = "${currentTitleObj.aggregateCount} incidents ahead (closest: ${UiController.formatDistance(currentTitleObj.closestDistance)})"
+                    
+                    // Update UI instantly
+                    handler.post {
+                        currentView?.findViewById<TextView>(R.id.notifMessage)?.text = updatedMessage
+                        // Optionally pulse the UI here to draw attention to the update
+                    }
+                    return // Stop processing, we handled it in-place
+                }
+            }
+
+            // Check if an alert of this group is sitting in the queue
+            val queuedAlert = queue.find { it.groupId == notification.groupId }
+            if (queuedAlert != null) {
+                queuedAlert.aggregateCount++
+                queuedAlert.closestDistance = minOf(queuedAlert.closestDistance, notification.closestDistance)
+                queuedAlert.title = "${queuedAlert.aggregateCount} ${notification.title}s"
+                queuedAlert.message = "Closest: ${UiController.formatDistance(queuedAlert.closestDistance)}"
+                return // Stop processing, we updated the queued item
             }
         }
 

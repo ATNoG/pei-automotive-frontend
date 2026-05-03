@@ -1247,6 +1247,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 type = InAppNotificationManager.Type.ACCIDENT,
                 title = "⚠️ Accident Alert",
                 message = distanceText,
+                groupId = "ACCIDENT_GROUP", // Group similar events
+                closestDistance = accidentData.distanceMeters, // Pass raw double
                 duration = 15_000L,
                 priority = metadata.priority,
                 expirationS = metadata.expirationS,

@@ -232,7 +232,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         overtakingEdgeLightView = attachOvertakingEdgeLight()
         alertPreferenceManager = AlertPreferenceManager(this)
         alertNotificationManager = AlertNotificationManager(this, alertPreferenceManager, inAppNotificationManager)
-        alertNotificationManager.requestNotificationPermission()
+        inAppNotificationManager.alertNotificationManager = alertNotificationManager
+        
         alertSettingsDialog = AlertSettingsDialog(
             this,
             alertPreferenceManager,
@@ -954,12 +955,56 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     // ========== MqttEventListener Implementation ==========
 
-    override fun onSpeedAlert() {
-        runOnUiThread { uiController.showSpeedAlert() }
+    override fun onSpeedAlert(payload: String) {
+        try {
+            val json = org.json.JSONObject(payload)
+            val metadata = parseAlertMetadata(json)
+            
+            val notification = InAppNotificationManager.AppNotification(
+                type = null, // Visual handled by custom action
+                title = null,
+                priority = metadata.priority,
+                expirationS = metadata.expirationS,
+                timestamp = metadata.timestamp,
+                isVisualExempt = true,
+                customVisualAction = { uiController.showSpeedAlert() },
+                playAudioAction = {
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.SPEEDING,
+                        getString(R.string.speed_limit_warning)
+                    )
+                }
+            )
+            inAppNotificationManager.handleAlert(notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing speed alert", e)
+        }
     }
 
     override fun onOvertakingAlert(payload: String) {
-        runOnUiThread { vehicleTracker.showOvertakingWarning(payload) }
+        try {
+            val json = org.json.JSONObject(payload)
+            val metadata = parseAlertMetadata(json)
+            
+            val notification = InAppNotificationManager.AppNotification(
+                type = null,
+                title = null,
+                priority = metadata.priority,
+                expirationS = metadata.expirationS,
+                timestamp = metadata.timestamp,
+                isVisualExempt = true,
+                customVisualAction = { vehicleTracker.showOvertakingWarning(payload) },
+                playAudioAction = {
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.OVERTAKING,
+                        getString(R.string.overtaking_warning)
+                    )
+                }
+            )
+            inAppNotificationManager.handleAlert(notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing overtaking alert", e)
+        }
     }
 
     override fun onAccidentAlert(topic: String, payload: String) {
@@ -1149,6 +1194,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     // ========== Accident Handling ==========
 
+    data class AlertMetadataData(val priority: Int, val expirationS: Int, val timestamp: Long)
+
+    private fun parseAlertMetadata(json: org.json.JSONObject): AlertMetadataData {
+        val priority = json.optInt("priority", 0)
+        val expirationS = json.optInt("expiration_s", 0)
+        val timestamp = json.optLong("timestamp", System.currentTimeMillis() / 1000)
+        return AlertMetadataData(priority, expirationS, timestamp)
+    }
+
     private fun handleAccidentAlert(topic: String, message: String) {
         if (!alertNotificationManager.shouldProcessAlert(AlertPreferenceManager.AlertType.ACCIDENT)) return
 
@@ -1180,19 +1234,32 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 distanceMeters = distanceM,
                 timestamp = (timestamp * 1000).toLong()
             )
+            
+            val metadata = parseAlertMetadata(json)
 
             runOnUiThread {
-                alertNotificationManager.showAccidentAlert(accidentData) { data ->
-                    mapController.addAccidentMarker(data.eventId, data.latitude, data.longitude)
-                    val distanceText = UiController.formatDistance(data.distanceMeters, getString(R.string.ahead))
-                    inAppNotificationManager.show(
-                        type = InAppNotificationManager.Type.ACCIDENT,
-                        title = "⚠️ Accident Alert",
-                        message = distanceText,
-                        duration = 15_000L
+                mapController.addAccidentMarker(accidentData.eventId, accidentData.latitude, accidentData.longitude)
+            }
+                
+            val distanceText = UiController.formatDistance(accidentData.distanceMeters, getString(R.string.ahead))
+            
+            val notification = InAppNotificationManager.AppNotification(
+                type = InAppNotificationManager.Type.ACCIDENT,
+                title = "⚠️ Accident Alert",
+                message = distanceText,
+                duration = 15_000L,
+                priority = metadata.priority,
+                expirationS = metadata.expirationS,
+                timestamp = metadata.timestamp,
+                playAudioAction = {
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.ACCIDENT,
+                        getString(R.string.accident_warning, distanceText)
                     )
                 }
-            }
+            )
+            
+            inAppNotificationManager.handleAlert(notification)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing accident alert", e)
         }
@@ -1232,6 +1299,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val distanceM = json.optDouble("distance_m", Double.NaN)
 
             if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) return
+            
+            val metadata = parseAlertMetadata(json)
 
             runOnUiThread {
                 vehicleTracker.handleEVProximityAlert(evId, evLat, evLon, evHeading)
@@ -1245,23 +1314,29 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 }
 
                 val evTag = "ev_$evId"
-                val shown = inAppNotificationManager.showOrUpdate(
-                    tag = evTag,
+                
+                val notification = InAppNotificationManager.AppNotification(
                     type = InAppNotificationManager.Type.EMERGENCY,
                     title = "🚨 Emergency Vehicle $direction",
                     message = distanceText,
                     duration = 8_000L,
-                    onDismissed = { evSpokenIds.remove(evId) }
+                    tag = evTag,
+                    priority = metadata.priority,
+                    expirationS = metadata.expirationS,
+                    timestamp = metadata.timestamp,
+                    onDismissed = { evSpokenIds.remove(evId) },
+                    playAudioAction = {
+                        if (evId !in evSpokenIds) {
+                            evSpokenIds.add(evId)
+                            alertNotificationManager.speakForAlert(
+                                AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
+                                getString(R.string.emergency_vehicle_warning)
+                            )
+                        }
+                    }
                 )
-
-                // Speak TTS only on the first alert for this EV
-                if (shown && evId !in evSpokenIds) {
-                    evSpokenIds.add(evId)
-                    alertNotificationManager.speakForAlert(
-                        AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE,
-                        getString(R.string.emergency_vehicle_warning)
-                    )
-                }
+                
+                inAppNotificationManager.handleAlert(notification)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing EV alert: ${e.message}")
@@ -1283,19 +1358,26 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 "safe" -> getString(R.string.highway_entry_warning_safe)
                 else -> getString(R.string.highway_entry_warning)
             }
+        
+        val metadata = parseAlertMetadata(json)
 
-            runOnUiThread {
-                inAppNotificationManager.show(
-                    type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
-                    title = title,
-                    message = messageText,
-                    duration = InAppNotificationManager.DEFAULT_DURATION_MS
-                )
+        val notification = InAppNotificationManager.AppNotification(
+            type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
+            title = title,
+            message = messageText,
+            duration = InAppNotificationManager.DEFAULT_DURATION_MS,
+            priority = metadata.priority,
+            expirationS = metadata.expirationS,
+            timestamp = metadata.timestamp,
+            playAudioAction = {
                 alertNotificationManager.speakForAlert(
                     AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
                     ttsText
                 )
             }
+        )
+        
+            inAppNotificationManager.handleAlert(notification)
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
         }

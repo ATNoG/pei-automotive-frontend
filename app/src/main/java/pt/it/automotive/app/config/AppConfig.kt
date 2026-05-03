@@ -56,6 +56,7 @@ object AppConfig {
         "highway-car",
         "highway-car-2",
         "minimal-jam-car-5",
+        "jam-lead",
         SUMO_USER_CAR_ID,
     )
 
@@ -73,7 +74,16 @@ object AppConfig {
         "minimal-jam-car-2",
         "minimal-jam-car-3",
         "minimal-jam-car-4",
-        "minimal-jam-lead"
+        "minimal-jam-lead",
+        "jam-car-1",
+        "jam-car-2",
+        "jam-car-3",
+        "jam-car-4",
+        "jam-car-5",
+        "jam-car-6",
+        "jam-car-7",
+        "jam-car-8",
+        "jam-car-9"
     )
 
     // ========== Default Positions ==========

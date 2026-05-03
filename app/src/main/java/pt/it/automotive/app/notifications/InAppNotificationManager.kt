@@ -42,6 +42,9 @@ import java.util.Locale
  */
 class InAppNotificationManager(private val activity: Activity) {
 
+    // Helper reference initialized post-construction
+    var alertNotificationManager: AlertNotificationManager? = null
+
     // ── Notification Types ───────────────────────────────────────────────
 
     enum class Type(@AttrRes val accentColorAttr: Int) {
@@ -57,10 +60,21 @@ class InAppNotificationManager(private val activity: Activity) {
     // ── Data ─────────────────────────────────────────────────────────────
 
     data class AppNotification(
-        val type: Type,
-        val title: String,
+        val type: Type?,
+        val title: String?,
         val message: String? = null,
         val duration: Long = DEFAULT_DURATION_MS,
+        
+        // Priority System props
+        val priority: Int = 0,
+        val expirationS: Int = 0,
+        val timestamp: Long = 0,
+
+        // Exception props
+        val isVisualExempt: Boolean = false,
+        val customVisualAction: (() -> Unit)? = null,
+        val playAudioAction: (() -> Unit)? = null,
+        
         val onDismissed: (() -> Unit)? = null,
         val tag: String? = null
     )
@@ -84,14 +98,126 @@ class InAppNotificationManager(private val activity: Activity) {
 
     // ── State ────────────────────────────────────────────────────────────
 
-    private val queue = ArrayDeque<AppNotification>()
+    private val queue = mutableListOf<AppNotification>()
     private var currentView: View? = null
     private var currentTag: String? = null
     private var isShowing = false
     private val handler = Handler(Looper.getMainLooper())
     private var autoDismissJob: Runnable? = null
+    
+    private var currentPriority: Int = 0
+    private var currentPriorityAudio: Int = 0
 
     // ── Public API ───────────────────────────────────────────────────────
+
+    /**
+     * Master function for priority-based alerts.
+     * Determines whether to discard, update-in-place, queue, or immediately display an alert.
+     */
+    fun handleAlert(notification: AppNotification) {
+        val now = System.currentTimeMillis() / 1000
+
+        // 1. TTL Check: Discard if expired
+        if (notification.timestamp > 0 && notification.expirationS > 0) {
+            if (notification.timestamp + notification.expirationS < now) {
+                Log.d(TAG, "Alert expired, discarding: ${notification.title}")
+                return
+            }
+        }
+
+        // 2. Dismissal Check: Skip if the user swiped this specific hazard away
+        if (notification.tag != null && notification.tag in dismissedTags) {
+            Log.d(TAG, "Alert tag ${notification.tag} was dismissed by user, dropping.")
+            return
+        }
+
+        // 3. Exception Rule: Speeding & Overtaking (Visual Exempt)
+        if (notification.isVisualExempt) {
+            handler.post {
+                notification.customVisualAction?.invoke()
+
+            }
+            
+            if (notification.priority > currentPriorityAudio) {
+                val prevAudioPriority = currentPriorityAudio
+                currentPriorityAudio = notification.priority
+                
+                handler.post {
+                    notification.playAudioAction?.invoke()
+                }
+            }
+            return 
+        }
+
+        // 4. NEW: Tag Deduplication / Update-In-Place Rule
+        if (notification.tag != null) {
+            // Case A: It's currently showing on screen
+            if (isShowing && currentTag == notification.tag && currentView?.parent != null) {
+                Log.d(TAG, "Updating existing on-screen alert for tag: ${notification.tag}")
+                handler.post {
+                    updateCurrentViewInPlace(notification)
+                }
+                return // Done, do not queue
+            }
+
+            // Case B: It's already in the queue waiting to be shown
+            val existingIndex = queue.indexOfFirst { it.tag == notification.tag }
+            if (existingIndex != -1) {
+                Log.d(TAG, "Updating existing queued alert for tag: ${notification.tag}")
+                queue[existingIndex] = notification // Replace with freshest distance/data
+                return // Done, do not add duplicate
+            }
+        }
+
+        // 5. Normal Banner Alert Rule (Accident, Highway Entry, Jam, EV)
+        if (notification.priority > currentPriority) {
+            Log.d(TAG, "Higher priority alert (${notification.priority} > $currentPriority): overwriting screen")
+            currentPriority = notification.priority
+            currentPriorityAudio = notification.priority
+
+            handler.post {
+                cancelAutoDismiss()
+                currentView?.let { v ->
+                    safeRemoveView(v)
+                    currentView = null
+                }
+                isShowing = false
+                enqueue(notification)
+            }
+        } else {
+            Log.d(TAG, "Lower/equal priority alert (${notification.priority} <= $currentPriority): adding to queue")
+            enqueue(notification)
+        }
+    }
+
+    private fun updateCurrentViewInPlace(notification: AppNotification) {
+        val view = currentView ?: return
+        
+        ensureNotificationOnTop(view)
+        
+        // Update Title and Message dynamically
+        view.findViewById<TextView>(R.id.notifTitle)?.text = notification.title
+        val msgView = view.findViewById<TextView>(R.id.notifMessage)
+        
+        if (!notification.message.isNullOrBlank()) {
+            msgView?.text = notification.message
+            msgView?.visibility = View.VISIBLE
+        } else {
+            msgView?.visibility = View.GONE
+        }
+        
+        // Reset the auto-dismiss timer so it stays on screen as long as updates stream in
+        cancelAutoDismiss()
+        val dismissRunnable = Runnable {
+            if (view.parent != null) {
+                val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
+                // Assuming you have animateOut defined later in the file
+                animateOut(view, rootView, translationX = 0f, notification.onDismissed)
+            }
+        }
+        autoDismissJob = dismissRunnable
+        handler.postDelayed(dismissRunnable, notification.duration)
+    }
 
     /**
      * Convenience overload — enqueue a notification with individual parameters.
@@ -104,7 +230,14 @@ class InAppNotificationManager(private val activity: Activity) {
         onDismissed: (() -> Unit)? = null,
         tag: String? = null
     ) {
-        enqueue(AppNotification(type, title, message, duration, onDismissed, tag))
+        enqueue(AppNotification(
+            type = type, 
+            title = title, 
+            message = message, 
+            duration = duration, 
+            onDismissed = onDismissed, 
+            tag = tag
+        ))
     }
 
     /**
@@ -148,10 +281,14 @@ class InAppNotificationManager(private val activity: Activity) {
                 autoDismissJob = dismissRunnable
                 handler.postDelayed(dismissRunnable, duration)
             } else {
-                enqueue(AppNotification(type, title, message, duration, {
-                    dismissedTags.add(tag)
-                    onDismissed?.invoke()
-                }, tag))
+                enqueue(AppNotification(
+                    type = type,
+                    title = title,
+                    message = message,
+                    duration = duration,
+                    onDismissed = onDismissed,
+                    tag = tag
+                ))
             }
         }
         return true
@@ -167,16 +304,31 @@ class InAppNotificationManager(private val activity: Activity) {
 
     /**
      * Enqueue a pre-built [AppNotification] for display.
+     * Validates TTL, sorts by priority (highest first), and maintains queue size.
      */
     fun enqueue(notification: AppNotification) {
         handler.post {
             if (activity.isFinishing || activity.isDestroyed) return@post
             if (notification.tag != null && notification.tag in dismissedTags) return@post
+            
+            // Validate TTL before adding to queue
+            if (notification.expirationS > 0 && notification.timestamp > 0) {
+                val currentTimeS = System.currentTimeMillis() / 1000
+                if (currentTimeS >= notification.timestamp + notification.expirationS) {
+                    return@post  // Alert expired, skip
+                }
+            }
+            
             if (queue.size >= MAX_QUEUE_SIZE) {
                 Log.w(TAG, "Queue full - dropping oldest notification")
-                queue.removeFirstOrNull()
+                queue.remove(queue.minByOrNull { it.timestamp }) // Keep newest
             }
-            queue.addLast(notification)
+            
+            queue.add(notification)
+            
+            // Sort queue by priority (descending), then by timestamp (ascending - oldest first)
+            queue.sortWith(compareBy<AppNotification> { -it.priority }.thenBy { it.timestamp })
+            
             currentView?.let { ensureNotificationOnTop(it) }
             if (!isShowing) showNext()
         }
@@ -189,6 +341,8 @@ class InAppNotificationManager(private val activity: Activity) {
         handler.post {
             queue.clear()
             cancelAutoDismiss()
+            currentPriority = 0
+            currentPriorityAudio = 0
             currentView?.let { v ->
                 safeRemoveView(v)
                 currentView = null
@@ -202,17 +356,36 @@ class InAppNotificationManager(private val activity: Activity) {
         handler.removeCallbacksAndMessages(null)
         currentView = null
         isShowing = false
+        currentPriority = 0
+        currentPriorityAudio = 0
         queue.clear()
     }
 
     // ── Core display logic ───────────────────────────────────────────────
 
     private fun showNext() {
+        // Remove expired alerts from queue
+        val currentTimeS = System.currentTimeMillis() / 1000
+        queue.removeAll { notification ->
+            notification.expirationS > 0 && 
+            notification.timestamp > 0 && 
+            currentTimeS >= notification.timestamp + notification.expirationS
+        }
+        
         val notification = queue.removeFirstOrNull() ?: run {
             isShowing = false
+            currentPriority = 0
+            currentPriorityAudio = 0
             return
         }
         isShowing = true
+        
+        // Update priority tracking
+        currentPriority = notification.priority
+        currentPriorityAudio = notification.priority
+
+        // Only play audio if this alert was valid natively triggered
+        notification.playAudioAction?.invoke()
 
         if (activity.isFinishing || activity.isDestroyed) {
             isShowing = false
@@ -260,7 +433,11 @@ class InAppNotificationManager(private val activity: Activity) {
         // Auto-dismiss
         val dismissRunnable = Runnable {
             if (view.parent != null) {
-                animateOut(view, rootView, translationX = 0f, notification.onDismissed)
+                animateOut(view, rootView, translationX = 0f, {
+                    currentPriority = 0
+                    currentPriorityAudio = 0
+                    notification.onDismissed?.invoke()
+                })
             }
         }
         autoDismissJob = dismissRunnable
@@ -317,7 +494,10 @@ class InAppNotificationManager(private val activity: Activity) {
                         isDismissing = true
                         cancelAutoDismiss()
                         val exitX = Math.signum(velocityX) * 1200 * density
-                        animateOut(view, rootView, exitX, notification.onDismissed)
+                        animateOut(view, rootView, exitX, {
+                            currentPriority = 0
+                            currentPriorityAudio = 0
+                            handleUserDismissal(notification.tag, notification.onDismissed)                        })
                         return true
                     }
                     return false
@@ -371,7 +551,11 @@ class InAppNotificationManager(private val activity: Activity) {
                             isDismissing = true
                             cancelAutoDismiss()
                             val exitX = Math.signum(dx) * 1200 * density
-                            animateOut(view, rootView, exitX, notification.onDismissed)
+                            animateOut(view, rootView, exitX, {
+                                currentPriority = 0
+                                currentPriorityAudio = 0
+                                handleUserDismissal(notification.tag, notification.onDismissed)
+                            })
                         } else {
                             // Snap back to center
                             v.animate()
@@ -469,7 +653,7 @@ class InAppNotificationManager(private val activity: Activity) {
         val density = activity.resources.displayMetrics.density
         val cornerRadiusPx = 20 * density
         val strokeWidthPx = (1.5f * density).toInt()
-        val strokeColor = resolveThemeColor(notification.type.accentColorAttr)
+        val strokeColor = resolveThemeColor(notification.type?.accentColorAttr ?: R.attr.colorNotificationInfo)
         val backgroundColor = resolveThemeColor(R.attr.colorSurfaceCard)
         val background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
@@ -483,12 +667,11 @@ class InAppNotificationManager(private val activity: Activity) {
     }
 
     private fun resolveStrokeColor(notification: AppNotification): Int {
-        val defaultStroke = (resolveThemeColor(notification.type.accentColorAttr) and 0x00FFFFFF) or 0xB3000000.toInt()
+        val defaultStroke = (resolveThemeColor(notification.type?.accentColorAttr ?: R.attr.colorNotificationInfo) and 0x00FFFFFF) or 0xB3000000.toInt()
         if (notification.type != Type.WEATHER) return defaultStroke
 
-        val firstWord = notification.title
-            .trim()
-            .replace(Regex("^[^A-Za-z]+"), "")
+        val firstWord = (notification.title ?: "")
+            .trim()            .replace(Regex("^[^A-Za-z]+"), "")
             .substringBefore(" ")
             .lowercase(Locale.getDefault())
 
@@ -507,6 +690,10 @@ class InAppNotificationManager(private val activity: Activity) {
     private fun cancelAutoDismiss() {
         autoDismissJob?.let { handler.removeCallbacks(it) }
         autoDismissJob = null
+    }
+
+    fun releaseAudioChannel() {
+        currentPriorityAudio = 0 // Free up the audio channel safely
     }
 
     private fun resolveThemeColor(@AttrRes attrRes: Int): Int {
@@ -538,5 +725,33 @@ class InAppNotificationManager(private val activity: Activity) {
         view.translationZ = 9999f
         parent.requestLayout()
         parent.invalidate()
+    }
+
+    /**
+     * Centralized logic for when a driver manually dismisses a notification.
+     * Halts audio, drops priority locks, and sets a temporary mute cooldown for the hazard.
+     */
+    fun handleUserDismissal(tag: String?, originalOnDismissed: (() -> Unit)?) {
+        // 1. Immediately kill the TTS voice
+        alertNotificationManager?.stopAudio()
+
+        // 2. Free up the audio priority lock so new alerts can talk
+        currentPriorityAudio = 0
+
+        // 3. Handle the MQTT spam cooldown if the alert has a tag
+        if (tag != null) {
+            dismissedTags.add(tag)
+            Log.d(TAG, "Tag $tag dismissed by driver. Muted for 2 minutes.")
+
+            // 4. Remove the tag after 2 minutes (120,000 ms)
+            // If the driver encounters the SAME hazard later, we want it to warn them again.
+            handler.postDelayed({
+                dismissedTags.remove(tag)
+                Log.d(TAG, "Cooldown ended for tag $tag. Tracking restored.")
+            }, 120_000L)
+        }
+
+        // 5. Trigger any custom dismissal logic (like stopping navigation)
+        originalOnDismissed?.invoke()
     }
 }

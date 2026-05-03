@@ -15,7 +15,7 @@ package pt.it.automotive.app.mqtt
 interface MqttEventListener {
 
     /** A speed alert was received for the user's vehicle. */
-    fun onSpeedAlert()
+    fun onSpeedAlert(payload: String)
 
     /** An overtaking alert was received. */
     fun onOvertakingAlert(payload: String)

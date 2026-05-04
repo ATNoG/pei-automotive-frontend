@@ -9,13 +9,21 @@ import android.widget.Button
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import android.widget.ScrollView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.google.android.material.tabs.TabLayout
 import pt.it.automotive.app.MapController
 import pt.it.automotive.app.R
 import pt.it.automotive.app.auth.LoginActivity
 import pt.it.automotive.app.auth.TokenStore
+import pt.it.automotive.app.auth.AccountApiService
+import pt.it.automotive.app.auth.AccountApiResult
 import pt.it.automotive.app.preferences.AlertCategory
 import pt.it.automotive.app.preferences.PreferencesSectionType
 import pt.it.automotive.app.preferences.PreferencesSectionUpdate
@@ -61,8 +69,8 @@ class AlertSettingsDialog(
         configureModalBounds(settingsView)
         rootView.addView(settingsView)
 
+        setupTabs(settingsView)
         setupMapStyleToggle(settingsView)
-        setupLanguageSelection(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupLogoutButton(settingsView)
@@ -96,6 +104,37 @@ class AlertSettingsDialog(
         }
     }
 
+    // ── Tabs Setup ────────────────────────────────────────────────────────
+
+    private fun setupTabs(settingsView: View) {
+        val tabLayout = settingsView.findViewById<TabLayout>(R.id.settingsTabLayout)
+        val tabAccount = settingsView.findViewById<ScrollView>(R.id.tabContentAccount)
+        val tabVisual = settingsView.findViewById<ScrollView>(R.id.tabContentVisual)
+        val tabAlerts = settingsView.findViewById<ScrollView>(R.id.tabContentAlerts)
+
+        // create tabs with localized titles
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_account)))
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_visual)))
+        tabLayout.addTab(tabLayout.newTab().setText(activity.getString(R.string.tab_alerts)))
+
+        // hide/show content based on selected tab
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                tabAccount.visibility = View.GONE
+                tabVisual.visibility = View.GONE
+                tabAlerts.visibility = View.GONE
+
+                when (tab?.position) {
+                    0 -> tabAccount.visibility = View.VISIBLE
+                    1 -> tabVisual.visibility = View.VISIBLE
+                    2 -> tabAlerts.visibility = View.VISIBLE
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+    }
+
     // ── Map Style ────────────────────────────────────────────────────────
 
     private fun setupMapStyleToggle(settingsView: View) {
@@ -112,35 +151,6 @@ class AlertSettingsDialog(
             changedSections.add(PreferencesSectionType.APPEARANCE)
             val mainActivity = activity as? pt.it.automotive.app.MainActivity
             mainActivity?.applyTheme(!isChecked)
-        }
-    }
-
-    // ── Language Selection ───────────────────────────────────────────────
-
-    private fun setupLanguageSelection(settingsView: View) {
-        val btnEnglish = settingsView.findViewById<Button>(R.id.btnEnglish)
-        val btnPortuguese = settingsView.findViewById<Button>(R.id.btnPortuguese)
-        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
-        val currentLanguage = prefs.getString("language", "en") ?: "en"
-
-        updateLanguageButtons(currentLanguage, btnEnglish, btnPortuguese)
-
-        btnEnglish.setOnClickListener {
-            prefs.edit().putString("language", "en").apply()
-            updateLanguageButtons("en", btnEnglish, btnPortuguese)
-            onPreferenceSectionChanged?.invoke(
-                PreferencesSectionUpdate.AppearanceUpdate(language = "en")
-            )
-            changedSections.add(PreferencesSectionType.APPEARANCE)
-        }
-
-        btnPortuguese.setOnClickListener {
-            prefs.edit().putString("language", "pt").apply()
-            updateLanguageButtons("pt", btnEnglish, btnPortuguese)
-            onPreferenceSectionChanged?.invoke(
-                PreferencesSectionUpdate.AppearanceUpdate(language = "pt")
-            )
-            changedSections.add(PreferencesSectionType.APPEARANCE)
         }
     }
             
@@ -345,27 +355,77 @@ class AlertSettingsDialog(
         val fullNameTextView = settingsView.findViewById<TextView>(R.id.fullNameTextView)
         val usernameTextView = settingsView.findViewById<TextView>(R.id.usernameTextView)
         val btnLogout = settingsView.findViewById<Button>(R.id.btnLogout)
+        val btnDeleteAccount = settingsView.findViewById<Button>(R.id.btnDeleteAccount)
         
         val fullName = TokenStore.getFullName(activity)
         val username = TokenStore.getUsername(activity)
-        
-        fullNameTextView?.text = fullName ?: activity.getString(R.string.unknown_user)
-        usernameTextView?.text = username?.let { "@$it" } ?: ""
 
-        btnLogout?.setOnClickListener {
-            // 1. Clear local preferences cache so the next user starts fresh
-            onLogout?.invoke()
-
-            // 2. Clear saved tokens
-            TokenStore.clear(activity)
-
-            // 3. Redirect to LoginActivity and clear the back stack
-            val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
-                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            activity.startActivity(intent)
-            activity.finish()
+        fullNameTextView.text = fullName ?: activity.getString(R.string.unknown_user)
+        if (username.isNullOrEmpty()) {
+            usernameTextView.visibility = View.GONE
+        } else {
+            usernameTextView.text = "@$username"
+            usernameTextView.visibility = View.VISIBLE
         }
+
+        btnLogout.setOnClickListener {
+            performLogout()
+        }
+
+        btnDeleteAccount.setOnClickListener {
+            showDeleteAccountDialog()
+        }
+    }
+
+    private fun showDeleteAccountDialog() {
+        val dialog = android.app.Dialog(activity)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_delete_account)
+        dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        val metrics = activity.resources.displayMetrics
+        val width = (metrics.widthPixels * 0.85).toInt()
+        dialog.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel_delete)
+        val btnConfirm = dialog.findViewById<Button>(R.id.btn_confirm_delete)
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        btnConfirm.setOnClickListener {
+            performAccountDeletion()
+            dialog.dismiss()
+        }
+        dialog.show()
+    }
+
+    private fun performAccountDeletion() {
+        val token = TokenStore.getAccessToken(activity) ?: return
+        activity.lifecycleScope.launch {
+            val apiService = AccountApiService()
+            when (val result = apiService.deleteAccount(token)) {
+                is AccountApiResult.Success -> {
+                    Toast.makeText(activity, "Account deleted successfully", Toast.LENGTH_LONG).show()
+                    performLogout()
+                }
+                is AccountApiResult.Error -> {
+                    Toast.makeText(activity, "Failed to delete account: ${result.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun performLogout() {
+        // clear local preferences cache so the next user starts fresh
+        onLogout?.invoke()
+
+        // clear saved tokens
+        TokenStore.clear(activity)
+
+        // redirect to LoginActivity and clear the back stack
+        val intent = android.content.Intent(activity, LoginActivity::class.java).apply {
+            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        activity.startActivity(intent)
+        activity.finish()
     }
 
     fun dismiss() {
@@ -390,21 +450,7 @@ class AlertSettingsDialog(
         // Prevent clicks on card from closing overlay
         settingsView.findViewById<View>(R.id.settingsCard)?.setOnClickListener { }
     }
-
-    private fun updateLanguageButtons(
-        selectedLanguage: String,
-        btnEnglish: Button,
-        btnPortuguese: Button
-    ) {
-        if (selectedLanguage.equals("pt", ignoreCase = true)) {
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        } else {
-            btnEnglish.setBackgroundColor(activity.getColor(android.R.color.holo_blue_light))
-            btnPortuguese.setBackgroundColor(activity.getColor(android.R.color.transparent))
-        }
-    }
-
+    
     private fun AlertPreferenceManager.AlertType.toAlertCategory(): AlertCategory {
         return when (this) {
             AlertPreferenceManager.AlertType.ACCIDENT -> AlertCategory.ACCIDENT

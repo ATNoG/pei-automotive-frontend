@@ -25,6 +25,8 @@
     <color name="surface_weather_badge">#FF282a2d</color>
     <color name="surface_button_neutral">#FF333333</color>
     <color name="surface_eta_flag">#FFCACACA</color>
+    <color name="btn_cancel_bg">#424242</color>
+    <color name="btn_cancel_text">#FFFFFF</color>
 
     <!-- ========== Text Colors ========== -->
     <color name="text_primary">#FFFFFFFF</color>

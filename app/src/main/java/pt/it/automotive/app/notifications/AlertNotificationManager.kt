@@ -47,9 +47,19 @@ class AlertNotificationManager(
     private fun initTextToSpeech() {
         tts = TextToSpeech(activity) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                tts?.setLanguage(Locale.US)
-                
-                // Attach a listener to track exact playback state
+                val currentLocale = Locale.getDefault()
+                val result = tts?.setLanguage(currentLocale)
+                ttsInitialized =
+                    result != TextToSpeech.LANG_MISSING_DATA &&
+                            result != TextToSpeech.LANG_NOT_SUPPORTED
+                if (ttsInitialized) {
+                    Log.d(TAG, "TTS initialised successfully for ${currentLocale.language}")
+                } else {
+                    Log.w(TAG, "TTS language not supported for ${currentLocale.language}, falling back to US English")
+                    tts?.setLanguage(Locale.US)
+                    ttsInitialized = true
+                }
+
                 tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
                     override fun onStart(utteranceId: String?) {}
                     
@@ -61,7 +71,8 @@ class AlertNotificationManager(
                         handler.post { onTtsFinished?.invoke() }
                     }
                 })
-                ttsInitialized = true
+            } else {
+                Log.e(TAG, "TTS initialisation failed")
             }
         }
   }
@@ -158,7 +169,7 @@ class AlertNotificationManager(
                 firstNewAlert = false
                 speakForAlert(
                     AlertPreferenceManager.AlertType.WEATHER,
-                    "Weather alert: ${alert.event}"
+                    activity.getString(R.string.weather_alert_tts, alert.event)
                 )
             }
         }

@@ -81,9 +81,9 @@ class MqttEventRouter(
         }
 
         when {
-            topic == AppConfig.MQTT_TOPIC_SPEED_ALERT -> {
-                Log.d(TAG, "Speed alert received")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
+            topic.startsWith(AppConfig.MQTT_TOPIC_SPEED_ALERT + "/") -> {
+                Log.d(TAG, "Speed alert received on $topic")
+                if (shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
                     listener?.onSpeedAlert()
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.SPEEDING,
@@ -92,9 +92,9 @@ class MqttEventRouter(
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_OVERTAKING_ALERT -> {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.OVERTAKING)) {
+            topic.startsWith(AppConfig.MQTT_TOPIC_OVERTAKING_ALERT + "/") -> {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received on $topic")
+                if (shouldProcess(AlertPreferenceManager.AlertType.OVERTAKING)) {
                     listener?.onOvertakingAlert(message)
                     alertNotificationManager.speakForAlert(
                         AlertPreferenceManager.AlertType.OVERTAKING,
@@ -108,32 +108,29 @@ class MqttEventRouter(
                 listener?.onAccidentCleared(message)
             }
 
-            topic.startsWith(AppConfig.MQTT_TOPIC_ACCIDENT_ALERT) || topic.contains("accident") -> {
+            topic.startsWith(AppConfig.MQTT_TOPIC_ACCIDENT_ALERT + "/") -> {
                 if (BuildConfig.DEBUG) Log.d(TAG, "Accident alert on $topic")
                 if (shouldProcess(AlertPreferenceManager.AlertType.ACCIDENT)) {
                     listener?.onAccidentAlert(topic, message)
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_EV_ALERT -> {
-                Log.d(TAG, "Emergency vehicle alert")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE)) {
+            topic.startsWith(AppConfig.MQTT_TOPIC_EV_ALERT + "/") -> {
+                Log.d(TAG, "Emergency vehicle alert on $topic")
+                if (shouldProcess(AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE)) {
                     listener?.onEmergencyVehicleAlert(message)
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> {
-                Log.d(TAG, "Highway entry alert")
+            topic.startsWith(AppConfig.MQTT_TOPIC_HIGHWAY_ALERT + "/") -> {
+                Log.d(TAG, "Highway entry alert on $topic")
                 if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
                     listener?.onHighwayEntryAlert(message)
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT ||
-                topic.startsWith(AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT + "/") -> {
+            topic.startsWith(AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT + "/") -> {
                 Log.d(TAG, "Traffic jam alert on $topic")
-                // Traffic jam alerts are road-context events; process regardless of a specific
-                // target car so shared jam zones still show up on the frontend map.
                 if (shouldProcess(AlertPreferenceManager.AlertType.TRAFFIC_JAM)) {
                     listener?.onTrafficJamAlert(message)
                 }
@@ -186,13 +183,23 @@ class MqttEventRouter(
     // ── Subscriptions ────────────────────────────────────────────────────
 
     private fun subscribeToTopics() {
-        subscribe(AppConfig.MQTT_TOPIC_ALERTS)
         subscribe(AppConfig.MQTT_TOPIC_CAR_UPDATES)
         subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)
         subscribe(AppConfig.MQTT_TOPIC_METEO_UPDATES)
 
+        // Per-car alert subscriptions: broker filters so each device only
+        // receives alerts targeting its own user car(s).
+        val alertBases = listOf(
+            AppConfig.MQTT_TOPIC_SPEED_ALERT,
+            AppConfig.MQTT_TOPIC_OVERTAKING_ALERT,
+            AppConfig.MQTT_TOPIC_HIGHWAY_ALERT,
+            AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT,
+            AppConfig.MQTT_TOPIC_EV_ALERT,
+            AppConfig.MQTT_TOPIC_ACCIDENT_ALERT,
+        )
+
         userCarIds.forEach { carId ->
-            subscribe("${AppConfig.MQTT_TOPIC_ACCIDENT_ALERT}/$carId")
+            alertBases.forEach { base -> subscribe("$base/$carId") }
             subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
         }
     }
@@ -209,38 +216,6 @@ class MqttEventRouter(
 
     private fun shouldProcess(type: AlertPreferenceManager.AlertType): Boolean =
         alertNotificationManager.shouldProcessAlert(type)
-
-    /**
-     * Check if an alert payload is targeted at one of our user cars.
-     * Inspects common fields: car_id, target_car_id, regular_car_id,
-     * overtaking_car_id, overtaken_car_id.
-     * Returns true if no car identifier is found (broadcast alert) or
-     * if the identifier matches one of our [userCarIds].
-     */
-    private fun isForUserCar(message: String): Boolean {
-        return try {
-            val json = JSONObject(message)
-            val carId = json.optString("car_id", "")
-            val targetCarId = json.optString("target_car_id", "")
-            val regularCarId = json.optString("regular_car_id", "")
-
-            val overtakingCarId = json.optString("overtaking_car_id", "")
-            val overtakenCarId = json.optString("overtaken_car_id", "")
-
-            val ids = listOf(
-                carId,
-                targetCarId,
-                regularCarId,
-                overtakingCarId,
-                overtakenCarId
-            ).filter { it.isNotEmpty() }
-
-            if (ids.isEmpty()) return true // No car filter in payload — treat as broadcast
-            ids.any { it in userCarIds }
-        } catch (e: Exception) {
-            true // Parse failure — don't drop the alert
-        }
-    }
 
     // ── Car Update Parsing ───────────────────────────────────────────────
 

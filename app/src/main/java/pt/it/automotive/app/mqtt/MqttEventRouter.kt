@@ -136,8 +136,8 @@ class MqttEventRouter(
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_CAR_UPDATES -> {
-                if (BuildConfig.DEBUG) Log.d(TAG, "Car update received")
+            topic.startsWith(AppConfig.MQTT_TOPIC_CAR_UPDATES + "/") -> {
+                if (BuildConfig.DEBUG) Log.d(TAG, "Car update on $topic")
                 try {
                     val json = JSONObject(message)
                     val data = parseCarUpdate(json)
@@ -183,12 +183,11 @@ class MqttEventRouter(
     // ── Subscriptions ────────────────────────────────────────────────────
 
     private fun subscribeToTopics() {
-        subscribe(AppConfig.MQTT_TOPIC_CAR_UPDATES)
         subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)
         subscribe(AppConfig.MQTT_TOPIC_METEO_UPDATES)
 
-        // Per-car alert subscriptions: broker filters so each device only
-        // receives alerts targeting its own user car(s).
+        // Per-car subscriptions: the broker filters so each device only
+        // receives car updates and alerts targeting its own user car(s).
         val alertBases = listOf(
             AppConfig.MQTT_TOPIC_SPEED_ALERT,
             AppConfig.MQTT_TOPIC_OVERTAKING_ALERT,
@@ -199,6 +198,7 @@ class MqttEventRouter(
         )
 
         userCarIds.forEach { carId ->
+            subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
             alertBases.forEach { base -> subscribe("$base/$carId") }
             subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
         }

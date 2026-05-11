@@ -1,18 +1,10 @@
 package pt.it.automotive.app.notifications
 
-import android.Manifest
 import android.app.Activity
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.util.Log
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import pt.it.automotive.app.R
 import pt.it.automotive.app.OpenWeatherMapClient
 import pt.it.automotive.app.UiController
@@ -27,21 +19,6 @@ class AlertNotificationManager(
 
     companion object {
         private const val TAG = "AlertNotificationManager"
-
-        // Notification channels are kept so that any previously granted
-        // permissions / channel settings remain valid, but we no longer
-        // post native heads-up notifications — everything goes through
-        // InAppNotificationManager instead.
-        private const val CHANNEL_ID = "weather_alerts"
-        private const val CHANNEL_NAME = "Weather Alerts"
-        private const val CHANNEL_DESCRIPTION = "Notifications for weather alerts and warnings"
-
-        private const val ACCIDENT_CHANNEL_ID = "accident_alerts"
-        private const val ACCIDENT_CHANNEL_NAME = "Accident Alerts"
-        private const val ACCIDENT_CHANNEL_DESCRIPTION =
-            "Critical notifications for accident alerts ahead"
-
-        const val NOTIFICATION_PERMISSION_REQUEST_CODE = 1001
 
         /** Cooldown between repeated TTS for the same alert type (prevents spam). */
         private const val SPEAK_COOLDOWN_MS = 10_000L
@@ -62,11 +39,10 @@ class AlertNotificationManager(
     private val lastSpokenTimestamps = mutableMapOf<AlertPreferenceManager.AlertType, Long>()
 
     init {
-        createNotificationChannels()
         initTextToSpeech()
     }
 
-    // ── TTS lifecycle ────────────────────────────────────────────────────
+    var onTtsFinished: (() -> Unit)? = null
 
     private fun initTextToSpeech() {
         tts = TextToSpeech(activity) { status ->
@@ -83,11 +59,23 @@ class AlertNotificationManager(
                     tts?.setLanguage(Locale.US)
                     ttsInitialized = true
                 }
+
+                tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                    override fun onStart(utteranceId: String?) {}
+                    
+                    override fun onDone(utteranceId: String?) {
+                        handler.post { onTtsFinished?.invoke() }
+                    }
+                    
+                    override fun onError(utteranceId: String?) {
+                        handler.post { onTtsFinished?.invoke() }
+                    }
+                })
             } else {
                 Log.e(TAG, "TTS initialisation failed")
             }
         }
-    }
+  }
 
     private fun speakText(text: String, flush: Boolean = true) {
         if (ttsInitialized) {
@@ -127,74 +115,23 @@ class AlertNotificationManager(
             if (!alertPreferenceManager.isEnabled(alertType) ||
                 !alertPreferenceManager.isAudioEnabled(alertType)
             ) return@post
-
-            val now = System.currentTimeMillis()
-            val lastSpoken = lastSpokenTimestamps[alertType] ?: 0L
-            if (now - lastSpoken < SPEAK_COOLDOWN_MS) return@post
-            lastSpokenTimestamps[alertType] = now
-
-            speakText(text, flush)
-        }
+        
+        val mode = if (flush) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+        tts?.speak(text, mode, null, "alert_${System.currentTimeMillis()}")        }
     }
 
-    // ── Notification channels (kept for backwards compatibility) ─────────
-
-    private fun createNotificationChannels() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm =
-                activity.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-            nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH)
-                    .apply {
-                        description = CHANNEL_DESCRIPTION
-                        enableVibration(false)
-                        setShowBadge(true)
-                    }
-            )
-
-            nm.createNotificationChannel(
-                NotificationChannel(
-                    ACCIDENT_CHANNEL_ID,
-                    ACCIDENT_CHANNEL_NAME,
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = ACCIDENT_CHANNEL_DESCRIPTION
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(0, 500, 200, 500)
-                    setShowBadge(true)
-                }
-            )
-
-            Log.d(TAG, "Notification channels ensured")
-        }
-    }
-
-    // ── Permission helpers ───────────────────────────────────────────────
-
-    fun requestNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(
-                    activity, Manifest.permission.POST_NOTIFICATIONS
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                ActivityCompat.requestPermissions(
-                    activity,
-                    arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    NOTIFICATION_PERMISSION_REQUEST_CODE
-                )
+    /**
+     * Instantly stops any ongoing Text-To-Speech playback.
+     * Used when the driver manually dismisses a notification.
+     */
+    fun stopAudio() {
+        handler.post {
+            if (ttsInitialized && tts?.isSpeaking == true) {
+                tts?.stop()
+                Log.d(TAG, "TTS audio halted by user dismissal")
             }
         }
     }
-
-    fun hasNotificationPermission(): Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                activity, Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            true
-        }
 
     // ── Weather alerts ───────────────────────────────────────────────────
 

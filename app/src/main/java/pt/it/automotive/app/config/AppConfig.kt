@@ -25,6 +25,7 @@ object AppConfig {
      * Vehicle 0 departs first so it is the most stable choice.
      */
     const val SUMO_USER_CAR_ID = "sumo-0"
+    const val SUMO_USER_CAR_ID2 = "sumo-merging-car"
 
     /**
      * Prefix shared by all SUMO-generated vehicles. Any car_id that starts
@@ -58,6 +59,7 @@ object AppConfig {
         "minimal-jam-car-5",
         "jam-lead",
         SUMO_USER_CAR_ID,
+        SUMO_USER_CAR_ID2,
     )
 
     /**

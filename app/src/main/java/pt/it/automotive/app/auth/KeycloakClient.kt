@@ -38,6 +38,7 @@ object KeycloakClient {
         object Pending   : PollResult()
         object SlowDown  : PollResult()
         object Expired   : PollResult()
+        object AccessDenied  : PollResult()
         data class Error(val message: String) : PollResult()
     }
 
@@ -69,10 +70,15 @@ object KeycloakClient {
             .add("device_code", deviceCode)
             .add("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
             .build()
+
         val response = http.newCall(
             Request.Builder().url("$BASE_URL/token").post(body).build()
         ).execute()
-        val json = JSONObject(response.body!!.string())
+
+        val bodyString = response.body?.string() ?: ""
+        val json = if (bodyString.isNotEmpty()) JSONObject(bodyString) else JSONObject()
+        val error = json.optString("error")
+
         when {
             response.isSuccessful ->
                 PollResult.Success(TokenResponse(
@@ -80,9 +86,10 @@ object KeycloakClient {
                     refreshToken = json.getString("refresh_token"),
                     expiresIn    = json.getInt("expires_in")
                 ))
-            json.optString("error") == "authorization_pending" -> PollResult.Pending
-            json.optString("error") == "slow_down"             -> PollResult.SlowDown
-            json.optString("error") == "expired_token"         -> PollResult.Expired
+            error == "authorization_pending" -> PollResult.Pending
+            error == "slow_down"             -> PollResult.SlowDown
+            error == "expired_token"         -> PollResult.Expired
+            error == "access_denied"         -> PollResult.AccessDenied
             else -> PollResult.Error(json.optString("error_description", "Unknown error"))
         }
     }

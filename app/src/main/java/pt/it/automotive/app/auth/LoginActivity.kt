@@ -102,20 +102,31 @@ class LoginActivity : AppCompatActivity() {
                         launchMain()
                         return@launch
                     }
-                    is KeycloakClient.PollResult.Pending  ->
+                    is KeycloakClient.PollResult.Pending -> {
                         statusText.text = "Waiting for login on your phone…"
+                    }
                     is KeycloakClient.PollResult.SlowDown -> {
                         interval += 5
                         statusText.text = "Waiting…"
                     }
-                    is KeycloakClient.PollResult.Expired  -> {
+                    is KeycloakClient.PollResult.Expired -> {
                         statusText.text = "Code expired. Restarting…"
                         delay(1500)
-                        startDeviceFlow()
+                        startDeviceFlow() // Fetches a brand new code
                         return@launch
                     }
-                    is KeycloakClient.PollResult.Error    ->
+                    is KeycloakClient.PollResult.AccessDenied -> {
+                        statusText.text = "Access denied. Generating new code…"
+                        delay(2000)
+                        startDeviceFlow() // Fetches a brand new code
+                        return@launch
+                    }
+                    is KeycloakClient.PollResult.Error -> {
                         statusText.text = "Error: ${result.message}"
+                        // Optional: You could also call startDeviceFlow() here
+                        // if you want it to be extremely resilient to any error.
+                        startDeviceFlow()
+                    }
                 }
             }
         }

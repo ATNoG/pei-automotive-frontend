@@ -613,8 +613,8 @@ class UiController(
                     inAppNotificationManager?.showOrUpdate(
                         tag = "driving_mode",
                         type = InAppNotificationManager.Type.ERROR,
-                        title = "You're driving",
-                        message = "Menus are disabled while driving",
+                        title = activity.getString(R.string.notification_title_driving_mode),
+                        message = activity.getString(R.string.notification_message_driving_mode),
                         duration = 3_000L
                     )
                 } else {

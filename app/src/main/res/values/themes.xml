@@ -108,4 +108,11 @@
         <!-- ========== Icons ========== -->
         <item name="colorIconDefault">@color/icon_default_cb</item>
     </style>
+
+    <!-- TabLayout Style -->
+    <style name="CustomTabTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">24sp</item> 
+        <item name="android:textStyle">bold</item> 
+        <item name="textAllCaps">false</item> 
+    </style>
 </resources>

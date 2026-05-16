@@ -84,12 +84,8 @@ class MqttEventRouter(
         when {
             topic.startsWith(AppConfig.MQTT_TOPIC_SPEED_ALERT + "/") -> {
                 Log.d(TAG, "Speed alert received on $topic")
-                if (shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
-                    listener?.onSpeedAlert()
-                    alertNotificationManager.speakForAlert(
-                        AlertPreferenceManager.AlertType.SPEEDING,
-                        alertNotificationManager.activity.getString(R.string.speed_limit_warning)
-                    )
+                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
+                    listener?.onSpeedAlert(message)
                 }
             }
 
@@ -97,10 +93,6 @@ class MqttEventRouter(
                 if (BuildConfig.DEBUG) Log.d(TAG, "Overtaking alert received on $topic")
                 if (shouldProcess(AlertPreferenceManager.AlertType.OVERTAKING)) {
                     listener?.onOvertakingAlert(message)
-                    alertNotificationManager.speakForAlert(
-                        AlertPreferenceManager.AlertType.OVERTAKING,
-                        alertNotificationManager.activity.getString(R.string.overtaking_warning)
-                    )
                 }
             }
 

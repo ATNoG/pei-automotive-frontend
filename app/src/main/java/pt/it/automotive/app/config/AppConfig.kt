@@ -25,6 +25,7 @@ object AppConfig {
      * Vehicle 0 departs first so it is the most stable choice.
      */
     const val SUMO_USER_CAR_ID = "sumo-0"
+    const val SUMO_USER_CAR_ID2 = "sumo-merging-car"
 
     /**
      * Prefix shared by all SUMO-generated vehicles. Any car_id that starts
@@ -56,9 +57,10 @@ object AppConfig {
         "highway-car",
         "highway-car-2",
         "minimal-jam-car-5",
-        // proximity_filter integration test (Aveiro pair, slow car is "ours")
+        "jam-lead",
         "prox-aveiro-slow",
         SUMO_USER_CAR_ID,
+        SUMO_USER_CAR_ID2,
     )
 
     /**
@@ -76,7 +78,15 @@ object AppConfig {
         "minimal-jam-car-3",
         "minimal-jam-car-4",
         "minimal-jam-lead",
-        // proximity_filter integration test
+        "jam-car-1",
+        "jam-car-2",
+        "jam-car-3",
+        "jam-car-4",
+        "jam-car-5",
+        "jam-car-6",
+        "jam-car-7",
+        "jam-car-8",
+        "jam-car-9",
         "prox-aveiro-fast",
         "prox-lisbon-slow",
         "prox-lisbon-fast",

@@ -943,10 +943,60 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
-        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
+        mqttManager = MqttManager(
+            context = this,
+            brokerAddress = BuildConfig.MQTT_BROKER_ADDRESS,
+            brokerPort = BuildConfig.MQTT_BROKER_PORT.toInt(),
+            accessToken = token,
+            onConnectionLost = { _ -> handleMqttReconnect() }
+        )
         mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
+    }
+
+    private fun handleMqttReconnect() {
+        lifecycleScope.launch {
+            // If the current token is still valid, reconnect immediately.
+            if (pt.it.automotive.app.auth.TokenStore.isAccessTokenValid(this@MainActivity)) {
+                val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this@MainActivity)
+                mqttManager.reconnect(
+                    newToken = token,
+                    onSuccess = { mqttEventRouter.resubscribeTopics() },
+                    onError = { e -> Log.e(TAG, "MQTT reconnect failed: $e") }
+                )
+                return@launch
+            }
+
+            // Token expired — try to refresh before reconnecting.
+            val refreshToken = pt.it.automotive.app.auth.TokenStore.getRefreshToken(this@MainActivity)
+            if (refreshToken == null) {
+                redirectToLogin()
+                return@launch
+            }
+
+            val tokens = pt.it.automotive.app.auth.KeycloakClient.refreshToken(refreshToken)
+            if (tokens != null) {
+                pt.it.automotive.app.auth.TokenStore.save(
+                    this@MainActivity,
+                    tokens.accessToken,
+                    tokens.refreshToken,
+                    tokens.expiresIn
+                )
+                mqttManager.reconnect(
+                    newToken = tokens.accessToken,
+                    onSuccess = { mqttEventRouter.resubscribeTopics() },
+                    onError = { e -> Log.e(TAG, "MQTT reconnect after token refresh failed: $e") }
+                )
+            } else {
+                redirectToLogin()
+            }
+        }
+    }
+
+    private fun redirectToLogin() {
+        startActivity(Intent(this, pt.it.automotive.app.auth.LoginActivity::class.java))
+        finish()
     }
 
     // ========== MqttEventListener Implementation ==========

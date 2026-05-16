@@ -13,7 +13,8 @@ class MqttManager(
     private val context: Context,
     private val brokerAddress: String,
     private val brokerPort: Int,
-    private val accessToken: String? = null
+    private val accessToken: String? = null,
+    private val onConnectionLost: ((cause: Throwable?) -> Unit)? = null
 ) {
     private val clientId = "android-${UUID.randomUUID()}"
     private val serverUri = "tcp://$brokerAddress:$brokerPort"
@@ -27,6 +28,7 @@ class MqttManager(
                 client?.setCallback(object : MqttCallback {
                     override fun connectionLost(cause: Throwable?) {
                         Log.w("MQTT", "Connection lost: ${cause?.message}")
+                        onConnectionLost?.invoke(cause)
                     }
 
                     override fun messageArrived(topic: String, message: MqttMessage) {
@@ -37,22 +39,24 @@ class MqttManager(
                     override fun deliveryComplete(token: IMqttDeliveryToken?) {}
                 })
 
-                val options = MqttConnectOptions().apply {
-                    isAutomaticReconnect = true
-                    isCleanSession = true
-                    connectionTimeout = 30
-                    keepAliveInterval = 60
-                    if (accessToken != null) {
-                        userName = "jwt"
-                        password = accessToken.toCharArray()
-                    }
-                }
-
-                client?.connect(options)
+                client?.connect(buildOptions(accessToken))
                 onSuccess()
             } catch (e: Exception) {
                 Log.e("MQTT", "Connection failed: ${e.message}")
                 onError(e.message ?: "Unknown error")
+            }
+        }.start()
+    }
+
+    // Reconnect with a freshly obtained token after a connectionLost event.
+    fun reconnect(newToken: String?, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        Thread {
+            try {
+                client?.connect(buildOptions(newToken))
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MQTT", "Reconnect failed: ${e.message}")
+                onError(e.message ?: "Reconnect error")
             }
         }.start()
     }
@@ -97,4 +101,18 @@ class MqttManager(
     }
 
     fun isConnected(): Boolean = client?.isConnected ?: false
+
+    private fun buildOptions(token: String?): MqttConnectOptions =
+        MqttConnectOptions().apply {
+            // Automatic reconnect is disabled: a dropped connection means the JWT
+            // may have expired, so the caller must refresh the token and call
+            // reconnect() explicitly with the new one.
+            isAutomaticReconnect = false
+            isCleanSession = true
+            connectionTimeout = 30
+            keepAliveInterval = 60
+            if (token != null) {
+                userName = token
+            }
+        }
 }

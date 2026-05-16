@@ -55,7 +55,7 @@ class MqttEventRouter(
             onSuccess = {
                 Log.d(TAG, "Connected to MQTT broker")
                 listener?.onMqttConnected()
-                subscribeToTopics()
+                resubscribeTopics()
             },
             onError = { error ->
                 Log.e(TAG, "Connection failed: $error")
@@ -177,7 +177,7 @@ class MqttEventRouter(
 
     // ── Subscriptions ────────────────────────────────────────────────────
 
-    private fun subscribeToTopics() {
+    fun resubscribeTopics() {
         subscribe(AppConfig.MQTT_TOPIC_ALERTS)
         subscribe(AppConfig.MQTT_TOPIC_CAR_UPDATES)
         subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)

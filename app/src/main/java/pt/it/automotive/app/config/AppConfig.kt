@@ -58,6 +58,7 @@ object AppConfig {
         "highway-car-2",
         "minimal-jam-car-5",
         "jam-lead",
+        "rw-entering-car",
         SUMO_USER_CAR_ID,
         SUMO_USER_CAR_ID2,
     )
@@ -85,7 +86,8 @@ object AppConfig {
         "jam-car-6",
         "jam-car-7",
         "jam-car-8",
-        "jam-car-9"
+        "jam-car-9",
+        "rw-left-car"
     )
 
     // ========== Default Positions ==========
@@ -144,7 +146,9 @@ object AppConfig {
     const val DEFAULT_MAP_ZOOM = 19.0
 
     /**
-     * Default map tilt angle (degrees) for 3D-like view.
+     * Default map tilt angle (degrees).
+     *   60.0 – original 3D perspective view
+     *    0.0 – flat 2D top-down view (better road visibility on low-detail styles)
      */
     const val DEFAULT_MAP_TILT = 60.0
 

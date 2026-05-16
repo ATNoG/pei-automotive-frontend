@@ -59,6 +59,7 @@ object AppConfig {
         "minimal-jam-car-5",
         "jam-lead",
         "rw-entering-car",
+        "rw-direct-entering",
         SUMO_USER_CAR_ID,
         SUMO_USER_CAR_ID2,
     )
@@ -87,7 +88,8 @@ object AppConfig {
         "jam-car-7",
         "jam-car-8",
         "jam-car-9",
-        "rw-left-car"
+        "rw-left-car",
+        "rw-direct-left"
     )
 
     // ========== Default Positions ==========

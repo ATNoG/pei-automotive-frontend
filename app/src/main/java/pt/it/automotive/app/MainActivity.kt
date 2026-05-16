@@ -947,7 +947,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
-        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS)
+        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS, OTHER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
     }

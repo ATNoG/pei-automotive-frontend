@@ -27,7 +27,8 @@ import org.json.JSONObject
 class MqttEventRouter(
     private val mqttManager: MqttManager,
     private val alertNotificationManager: AlertNotificationManager,
-    private val userCarIds: Set<String>
+    private val userCarIds: Set<String>,
+    private val otherCarIds: Set<String> = emptySet(),
 ) {
 
     companion object {
@@ -201,6 +202,10 @@ class MqttEventRouter(
             subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
             alertBases.forEach { base -> subscribe("$base/$carId") }
             subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
+        }
+
+        otherCarIds.forEach { carId ->
+            subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
         }
     }
 

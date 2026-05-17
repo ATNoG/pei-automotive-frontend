@@ -944,7 +944,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
-        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS)
+        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS, OTHER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
     }
@@ -1015,8 +1015,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         handleEmergencyVehicleAlert(payload)
     }
 
-    override fun onHighwayEntryAlert(payload: String) {
-        handleHighwayEntryAlert(payload)
+    override fun onLaneMergeAlert(payload: String) {
+        handleLaneMergeAlert(payload)
     }
 
     override fun onTrafficJamAlert(payload: String) {
@@ -1349,22 +1349,22 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
     }
 
-    private fun handleHighwayEntryAlert(message: String) {
+    private fun handleLaneMergeAlert(message: String) {
         try {
             val json = org.json.JSONObject(message)
             val status = json.optString("status", "unknown")
             val title = when (status) {
-                "unsafe" -> getString(R.string.notification_title_highway_unsafe)
-                "safe" -> getString(R.string.notification_title_highway_safe)
-                else -> getString(R.string.notification_title_highway)
+                "unsafe" -> getString(R.string.notification_title_lane_merge_unsafe)
+                "safe" -> getString(R.string.notification_title_lane_merge_safe)
+                else -> getString(R.string.notification_title_lane_merge)
             }
-            val messageText = getString(R.string.highway_entry_message, status)
+            val messageText = getString(R.string.lane_merge_message, status)
             val ttsText = when (status) {
-                "unsafe" -> getString(R.string.highway_entry_warning_unsafe)
-                "safe" -> getString(R.string.highway_entry_warning_safe)
-                else -> getString(R.string.highway_entry_warning)
+                "unsafe" -> getString(R.string.lane_merge_warning_unsafe)
+                "safe" -> getString(R.string.lane_merge_warning_safe)
+                else -> getString(R.string.lane_merge_warning)
             }
-        
+
         val metadata = parseAlertMetadata(json)
 
         val notification = InAppNotificationManager.AppNotification(
@@ -1377,15 +1377,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             timestamp = metadata.timestamp,
             playAudioAction = {
                 alertNotificationManager.speakForAlert(
-                    AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+                    AlertPreferenceManager.AlertType.LANE_MERGE,
                     ttsText
                 )
             }
         )
-        
+
             inAppNotificationManager.handleAlert(notification)
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing highway entry alert: ${e.message}")
+            Log.e(TAG, "Error parsing lane merge alert: ${e.message}")
         }
     }
 

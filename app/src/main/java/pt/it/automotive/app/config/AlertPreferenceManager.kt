@@ -41,7 +41,7 @@ class AlertPreferenceManager(context: Context) {
         OVERTAKING("overtaking", R.string.alert_overtaking),
         EMERGENCY_VEHICLE("emergency_vehicle", R.string.alert_emergency_vehicle),
         NAVIGATION("navigation", R.string.alert_navigation),
-        HIGHWAY_ENTRY("highway_entry", R.string.alert_highway_entry),
+        LANE_MERGE("lane_merge", R.string.alert_lane_merge),
         TRAFFIC_JAM("traffic_jam", R.string.alert_traffic_jam)
     }
 

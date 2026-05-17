@@ -847,114 +847,58 @@ class MapController(
         }
     }
     
-    /**
-     * Optimize map performance by removing unnecessary labels and POIs.
-     * Only keep essential road labels for navigation.
-     * MapTiler Streets-v2-dark style layer IDs.
-     * 
-     * PERFORMANCE CRITICAL: Removes ALL non-essential visual elements
-     * for maximum rendering performance during navigation simulation.
-     */
     private fun optimizeMapLayers(style: Style) {
-        Log.d(TAG, "Optimizing map layers - aggressively hiding POIs and non-essential elements")
-        
-        // AGGRESSIVE OPTIMIZATION: Remove ALL these layer patterns
-        val patternsToHide = listOf(
-            // POI labels - all variations
-            "poi", "place", "label", "symbol", "text", "icon",
-            // Buildings and structures
-            "building", "housenumber", "house", "housenum",
-            // Natural features
-            "water", "waterway", "park", "landuse", "landcover", "mountain", "peak",
-            // Transit and infrastructure
-            "transit", "airport", "aeroway", "railway",
-            // Road labels (keep roads visible but hide labels for performance)
-            "road_label", "road-label", "road_shield", "road-shield", 
-            "road-number", "highway-shield", "road-oneway",
-            // 3D and extrusions (heavy on GPU)
-            "3d", "extrusion",
-            // Boundaries and administrative
-            "boundary", "admin", "state", "country",
-            // Miscellaneous
-            "barrier", "bridge", "tunnel"
-        )
-        
-        // Method 1: Hide by known layer IDs (fast)
         val explicitLayersToHide = listOf(
-            // POI comprehensive list
             "poi", "poi-level-1", "poi-level-2", "poi-level-3", "poi_label", "poi-label",
-            "poi_z14", "poi_z15", "poi_z16", "poi-railway", "poi-bus", "poi-park", 
+            "poi_z14", "poi_z15", "poi_z16", "poi-railway", "poi-bus", "poi-park",
             "poi-hospital", "poi-school", "poi-restaurant", "poi-cafe", "poi-shop",
-            
-            // Place labels
-            "place-other", "place_other", "place-city", "place_city", "place-village", 
-            "place_village", "place-town", "place_town", "place-neighbourhood", 
-            "place_neighbourhood", "place-suburb", "place_suburb", "place-hamlet", 
-            "place_hamlet", "place-island", "place_island", "place-residential", 
+            "place-other", "place_other", "place-city", "place_city", "place-village",
+            "place_village", "place-town", "place_town", "place-neighbourhood",
+            "place_neighbourhood", "place-suburb", "place_suburb", "place-hamlet",
+            "place_hamlet", "place-island", "place_island", "place-residential",
             "place-quarter", "place_label",
-            
-            // House and building labels
-            "housenumber", "house-number", "housenum-label", "housenum", 
-            "building", "building-top", "building-number", "building-3d", 
+            "housenumber", "house-number", "housenum-label", "housenum",
+            "building", "building-top", "building-number", "building-3d",
             "building_3d", "building-extrusion",
-            
-            // Water labels
-            "water-name", "water_name", "water-name-lakeline", "water-name-ocean", 
+            "water-name", "water_name", "water-name-lakeline", "water-name-ocean",
             "water-name-other", "waterway-name", "waterway_label", "waterway-label",
-            
-            // Park and landuse
-            "park", "park-label", "park_label", "landcover", "landcover-grass", 
-            "landcover-label", "landuse", "landuse-label", "landuse-park",
-            
-            // Transit
-            "transit", "transit-label", "transit_label", "airport", "airport-label", 
+            "park", "park-label", "park_label",
+            "transit", "transit-label", "transit_label", "airport", "airport-label",
             "airport_label", "aeroway", "aeroway-label", "railway-label",
-            
-            // Road labels and shields (hide for performance, keep road lines)
             "road_label", "road-label", "road_label_primary", "road_label_secondary",
             "road-label-small", "road_label_small", "road-label-minor",
             "road_shield", "road-shield", "highway-shield", "road-number-shield",
             "road-oneway-arrows", "road-oneway-arrow",
-            
-            // Mountains and natural
-            "mountain_peak", "mountain-peak-label", "peak", "hill-shade",
-            
-            // Generic labels
-            "label", "symbol", "text"
+            "mountain_peak", "mountain-peak-label", "peak"
         )
-        
-        var hiddenCount = 0
+
         explicitLayersToHide.forEach { layerId ->
             try {
-                val layer = style.getLayer(layerId)
-                if (layer != null) {
-                    layer.setProperties(visibility(Property.NONE))
-                    hiddenCount++
-                }
+                style.getLayer(layerId)?.setProperties(visibility(Property.NONE))
             } catch (_: Exception) { }
         }
-        
-        // Method 2: Pattern-based hiding (comprehensive)
-        // Iterate ALL layers and hide based on name patterns
+
+        // Pattern sweep to catch layer IDs not covered by the explicit list above.
+        // Excludes "bridge"/"tunnel" so road layers on those structures remain visible.
+        val patternsToHide = listOf(
+            "poi", "place", "label", "shield", "oneway",
+            "housenumber", "housenum",
+            "building", "3d", "extrusion",
+            "transit", "airport", "aeroway",
+            "mountain", "peak"
+        )
+        val safetyExclusions = listOf("arrow", "route", "destination", "car", "road_")
+
         style.layers.forEach { layer ->
             try {
-                val layerName = layer.id.lowercase()
-                
-                // Check if layer name contains any pattern to hide
-                val shouldHide = patternsToHide.any { pattern ->
-                    layerName.contains(pattern.lowercase())
-                } && !layerName.contains("arrow") && !layerName.contains("route") && 
-                  !layerName.contains("destination") && !layerName.contains("car")
-                
-                if (shouldHide) {
+                val id = layer.id.lowercase()
+                val matchesPattern = patternsToHide.any { id.contains(it) }
+                val isSafe = safetyExclusions.none { id.contains(it) }
+                if (matchesPattern && isSafe) {
                     layer.setProperties(visibility(Property.NONE))
-                    hiddenCount++
                 }
             } catch (_: Exception) { }
         }
-        
-        Log.d(TAG, "Map optimization complete - hidden $hiddenCount layers for maximum performance")
-        Log.d(TAG, "Map now shows: roads, navigation markers, and route lines only")
     }
     
     // --- Route line setup ---

@@ -180,9 +180,9 @@ object AppConfig {
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
 
     /**
-     * MQTT topic for highway entry alerts.
+     * MQTT topic for lane merge alerts.
      */
-    const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
+    const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
 
     /**
      * MQTT topic for traffic jam alerts.

@@ -186,7 +186,7 @@ class AlertSettingsDialog(
 
         val alertTypes = listOf(
             AlertPreferenceManager.AlertType.ACCIDENT,
-            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+            AlertPreferenceManager.AlertType.LANE_MERGE,
             AlertPreferenceManager.AlertType.TRAFFIC_JAM,
             AlertPreferenceManager.AlertType.SPEEDING,
             AlertPreferenceManager.AlertType.WEATHER,
@@ -459,7 +459,7 @@ class AlertSettingsDialog(
             AlertPreferenceManager.AlertType.OVERTAKING -> AlertCategory.OVERTAKING
             AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE -> AlertCategory.EMERGENCY_VEHICLE
             AlertPreferenceManager.AlertType.NAVIGATION -> AlertCategory.NAVIGATION
-            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY -> AlertCategory.MANEUVER
+            AlertPreferenceManager.AlertType.LANE_MERGE -> AlertCategory.MANEUVER
             AlertPreferenceManager.AlertType.TRAFFIC_JAM -> AlertCategory.TRAFFIC
         }
     }

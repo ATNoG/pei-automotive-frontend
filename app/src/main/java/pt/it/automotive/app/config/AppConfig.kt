@@ -54,10 +54,11 @@ object AppConfig {
         "curved-route-car",
         "ev-test-regular",
         "car-behind",
-        "highway-car",
-        "highway-car-2",
+        "entering-car",
+        "entering-car-2",
         "minimal-jam-car-5",
         "jam-lead",
+        "prox-aveiro-slow",
         SUMO_USER_CAR_ID,
         SUMO_USER_CAR_ID2,
     )
@@ -70,8 +71,8 @@ object AppConfig {
         "overtaking-car-behind",
         "accident-car",
         "car-ahead",
-        "entering-car",
-        "entering-car-2",
+        "highway-car",
+        "highway-car-2",
         "minimal-jam-car-1",
         "minimal-jam-car-2",
         "minimal-jam-car-3",
@@ -85,7 +86,10 @@ object AppConfig {
         "jam-car-6",
         "jam-car-7",
         "jam-car-8",
-        "jam-car-9"
+        "jam-car-9",
+        "prox-aveiro-fast",
+        "prox-lisbon-slow",
+        "prox-lisbon-fast",
     )
 
     // ========== Default Positions ==========
@@ -176,9 +180,9 @@ object AppConfig {
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
 
     /**
-     * MQTT topic for highway entry alerts.
+     * MQTT topic for lane merge alerts.
      */
-    const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
+    const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
 
     /**
      * MQTT topic for traffic jam alerts.

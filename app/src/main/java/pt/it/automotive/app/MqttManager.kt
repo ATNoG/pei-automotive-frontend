@@ -113,6 +113,7 @@ class MqttManager(
             keepAliveInterval = 60
             if (token != null) {
                 userName = token
+                password = "jwt".toCharArray()
             }
         }
 }

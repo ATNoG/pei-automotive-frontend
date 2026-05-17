@@ -114,8 +114,9 @@ class MqttEventRouter(
                 }
             }
 
-            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT -> {
-                Log.d(TAG, "Highway entry alert")
+            topic == AppConfig.MQTT_TOPIC_HIGHWAY_ALERT ||
+                topic == AppConfig.MQTT_TOPIC_LANE_MERGE_ALERT -> {
+                Log.d(TAG, "Lane merge / highway entry alert on $topic")
                 if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
                     listener?.onHighwayEntryAlert(message)
                 }

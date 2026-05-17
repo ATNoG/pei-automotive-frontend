@@ -187,6 +187,13 @@ object AppConfig {
     const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
 
     /**
+     * MQTT topic for lane merge alerts (backend lane_merge_detector).
+     * Routed to the same handler as MQTT_TOPIC_HIGHWAY_ALERT: identical
+     * payload shape (status: safe|unsafe) and identical user-facing copy.
+     */
+    const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
+
+    /**
      * MQTT topic for traffic jam alerts.
      */
     const val MQTT_TOPIC_TRAFFIC_JAM_ALERT = "alerts/traffic_jam"

@@ -84,7 +84,7 @@ class MqttEventRouter(
         when {
             topic.startsWith(AppConfig.MQTT_TOPIC_SPEED_ALERT + "/") -> {
                 Log.d(TAG, "Speed alert received on $topic")
-                if (isForUserCar(message) && shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
+                if (shouldProcess(AlertPreferenceManager.AlertType.SPEEDING)) {
                     listener?.onSpeedAlert(message)
                 }
             }
@@ -115,10 +115,10 @@ class MqttEventRouter(
                 }
             }
 
-            topic.startsWith(AppConfig.MQTT_TOPIC_HIGHWAY_ALERT + "/") -> {
-                Log.d(TAG, "Highway entry alert on $topic")
-                if (shouldProcess(AlertPreferenceManager.AlertType.HIGHWAY_ENTRY)) {
-                    listener?.onHighwayEntryAlert(message)
+            topic.startsWith(AppConfig.MQTT_TOPIC_LANE_MERGE_ALERT + "/") -> {
+                Log.d(TAG, "Lane merge alert on $topic")
+                if (shouldProcess(AlertPreferenceManager.AlertType.LANE_MERGE)) {
+                    listener?.onLaneMergeAlert(message)
                 }
             }
 
@@ -184,7 +184,7 @@ class MqttEventRouter(
         val alertBases = listOf(
             AppConfig.MQTT_TOPIC_SPEED_ALERT,
             AppConfig.MQTT_TOPIC_OVERTAKING_ALERT,
-            AppConfig.MQTT_TOPIC_HIGHWAY_ALERT,
+            AppConfig.MQTT_TOPIC_LANE_MERGE_ALERT,
             AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT,
             AppConfig.MQTT_TOPIC_EV_ALERT,
             AppConfig.MQTT_TOPIC_ACCIDENT_ALERT,

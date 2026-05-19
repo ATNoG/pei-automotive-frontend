@@ -90,7 +90,7 @@ object AppConfig {
         "jam-car-8",
         "jam-car-9",
         "rw-left-car",
-        "rw-direct-left"
+        "rw-direct-left",
         "prox-aveiro-fast",
         "prox-lisbon-slow",
         "prox-lisbon-fast",
@@ -187,13 +187,6 @@ object AppConfig {
 
     /**
      * MQTT topic for lane merge alerts.
-     */
-    const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
-
-    /**
-     * MQTT topic for lane merge alerts (backend lane_merge_detector).
-     * Routed to the same handler as MQTT_TOPIC_HIGHWAY_ALERT: identical
-     * payload shape (status: safe|unsafe) and identical user-facing copy.
      */
     const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
 

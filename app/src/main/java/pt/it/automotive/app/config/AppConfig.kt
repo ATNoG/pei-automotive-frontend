@@ -54,10 +54,13 @@ object AppConfig {
         "curved-route-car",
         "ev-test-regular",
         "car-behind",
-        "highway-car",
-        "highway-car-2",
+        "entering-car",
+        "entering-car-2",
         "minimal-jam-car-5",
         "jam-lead",
+        "rw-entering-car",
+        "rw-direct-entering",
+        "prox-aveiro-slow",
         SUMO_USER_CAR_ID,
         SUMO_USER_CAR_ID2,
     )
@@ -70,8 +73,8 @@ object AppConfig {
         "overtaking-car-behind",
         "accident-car",
         "car-ahead",
-        "entering-car",
-        "entering-car-2",
+        "highway-car",
+        "highway-car-2",
         "minimal-jam-car-1",
         "minimal-jam-car-2",
         "minimal-jam-car-3",
@@ -85,7 +88,12 @@ object AppConfig {
         "jam-car-6",
         "jam-car-7",
         "jam-car-8",
-        "jam-car-9"
+        "jam-car-9",
+        "rw-left-car",
+        "rw-direct-left",
+        "prox-aveiro-fast",
+        "prox-lisbon-slow",
+        "prox-lisbon-fast",
     )
 
     // ========== Default Positions ==========
@@ -144,7 +152,9 @@ object AppConfig {
     const val DEFAULT_MAP_ZOOM = 19.0
 
     /**
-     * Default map tilt angle (degrees) for 3D-like view.
+     * Default map tilt angle (degrees).
+     *   60.0 – original 3D perspective view
+     *    0.0 – flat 2D top-down view (better road visibility on low-detail styles)
      */
     const val DEFAULT_MAP_TILT = 60.0
 
@@ -176,9 +186,9 @@ object AppConfig {
     const val MQTT_TOPIC_OVERTAKING_ALERT = "alerts/overtaking"
 
     /**
-     * MQTT topic for highway entry alerts.
+     * MQTT topic for lane merge alerts.
      */
-    const val MQTT_TOPIC_HIGHWAY_ALERT = "alerts/highway_entry"
+    const val MQTT_TOPIC_LANE_MERGE_ALERT = "alerts/lane_merge"
 
     /**
      * MQTT topic for traffic jam alerts.

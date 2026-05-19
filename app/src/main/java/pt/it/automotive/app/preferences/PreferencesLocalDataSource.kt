@@ -116,7 +116,7 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
             emergencyVehicle = readAlertChannel("emergency_vehicle", defaultAudio = false),
             navigation = readAlertChannel("navigation", defaultAudio = false),
             traffic = readAlertChannel("traffic_jam", defaultAudio = false),
-            maneuver = readAlertChannel("highway_entry", defaultAudio = false)
+            maneuver = readAlertChannel("lane_merge", defaultAudio = false)
         )
     }
 
@@ -136,8 +136,8 @@ class PreferencesLocalDataSource(context: Context) : PreferencesLocalStore {
             .putBoolean("navigation$ALERT_SUFFIX_AUDIO", alerts.navigation.audio)
             .putBoolean("traffic_jam$ALERT_SUFFIX_ENABLED", alerts.traffic.alert)
             .putBoolean("traffic_jam$ALERT_SUFFIX_AUDIO", alerts.traffic.audio)
-            .putBoolean("highway_entry$ALERT_SUFFIX_ENABLED", alerts.maneuver.alert)
-            .putBoolean("highway_entry$ALERT_SUFFIX_AUDIO", alerts.maneuver.audio)
+            .putBoolean("lane_merge$ALERT_SUFFIX_ENABLED", alerts.maneuver.alert)
+            .putBoolean("lane_merge$ALERT_SUFFIX_AUDIO", alerts.maneuver.audio)
             .apply()
     }
 

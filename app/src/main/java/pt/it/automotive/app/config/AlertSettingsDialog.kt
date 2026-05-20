@@ -42,7 +42,7 @@ class AlertSettingsDialog(
     private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
     private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
     private val onLogout: (() -> Unit)? = null,
-    private val onCarIdsChanged: ((List<String>) -> Unit)? = null
+    private val onCarSelectionChanged: ((selectedId: String?, allIds: List<String>) -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
@@ -361,17 +361,34 @@ class AlertSettingsDialog(
 
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
         val carIds = loadCarIds(prefs).toMutableList()
+        // Array wrapper so lambdas can reassign the selection
+        val selectedHolder = arrayOf(loadSelectedCarId(prefs))
 
         fun rebuildList() {
             listContainer.removeAllViews()
             carIds.forEach { carId ->
-                listContainer.addView(buildCarIdRow(carId) {
-                    carIds.remove(carId)
-                    saveCarIds(prefs, carIds)
-                    onCarIdsChanged?.invoke(carIds.toList())
-                    rebuildList()
-                    Toast.makeText(activity, activity.getString(R.string.car_id_removed), Toast.LENGTH_SHORT).show()
-                })
+                listContainer.addView(buildCarIdRow(
+                    carId = carId,
+                    isSelected = carId == selectedHolder[0],
+                    onSelect = {
+                        selectedHolder[0] = carId
+                        saveSelectedCarId(prefs, carId)
+                        onCarSelectionChanged?.invoke(carId, carIds.toList())
+                        rebuildList()
+                    },
+                    onRemove = {
+                        val wasSelected = carId == selectedHolder[0]
+                        carIds.remove(carId)
+                        if (wasSelected) {
+                            selectedHolder[0] = null
+                            saveSelectedCarId(prefs, null)
+                        }
+                        saveCarIds(prefs, carIds)
+                        onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
+                        rebuildList()
+                        Toast.makeText(activity, activity.getString(R.string.car_id_removed), Toast.LENGTH_SHORT).show()
+                    }
+                ))
             }
         }
 
@@ -385,7 +402,7 @@ class AlertSettingsDialog(
                 else -> {
                     carIds.add(newId)
                     saveCarIds(prefs, carIds)
-                    onCarIdsChanged?.invoke(carIds.toList())
+                    onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
                     editCarId.setText("")
                     rebuildList()
                     Toast.makeText(activity, activity.getString(R.string.car_id_added), Toast.LENGTH_SHORT).show()
@@ -394,10 +411,22 @@ class AlertSettingsDialog(
         }
     }
 
-    private fun buildCarIdRow(carId: String, onRemove: () -> Unit): LinearLayout {
+    private fun buildCarIdRow(
+        carId: String,
+        isSelected: Boolean,
+        onSelect: () -> Unit,
+        onRemove: () -> Unit
+    ): LinearLayout {
         val density = activity.resources.displayMetrics.density
         val padV = (12 * density).toInt()
         val padH = (14 * density).toInt()
+        val dotSize = (12 * density).toInt()
+        val selectableItemBg = android.R.attr.selectableItemBackgroundBorderless.let {
+            val ta = activity.obtainStyledAttributes(intArrayOf(it))
+            val res = ta.getResourceId(0, 0)
+            ta.recycle()
+            res
+        }
 
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -408,12 +437,31 @@ class AlertSettingsDialog(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = (8 * density).toInt() }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onSelect() }
+        }
+
+        val dot = android.view.View(activity).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                if (isSelected) {
+                    setColor(0xFF4CAF50.toInt())
+                } else {
+                    setColor(0x00000000)
+                    setStroke((2 * density).toInt(), ContextCompat.getColor(activity, R.color.text_secondary))
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
+                marginEnd = (10 * density).toInt()
+            }
         }
 
         val label = TextView(activity).apply {
             text = carId
             textSize = 24f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+            if (isSelected) setTypeface(null, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
@@ -422,12 +470,7 @@ class AlertSettingsDialog(
             imageTintList = android.content.res.ColorStateList.valueOf(
                 ContextCompat.getColor(activity, R.color.text_primary)
             )
-            background = ContextCompat.getDrawable(activity, android.R.attr.selectableItemBackgroundBorderless.let {
-                val ta = activity.obtainStyledAttributes(intArrayOf(it))
-                val res = ta.getResourceId(0, 0)
-                ta.recycle()
-                res
-            })
+            background = ContextCompat.getDrawable(activity, selectableItemBg)
             contentDescription = activity.getString(R.string.car_id_remove_desc)
             layoutParams = LinearLayout.LayoutParams(
                 (48 * density).toInt(),
@@ -436,6 +479,7 @@ class AlertSettingsDialog(
             setOnClickListener { onRemove() }
         }
 
+        row.addView(dot)
         row.addView(label)
         row.addView(deleteBtn)
         return row
@@ -448,6 +492,15 @@ class AlertSettingsDialog(
 
     private fun saveCarIds(prefs: android.content.SharedPreferences, ids: List<String>) {
         prefs.edit().putString("userCarIds", ids.joinToString(",")).apply()
+    }
+
+    private fun loadSelectedCarId(prefs: android.content.SharedPreferences): String? {
+        val v = prefs.getString("selectedCarId", "") ?: ""
+        return v.ifBlank { null }
+    }
+
+    private fun saveSelectedCarId(prefs: android.content.SharedPreferences, id: String?) {
+        prefs.edit().putString("selectedCarId", id ?: "").apply()
     }
 
     private fun setupLogoutButton(settingsView: View) {

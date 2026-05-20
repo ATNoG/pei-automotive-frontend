@@ -29,10 +29,15 @@ object AppConfig {
     * minimal-jam-car-5
     * jam-lead
     * rw-entering-car
-    * "rw-direct-entering
+    * rw-direct-entering
     * prox-aveiro-slow
     * sumo-0
     * sumo-merging-car
+    */
+
+    /**
+    * rw-left-car
+    * rw-direct-left
     */
 
     // ========== SUMO Simulation ==========
@@ -68,8 +73,6 @@ object AppConfig {
         "jam-car-7",
         "jam-car-8",
         "jam-car-9",
-        "rw-left-car",
-        "rw-direct-left",
         "prox-aveiro-fast",
         "prox-lisbon-slow",
         "prox-lisbon-fast",

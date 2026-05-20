@@ -31,6 +31,8 @@ class MqttEventRouter(
     private val otherCarIds: Set<String> = emptySet(),
 ) {
     private val userCarIds: MutableSet<String> = initialUserCarIds.toMutableSet()
+    // Car IDs from the user's saved list that are NOT currently selected — shown on map only.
+    private val listOtherCarIds: MutableSet<String> = mutableSetOf()
 
     companion object {
         private const val TAG = "MqttEventRouter"
@@ -203,6 +205,19 @@ class MqttEventRouter(
             unsubscribeUserCar(carId)
             Log.d(TAG, "Removed user car '$carId'")
         }
+    }
+
+    fun switchOtherListCars(newIds: Collection<String>) {
+        val newSet = newIds.toSet()
+        val toRemove = listOtherCarIds - newSet
+        val toAdd = newSet - listOtherCarIds
+        toRemove.filter { it !in otherCarIds && it !in userCarIds }
+            .forEach { unsubscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$it") }
+        listOtherCarIds.removeAll(toRemove)
+        toAdd.filter { it !in otherCarIds && it !in userCarIds }
+            .forEach { subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$it") }
+        listOtherCarIds.addAll(toAdd)
+        Log.d(TAG, "List other cars updated: $listOtherCarIds")
     }
 
     fun switchUserCars(newCarIds: Collection<String>) {

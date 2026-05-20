@@ -68,14 +68,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     companion object {
         private const val TAG = "MainActivity"
-
-        val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
         const val ALPHA_LOCKED = 0.80f
         const val ALPHA_UNLOCKED = 1.0f
     }
 
-    // Resolved at runtime from SharedPreferences; falls back to AppConfig list if none saved.
     private var activeUserCarIds: Set<String> = emptySet()
+    // AppConfig static cars + non-selected list cars
+    private var activeOtherCarIds: Set<String> = AppConfig.OTHER_CAR_IDS
 
     private lateinit var mapController: MapController
     private lateinit var uiController: UiController
@@ -239,10 +238,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             onPreferenceSectionChanged = ::onPreferenceSectionChanged,
             onDialogClosed = ::onSettingsDialogClosed,
             onLogout = { preferencesRepository.clearLocalData() },
-            onCarIdsChanged = { newIds ->
-                activeUserCarIds = newIds.toSet()
+            onCarSelectionChanged = { selectedId, allIds ->
+                activeUserCarIds = if (selectedId != null) setOf(selectedId) else emptySet()
+                val otherListIds = allIds - activeUserCarIds
+                activeOtherCarIds = AppConfig.OTHER_CAR_IDS + otherListIds
                 if (::mqttEventRouter.isInitialized) {
-                    mqttEventRouter.switchUserCars(newIds)
+                    mqttEventRouter.switchUserCars(activeUserCarIds)
+                    mqttEventRouter.switchOtherListCars(otherListIds)
                 }
             }
         )
@@ -276,10 +278,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Setup weather card click listener
         uiController.setupWeatherCardClick()
 
-        // Resolve user car IDs from settings (overrides AppConfig list when any are saved)
         val savedCarIdsRaw = appPrefs.getString("userCarIds", "") ?: ""
+        val savedSelectedId = appPrefs.getString("selectedCarId", "")?.ifBlank { null }
         if (savedCarIdsRaw.isNotBlank()) {
-            activeUserCarIds = savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            val allIds = savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            activeUserCarIds = if (savedSelectedId != null && savedSelectedId in allIds) setOf(savedSelectedId) else emptySet()
+            activeOtherCarIds = AppConfig.OTHER_CAR_IDS + (allIds - activeUserCarIds)
         }
 
         // Setup MQTT via event router (after uiController is initialized)
@@ -949,7 +953,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
-        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, activeUserCarIds, OTHER_CAR_IDS)
+        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, activeUserCarIds, activeOtherCarIds)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
     }
@@ -1033,7 +1037,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val normalizedCarId = data.carId.trim()
             when {
                 normalizedCarId in activeUserCarIds -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
-                normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in activeOtherCarIds -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
                 // SUMO-generated vehicles: any sumo-N other than the user car is shown on the map.
                 normalizedCarId.startsWith(AppConfig.SUMO_CAR_PREFIX) -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
@@ -1044,7 +1048,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                         TAG,
                         "Unknown car_id raw='${data.carId}' normalized='$normalizedCarId' " +
                                 "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
-                                "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
+                                "bytes=[$bytes], ignoring. Configured other cars: $activeOtherCarIds"
                     )
                 }
             }

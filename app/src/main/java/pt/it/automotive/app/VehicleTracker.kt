@@ -37,6 +37,8 @@ class VehicleTracker(
         private const val OVERTAKING_WARNING_DURATION_MS = 5000L
         private const val EV_CLEANUP_DELAY_MS = 10_000L
         private const val EV_CLEANUP_THRESHOLD_MS = 9_500L
+        private const val OTHER_CAR_STALENESS_MS = 30_000L
+        private const val STALENESS_CHECK_INTERVAL_MS = 10_000L
     }
 
     // ── User Car State ───────────────────────────────────────────────────
@@ -50,6 +52,7 @@ class VehicleTracker(
     data class CarPosition(val carId: String, val lat: Double, val lon: Double, val heading: Float)
 
     private val otherCarPositions = mutableMapOf<String, CarPosition>()
+    private val otherCarLastSeen = mutableMapOf<String, Long>()
 
     // ── Emergency Vehicle Positions & Active Tracking ────────────────────
 
@@ -70,6 +73,7 @@ class VehicleTracker(
     private var otherCarUpdateRunnable: Runnable? = null
     private var evUpdateRunnable: Runnable? = null
     private var hideOvertakingRunnable: Runnable? = null
+    private var stalenessCheckRunnable: Runnable? = null
 
     // ====================================================================
     //  User Car
@@ -95,7 +99,10 @@ class VehicleTracker(
 
     fun updateOtherCar(carId: String, lat: Double, lon: Double, heading: Float) {
         otherCarPositions[carId] = CarPosition(carId, lat, lon, heading)
+        otherCarLastSeen[carId] = System.currentTimeMillis()
         if (!hasSeenOtherCar) hasSeenOtherCar = true
+
+        if (stalenessCheckRunnable == null) scheduleStalenessCheck()
 
         scheduleThrottledUpdate(
             runnable = { otherCarUpdateRunnable },
@@ -108,6 +115,42 @@ class VehicleTracker(
             }
         )
         refreshTopDownView()
+    }
+
+    fun removeOtherCar(carId: String) {
+        if (otherCarPositions.remove(carId) != null) {
+            otherCarLastSeen.remove(carId)
+            val list = otherCarPositions.values.map {
+                MapController.OtherCarData(it.carId, it.lat, it.lon, it.heading)
+            }
+            mapController.updateOtherCars(list)
+            refreshTopDownView()
+        }
+    }
+
+    private fun scheduleStalenessCheck() {
+        val r = Runnable {
+            stalenessCheckRunnable = null
+            val now = System.currentTimeMillis()
+            val staleIds = otherCarLastSeen.entries
+                .filter { (_, lastSeen) -> now - lastSeen > OTHER_CAR_STALENESS_MS }
+                .map { it.key }
+            if (staleIds.isNotEmpty()) {
+                staleIds.forEach { id ->
+                    Log.d(TAG, "Other car $id stale, removing from map")
+                    otherCarPositions.remove(id)
+                    otherCarLastSeen.remove(id)
+                }
+                val list = otherCarPositions.values.map {
+                    MapController.OtherCarData(it.carId, it.lat, it.lon, it.heading)
+                }
+                mapController.updateOtherCars(list)
+                refreshTopDownView()
+            }
+            if (otherCarPositions.isNotEmpty()) scheduleStalenessCheck()
+        }
+        stalenessCheckRunnable = r
+        mainHandler.postDelayed(r, STALENESS_CHECK_INTERVAL_MS)
     }
 
     // ====================================================================
@@ -144,6 +187,7 @@ class VehicleTracker(
             hasSeenOtherCar = false
             overtakingAnimationStarted = false
             otherCarPositions.clear()
+            otherCarLastSeen.clear()
             mapController.clearOtherCar()
             overtakingWarningIcon.visibility = View.GONE
             overtakingEdgeLightView.hideIndicator()
@@ -371,6 +415,7 @@ class VehicleTracker(
         otherCarUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
         evUpdateRunnable?.let { mainHandler.removeCallbacks(it) }
         hideOvertakingRunnable?.let { mainHandler.removeCallbacks(it) }
+        stalenessCheckRunnable?.let { mainHandler.removeCallbacks(it) }
         overtakingEdgeLightView.hideIndicator()
     }
 

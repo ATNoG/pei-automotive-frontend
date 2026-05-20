@@ -13,7 +13,7 @@
     <string name="alert_overtaking">Adelantamiento</string>
     <string name="alert_emergency_vehicle">Vehículo de Emergencia</string>
     <string name="alert_navigation">Navegación</string>
-    <string name="alert_highway_entry">Entrada/Salida de Autopista</string>
+    <string name="alert_lane_merge">Fusión de Carril</string>
     <string name="alert_traffic_jam">Tráfico Congestionado</string>
     <string name="alert_sound">Sonido</string>
     <string name="alert_enabled">Alerta</string>
@@ -40,16 +40,16 @@
     <string name="traffic_jam_warning">¡Atención! Tráfico congestionado a %1$s.</string>
     <string name="traffic_jam_warning_short">Tráfico congestionado a %1$s</string>
     <string name="traffic_jam_warning_generic">Atención, tráfico congestionado más adelante</string>
-    <string name="highway_entry_warning">Alerta de fusión de carril detectada</string>
-    <string name="highway_entry_warning_safe">Fusión de carril segura</string>
-    <string name="highway_entry_warning_unsafe">Atención, fusión de carril insegura</string>
-    <string name="highway_entry_message">Fusión de carril detectada: %1$s</string>
+    <string name="lane_merge_warning">Alerta de fusión de carril detectada</string>
+    <string name="lane_merge_warning_safe">Fusión de carril segura</string>
+    <string name="lane_merge_warning_unsafe">Atención, fusión de carril insegura</string>
+    <string name="lane_merge_message">Fusión de carril detectada: %1$s</string>
     <string name="weather_alert_tts">Alerta meteorológica: %1$s</string>
     <string name="notification_title_accident_alert">⚠️ Alerta de Accidente</string>
     <string name="notification_title_ev">🚨 Vehículo de Emergencia %1$s</string>
-    <string name="notification_title_highway_unsafe">⚠️ Fusión de Carril Insegura</string>
-    <string name="notification_title_highway_safe">✅ Fusión de Carril Segura</string>
-    <string name="notification_title_highway">⚠️ Alerta de Fusión de Carril</string>
+    <string name="notification_title_lane_merge_unsafe">⚠️ Fusión de Carril Insegura</string>
+    <string name="notification_title_lane_merge_safe">✅ Fusión de Carril Segura</string>
+    <string name="notification_title_lane_merge">⚠️ Alerta de Fusión de Carril</string>
     <string name="notification_title_traffic_jam">🚦 Alerta de Tráfico</string>
     <string name="notification_title_mqtt">✔️ Conectado</string>
     <string name="notification_title_mqtt_error">❌ Error de Conexión</string>
@@ -86,4 +86,12 @@
     <string name="tab_account">Cuenta</string>
     <string name="tab_visual">Apariencia</string>
     <string name="tab_alerts">Alertas</string>
+    <string name="vehicle_section">Vehículo</string>
+    <string name="car_id_hint">Añadir ID de vehículo...</string>
+    <string name="car_id_add">+ Añadir</string>
+    <string name="car_id_added">ID de vehículo añadido</string>
+    <string name="car_id_removed">ID de vehículo eliminado</string>
+    <string name="car_id_duplicate">Ese ID de vehículo ya está en la lista</string>
+    <string name="car_id_empty_error">Por favor, introduce un ID de vehículo</string>
+    <string name="car_id_remove_desc">Eliminar ID de vehículo</string>
 </resources>

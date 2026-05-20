@@ -4,6 +4,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Button
 import android.widget.ImageButton
@@ -40,10 +41,12 @@ class AlertSettingsDialog(
     private val mapController: MapController,
     private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
     private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
-    private val onLogout: (() -> Unit)? = null
+    private val onLogout: (() -> Unit)? = null,
+    private val onCarSelectionChanged: ((selectedId: String?, allIds: List<String>) -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
+    private var savedSoftInputMode: Int = 0
 
     private companion object {
         const val MODAL_SIDE_MARGIN_DP = 24
@@ -63,6 +66,9 @@ class AlertSettingsDialog(
         if (currentSettingsView != null) return
         changedSections.clear()
 
+        savedSoftInputMode = activity.window.attributes.softInputMode
+        activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         val settingsView = activity.layoutInflater.inflate(R.layout.dialog_settings, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
         currentSettingsView = settingsView
@@ -70,6 +76,7 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupTabs(settingsView)
+        setupCarIdList(settingsView)
         setupMapStyleToggle(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
@@ -96,7 +103,7 @@ class AlertSettingsDialog(
 
         (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
             lp.width = minOf(targetWidthPx, maxWidth)
-            lp.height = modalHeight
+            lp.height = ViewGroup.LayoutParams.MATCH_PARENT
             lp.gravity = Gravity.CENTER
             lp.topMargin = verticalMarginPx
             lp.bottomMargin = verticalMarginPx
@@ -108,7 +115,7 @@ class AlertSettingsDialog(
 
     private fun setupTabs(settingsView: View) {
         val tabLayout = settingsView.findViewById<TabLayout>(R.id.settingsTabLayout)
-        val tabAccount = settingsView.findViewById<ScrollView>(R.id.tabContentAccount)
+        val tabAccount = settingsView.findViewById<LinearLayout>(R.id.tabContentAccount)
         val tabVisual = settingsView.findViewById<ScrollView>(R.id.tabContentVisual)
         val tabAlerts = settingsView.findViewById<ScrollView>(R.id.tabContentAlerts)
 
@@ -186,7 +193,7 @@ class AlertSettingsDialog(
 
         val alertTypes = listOf(
             AlertPreferenceManager.AlertType.ACCIDENT,
-            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY,
+            AlertPreferenceManager.AlertType.LANE_MERGE,
             AlertPreferenceManager.AlertType.TRAFFIC_JAM,
             AlertPreferenceManager.AlertType.SPEEDING,
             AlertPreferenceManager.AlertType.WEATHER,
@@ -351,6 +358,155 @@ class AlertSettingsDialog(
         return block to toggle
     }
 
+    private fun setupCarIdList(settingsView: View) {
+        val listContainer = settingsView.findViewById<LinearLayout>(R.id.carIdListContainer) ?: return
+        val editCarId = settingsView.findViewById<EditText>(R.id.editCarId) ?: return
+        val btnAddCarId = settingsView.findViewById<Button>(R.id.btnAddCarId) ?: return
+
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        val carIds = loadCarIds(prefs).toMutableList()
+        // Array wrapper so lambdas can reassign the selection
+        val selectedHolder = arrayOf(loadSelectedCarId(prefs))
+
+        fun rebuildList() {
+            listContainer.removeAllViews()
+            carIds.forEach { carId ->
+                listContainer.addView(buildCarIdRow(
+                    carId = carId,
+                    isSelected = carId == selectedHolder[0],
+                    onSelect = {
+                        selectedHolder[0] = carId
+                        saveSelectedCarId(prefs, carId)
+                        onCarSelectionChanged?.invoke(carId, carIds.toList())
+                        rebuildList()
+                    },
+                    onRemove = {
+                        val wasSelected = carId == selectedHolder[0]
+                        carIds.remove(carId)
+                        if (wasSelected) {
+                            selectedHolder[0] = null
+                            saveSelectedCarId(prefs, null)
+                        }
+                        saveCarIds(prefs, carIds)
+                        onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
+                        rebuildList()
+                        Toast.makeText(activity, activity.getString(R.string.car_id_removed), Toast.LENGTH_SHORT).show()
+                    }
+                ))
+            }
+        }
+
+        rebuildList()
+
+        btnAddCarId.setOnClickListener {
+            val newId = editCarId.text.toString().trim()
+            when {
+                newId.isEmpty() -> Toast.makeText(activity, activity.getString(R.string.car_id_empty_error), Toast.LENGTH_SHORT).show()
+                carIds.contains(newId) -> Toast.makeText(activity, activity.getString(R.string.car_id_duplicate), Toast.LENGTH_SHORT).show()
+                else -> {
+                    carIds.add(newId)
+                    saveCarIds(prefs, carIds)
+                    onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
+                    editCarId.setText("")
+                    rebuildList()
+                    Toast.makeText(activity, activity.getString(R.string.car_id_added), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun buildCarIdRow(
+        carId: String,
+        isSelected: Boolean,
+        onSelect: () -> Unit,
+        onRemove: () -> Unit
+    ): LinearLayout {
+        val density = activity.resources.displayMetrics.density
+        val padV = (12 * density).toInt()
+        val padH = (14 * density).toInt()
+        val dotSize = (12 * density).toInt()
+        val selectableItemBg = android.R.attr.selectableItemBackgroundBorderless.let {
+            val ta = activity.obtainStyledAttributes(intArrayOf(it))
+            val res = ta.getResourceId(0, 0)
+            ta.recycle()
+            res
+        }
+
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(padH, padV, padH, padV)
+            background = activity.getDrawable(R.drawable.card_background_with_stroke)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (8 * density).toInt() }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { onSelect() }
+        }
+
+        val dot = android.view.View(activity).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                if (isSelected) {
+                    setColor(0xFF4CAF50.toInt())
+                } else {
+                    setColor(0x00000000)
+                    setStroke((2 * density).toInt(), ContextCompat.getColor(activity, R.color.text_secondary))
+                }
+            }
+            layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
+                marginEnd = (10 * density).toInt()
+            }
+        }
+
+        val label = TextView(activity).apply {
+            text = carId
+            textSize = 24f
+            setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+            if (isSelected) setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val deleteBtn = android.widget.ImageButton(activity).apply {
+            setImageResource(R.drawable.ic_delete)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(activity, R.color.text_primary)
+            )
+            background = ContextCompat.getDrawable(activity, selectableItemBg)
+            contentDescription = activity.getString(R.string.car_id_remove_desc)
+            layoutParams = LinearLayout.LayoutParams(
+                (48 * density).toInt(),
+                (48 * density).toInt()
+            )
+            setOnClickListener { onRemove() }
+        }
+
+        row.addView(dot)
+        row.addView(label)
+        row.addView(deleteBtn)
+        return row
+    }
+
+    private fun loadCarIds(prefs: android.content.SharedPreferences): List<String> {
+        val raw = prefs.getString("userCarIds", "") ?: ""
+        return if (raw.isBlank()) emptyList() else raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    private fun saveCarIds(prefs: android.content.SharedPreferences, ids: List<String>) {
+        prefs.edit().putString("userCarIds", ids.joinToString(",")).apply()
+    }
+
+    private fun loadSelectedCarId(prefs: android.content.SharedPreferences): String? {
+        val v = prefs.getString("selectedCarId", "") ?: ""
+        return v.ifBlank { null }
+    }
+
+    private fun saveSelectedCarId(prefs: android.content.SharedPreferences, id: String?) {
+        prefs.edit().putString("selectedCarId", id ?: "").apply()
+    }
+
     private fun setupLogoutButton(settingsView: View) {
         val fullNameTextView = settingsView.findViewById<TextView>(R.id.fullNameTextView)
         val usernameTextView = settingsView.findViewById<TextView>(R.id.usernameTextView)
@@ -434,6 +590,7 @@ class AlertSettingsDialog(
             rootView.removeView(it)
             currentSettingsView = null
         }
+        activity.window.setSoftInputMode(savedSoftInputMode)
     }
 
     // ── Close Actions ────────────────────────────────────────────────────
@@ -459,7 +616,7 @@ class AlertSettingsDialog(
             AlertPreferenceManager.AlertType.OVERTAKING -> AlertCategory.OVERTAKING
             AlertPreferenceManager.AlertType.EMERGENCY_VEHICLE -> AlertCategory.EMERGENCY_VEHICLE
             AlertPreferenceManager.AlertType.NAVIGATION -> AlertCategory.NAVIGATION
-            AlertPreferenceManager.AlertType.HIGHWAY_ENTRY -> AlertCategory.MANEUVER
+            AlertPreferenceManager.AlertType.LANE_MERGE -> AlertCategory.MANEUVER
             AlertPreferenceManager.AlertType.TRAFFIC_JAM -> AlertCategory.TRAFFIC
         }
     }

@@ -4,7 +4,7 @@ package pt.it.automotive.app.mqtt
  * Typed callback interface for MQTT-sourced events.
  *
  * Each method corresponds to a distinct event category received over MQTT.
- * Implementors handle only the business-level semantics — all parsing,
+ * Implementors handle only the business-level semantics - all parsing,
  * validation, and routing is done by [MqttEventRouter].
  *
  * Adding a new event type:
@@ -43,11 +43,11 @@ interface MqttEventListener {
     fun onEmergencyVehicleAlert(payload: String)
 
     /**
-     * A highway entry alert was received.
+     * A lane merge alert was received.
      *
      * @param payload The raw JSON payload.
      */
-    fun onHighwayEntryAlert(payload: String)
+    fun onLaneMergeAlert(payload: String)
 
     /**
      * A car position update was received (for any car type).
@@ -72,6 +72,12 @@ interface MqttEventListener {
      * @param payload The raw JSON payload with stations array.
      */
     fun onMeteoStationsUpdate(payload: String)
+
+    /**
+     * A test-cleanup sentinel was received for a user car.
+     * The car is no longer active - reset speed and related UI state.
+     */
+    fun onUserCarCleanup(carId: String)
 
     /** MQTT connection established successfully. */
     fun onMqttConnected()

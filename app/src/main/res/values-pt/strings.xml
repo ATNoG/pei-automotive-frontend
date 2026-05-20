@@ -13,7 +13,7 @@
     <string name="alert_overtaking">Ultrapassagem</string>
     <string name="alert_emergency_vehicle">Veículo de Emergência</string>
     <string name="alert_navigation">Navegação</string>
-    <string name="alert_highway_entry">Entrada/Saída de Autoestrada</string>
+    <string name="alert_lane_merge">Convergência de Faixa</string>
     <string name="alert_traffic_jam">Trânsito Congestionado</string>
     <string name="alert_sound">Som</string>
     <string name="alert_enabled">Alerta</string>
@@ -40,16 +40,16 @@
     <string name="traffic_jam_warning">Atenção! Trânsito congestionado a %1$s.</string>
     <string name="traffic_jam_warning_short">Trânsito congestionado a %1$s</string>
     <string name="traffic_jam_warning_generic">Atenção, trânsito congestionado à frente</string>
-    <string name="highway_entry_warning">Alerta de Convergência de Faixa</string>
-    <string name="highway_entry_warning_safe">Convergência de faixa segura</string>
-    <string name="highway_entry_warning_unsafe">Atenção, convergência de faixa perigosa</string>
-    <string name="highway_entry_message">Convergência de faixa detetada: %1$s</string>
+    <string name="lane_merge_warning">Alerta de Convergência de Faixa</string>
+    <string name="lane_merge_warning_safe">Convergência de faixa segura</string>
+    <string name="lane_merge_warning_unsafe">Atenção, convergência de faixa perigosa</string>
+    <string name="lane_merge_message">Convergência de faixa detetada: %1$s</string>
     <string name="weather_alert_tts">Alerta meteorológico: %1$s</string>
     <string name="notification_title_accident_alert">⚠️ Alerta de Acidente</string>
     <string name="notification_title_ev">🚨 Veículo de Emergência %1$s</string>
-    <string name="notification_title_highway_unsafe">⚠️ Convergência de Faixa Insegura</string>
-    <string name="notification_title_highway_safe">✅ Convergência de Faixa Segura</string>
-    <string name="notification_title_highway">⚠️ Alerta de Convergência de Faixa</string>
+    <string name="notification_title_lane_merge_unsafe">⚠️ Convergência de Faixa Insegura</string>
+    <string name="notification_title_lane_merge_safe">✅ Convergência de Faixa Segura</string>
+    <string name="notification_title_lane_merge">⚠️ Alerta de Convergência de Faixa</string>
     <string name="notification_title_traffic_jam">🚦 Alerta de Trânsito</string>
     <string name="notification_title_mqtt">✔️ Conectado</string>
     <string name="notification_title_mqtt_error">❌ Erro de Ligação</string>
@@ -86,4 +86,12 @@
     <string name="tab_account">Conta</string>
     <string name="tab_visual">Visual</string>
     <string name="tab_alerts">Alertas</string>
+    <string name="vehicle_section">Veículo</string>
+    <string name="car_id_hint">Adicionar ID de veículo...</string>
+    <string name="car_id_add">+ Adicionar</string>
+    <string name="car_id_added">ID de veículo adicionado</string>
+    <string name="car_id_removed">ID de veículo removido</string>
+    <string name="car_id_duplicate">Esse ID de veículo já está na lista</string>
+    <string name="car_id_empty_error">Por favor, insira um ID de um veículo</string>
+    <string name="car_id_remove_desc">Remover ID de veículo</string>
 </resources>

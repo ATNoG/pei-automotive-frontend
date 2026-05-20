@@ -4,6 +4,7 @@ import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.Button
 import android.widget.ImageButton
@@ -40,7 +41,8 @@ class AlertSettingsDialog(
     private val mapController: MapController,
     private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
     private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
-    private val onLogout: (() -> Unit)? = null
+    private val onLogout: (() -> Unit)? = null,
+    private val onCarIdsChanged: ((List<String>) -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
@@ -70,6 +72,7 @@ class AlertSettingsDialog(
         rootView.addView(settingsView)
 
         setupTabs(settingsView)
+        setupCarIdList(settingsView)
         setupMapStyleToggle(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
@@ -349,6 +352,102 @@ class AlertSettingsDialog(
         }
 
         return block to toggle
+    }
+
+    private fun setupCarIdList(settingsView: View) {
+        val listContainer = settingsView.findViewById<LinearLayout>(R.id.carIdListContainer) ?: return
+        val editCarId = settingsView.findViewById<EditText>(R.id.editCarId) ?: return
+        val btnAddCarId = settingsView.findViewById<Button>(R.id.btnAddCarId) ?: return
+
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        val carIds = loadCarIds(prefs).toMutableList()
+
+        fun rebuildList() {
+            listContainer.removeAllViews()
+            carIds.forEach { carId ->
+                listContainer.addView(buildCarIdRow(carId) {
+                    carIds.remove(carId)
+                    saveCarIds(prefs, carIds)
+                    onCarIdsChanged?.invoke(carIds.toList())
+                    rebuildList()
+                    Toast.makeText(activity, activity.getString(R.string.car_id_removed), Toast.LENGTH_SHORT).show()
+                })
+            }
+        }
+
+        rebuildList()
+
+        btnAddCarId.setOnClickListener {
+            val newId = editCarId.text.toString().trim()
+            when {
+                newId.isEmpty() -> Toast.makeText(activity, activity.getString(R.string.car_id_empty_error), Toast.LENGTH_SHORT).show()
+                carIds.contains(newId) -> Toast.makeText(activity, activity.getString(R.string.car_id_duplicate), Toast.LENGTH_SHORT).show()
+                else -> {
+                    carIds.add(newId)
+                    saveCarIds(prefs, carIds)
+                    onCarIdsChanged?.invoke(carIds.toList())
+                    editCarId.setText("")
+                    rebuildList()
+                    Toast.makeText(activity, activity.getString(R.string.car_id_added), Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun buildCarIdRow(carId: String, onRemove: () -> Unit): LinearLayout {
+        val density = activity.resources.displayMetrics.density
+        val padV = (12 * density).toInt()
+        val padH = (14 * density).toInt()
+
+        val row = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(padH, padV, padH, padV)
+            background = activity.getDrawable(R.drawable.card_background_with_stroke)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { bottomMargin = (8 * density).toInt() }
+        }
+
+        val label = TextView(activity).apply {
+            text = carId
+            textSize = 24f
+            setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val deleteBtn = android.widget.ImageButton(activity).apply {
+            setImageResource(R.drawable.ic_delete)
+            imageTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(activity, R.color.text_primary)
+            )
+            background = ContextCompat.getDrawable(activity, android.R.attr.selectableItemBackgroundBorderless.let {
+                val ta = activity.obtainStyledAttributes(intArrayOf(it))
+                val res = ta.getResourceId(0, 0)
+                ta.recycle()
+                res
+            })
+            contentDescription = activity.getString(R.string.car_id_remove_desc)
+            layoutParams = LinearLayout.LayoutParams(
+                (48 * density).toInt(),
+                (48 * density).toInt()
+            )
+            setOnClickListener { onRemove() }
+        }
+
+        row.addView(label)
+        row.addView(deleteBtn)
+        return row
+    }
+
+    private fun loadCarIds(prefs: android.content.SharedPreferences): List<String> {
+        val raw = prefs.getString("userCarIds", "") ?: ""
+        return if (raw.isBlank()) emptyList() else raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+    }
+
+    private fun saveCarIds(prefs: android.content.SharedPreferences, ids: List<String>) {
+        prefs.edit().putString("userCarIds", ids.joinToString(",")).apply()
     }
 
     private fun setupLogoutButton(settingsView: View) {

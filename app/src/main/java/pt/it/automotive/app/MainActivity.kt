@@ -69,12 +69,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     companion object {
         private const val TAG = "MainActivity"
 
-        // Car IDs configuration - delegate to AppConfig for centralized management
-        val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
         val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
         const val ALPHA_LOCKED = 0.80f
         const val ALPHA_UNLOCKED = 1.0f
     }
+
+    // Resolved at runtime from SharedPreferences; falls back to AppConfig list if none saved.
+    private var activeUserCarIds: Set<String> = emptySet()
 
     private lateinit var mapController: MapController
     private lateinit var uiController: UiController
@@ -237,7 +238,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             mapController,
             onPreferenceSectionChanged = ::onPreferenceSectionChanged,
             onDialogClosed = ::onSettingsDialogClosed,
-            onLogout = { preferencesRepository.clearLocalData() }
+            onLogout = { preferencesRepository.clearLocalData() },
+            onCarIdsChanged = { newIds ->
+                activeUserCarIds = newIds.toSet()
+                if (::mqttEventRouter.isInitialized) {
+                    mqttEventRouter.switchUserCars(newIds)
+                }
+            }
         )
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
@@ -268,6 +275,12 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Setup weather card click listener
         uiController.setupWeatherCardClick()
+
+        // Resolve user car IDs from settings (overrides AppConfig list when any are saved)
+        val savedCarIdsRaw = appPrefs.getString("userCarIds", "") ?: ""
+        if (savedCarIdsRaw.isNotBlank()) {
+            activeUserCarIds = savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        }
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
@@ -770,9 +783,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     fun isDrivingMode(): Boolean {
-        // App blocks menus if speed >= 0 km/h OR if the car is actively in a driving gear
+        // App blocks menus if speed > 0 km/h OR if the car is actively in a driving gear
         val gearDriving = currentGearString == "D" || currentGearString == "R" || currentGearString.matches(Regex("[1-8]"))
-        return currentSpeed >= 0.0 || gearDriving
+        return currentSpeed > 0.0 || gearDriving
     }
 
     private fun setupSettingsButton() {
@@ -936,7 +949,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
-        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS, OTHER_CAR_IDS)
+        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, activeUserCarIds, OTHER_CAR_IDS)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
     }
@@ -1019,7 +1032,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             val normalizedCarId = data.carId.trim()
             when {
-                normalizedCarId in USER_CAR_IDS -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in activeUserCarIds -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
                 // SUMO-generated vehicles: any sumo-N other than the user car is shown on the map.
@@ -1212,7 +1225,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         try {
             val json = org.json.JSONObject(message)
             val targetCarId = topic.substringAfterLast("/")
-            if (targetCarId !in USER_CAR_IDS) return
+            if (targetCarId !in activeUserCarIds) return
 
             val notificationType = json.optString("notification_type", "")
             if (notificationType != "accident_alert") return
@@ -1303,7 +1316,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val direction = json.optString("direction", "nearby")
             val distanceM = json.optDouble("distance_m", Double.NaN)
 
-            if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) return
+            if (regularCarId.isNotEmpty() && regularCarId !in activeUserCarIds) return
             
             val metadata = parseAlertMetadata(json)
 

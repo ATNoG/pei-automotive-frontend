@@ -27,9 +27,10 @@ import org.json.JSONObject
 class MqttEventRouter(
     private val mqttManager: MqttManager,
     private val alertNotificationManager: AlertNotificationManager,
-    private val userCarIds: Set<String>,
+    initialUserCarIds: Set<String>,
     private val otherCarIds: Set<String> = emptySet(),
 ) {
+    private val userCarIds: MutableSet<String> = initialUserCarIds.toMutableSet()
 
     companion object {
         private const val TAG = "MqttEventRouter"
@@ -181,30 +182,61 @@ class MqttEventRouter(
 
     // ── Subscriptions ────────────────────────────────────────────────────
 
+    private val alertBases = listOf(
+        AppConfig.MQTT_TOPIC_SPEED_ALERT,
+        AppConfig.MQTT_TOPIC_OVERTAKING_ALERT,
+        AppConfig.MQTT_TOPIC_LANE_MERGE_ALERT,
+        AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT,
+        AppConfig.MQTT_TOPIC_EV_ALERT,
+        AppConfig.MQTT_TOPIC_ACCIDENT_ALERT,
+    )
+
+    fun addUserCar(carId: String) {
+        if (carId.isBlank() || carId in userCarIds) return
+        userCarIds.add(carId)
+        subscribeUserCar(carId)
+        Log.d(TAG, "Added user car '$carId'")
+    }
+
+    fun removeUserCar(carId: String) {
+        if (userCarIds.remove(carId)) {
+            unsubscribeUserCar(carId)
+            Log.d(TAG, "Removed user car '$carId'")
+        }
+    }
+
+    fun switchUserCars(newCarIds: Collection<String>) {
+        val toRemove = userCarIds - newCarIds.toSet()
+        val toAdd = newCarIds.toSet() - userCarIds
+        toRemove.forEach { unsubscribeUserCar(it) }
+        userCarIds.removeAll(toRemove)
+        toAdd.forEach { carId ->
+            userCarIds.add(carId)
+            subscribeUserCar(carId)
+        }
+        Log.d(TAG, "User cars updated: $userCarIds")
+    }
+
+    fun getUserCarIds(): Set<String> = userCarIds.toSet()
+
     private fun subscribeToTopics() {
         subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)
         subscribe(AppConfig.MQTT_TOPIC_METEO_UPDATES)
 
-        // Per-car subscriptions: the broker filters so each device only
-        // receives car updates and alerts targeting its own user car(s).
-        val alertBases = listOf(
-            AppConfig.MQTT_TOPIC_SPEED_ALERT,
-            AppConfig.MQTT_TOPIC_OVERTAKING_ALERT,
-            AppConfig.MQTT_TOPIC_LANE_MERGE_ALERT,
-            AppConfig.MQTT_TOPIC_TRAFFIC_JAM_ALERT,
-            AppConfig.MQTT_TOPIC_EV_ALERT,
-            AppConfig.MQTT_TOPIC_ACCIDENT_ALERT,
-        )
+        userCarIds.forEach { carId -> subscribeUserCar(carId) }
+        otherCarIds.forEach { carId -> subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId") }
+    }
 
-        userCarIds.forEach { carId ->
-            subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
-            alertBases.forEach { base -> subscribe("$base/$carId") }
-            subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
-        }
+    private fun subscribeUserCar(carId: String) {
+        subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
+        alertBases.forEach { base -> subscribe("$base/$carId") }
+        subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
+    }
 
-        otherCarIds.forEach { carId ->
-            subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
-        }
+    private fun unsubscribeUserCar(carId: String) {
+        unsubscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
+        alertBases.forEach { base -> unsubscribe("$base/$carId") }
+        unsubscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
     }
 
     private fun subscribe(topic: String) {
@@ -212,6 +244,14 @@ class MqttEventRouter(
             topic,
             onSuccess = { Log.d(TAG, "Subscribed to $topic") },
             onError = { error -> Log.e(TAG, "Subscribe failed ($topic): $error") }
+        )
+    }
+
+    private fun unsubscribe(topic: String) {
+        mqttManager.unsubscribe(
+            topic,
+            onSuccess = { Log.d(TAG, "Unsubscribed from $topic") },
+            onError = { error -> Log.e(TAG, "Unsubscribe failed ($topic): $error") }
         )
     }
 

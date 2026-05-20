@@ -86,4 +86,12 @@
     <string name="tab_account">Account</string>
     <string name="tab_visual">Visual</string>
     <string name="tab_alerts">Alerts</string>
+    <string name="vehicle_section">Vehicle</string>
+    <string name="car_id_hint">Enter car ID...</string>
+    <string name="car_id_add">+ Add</string>
+    <string name="car_id_added">Car ID added</string>
+    <string name="car_id_removed">Car ID removed</string>
+    <string name="car_id_duplicate">That car ID is already in the list</string>
+    <string name="car_id_empty_error">Please enter a car ID</string>
+    <string name="car_id_remove_desc">Remove car ID</string>
 </resources>

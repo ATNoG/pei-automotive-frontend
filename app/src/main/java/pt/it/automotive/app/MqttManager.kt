@@ -81,6 +81,18 @@ class MqttManager(
         }.start()
     }
 
+    fun unsubscribe(topic: String, onSuccess: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        Thread {
+            try {
+                client?.unsubscribe(topic)
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MQTT", "Unsubscribe failed: ${e.message}")
+                onError(e.message ?: "Unknown error")
+            }
+        }.start()
+    }
+
     fun disconnect() {
         Thread {
             try {

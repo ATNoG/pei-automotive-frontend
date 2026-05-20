@@ -69,151 +69,166 @@
                 android:layout_weight="1">
 
                 <!-- 1st tab account (visible by default) -->
-                <ScrollView
+                <LinearLayout
                     android:id="@+id/tabContentAccount"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:fillViewport="true"
+                    android:orientation="vertical"
                     android:visibility="visible">
 
-                    <LinearLayout
+                    <!-- Scrollable content: user info + car list -->
+                    <ScrollView
+                        android:id="@+id/accountScrollView"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:padding="20dp">
+                        android:layout_height="0dp"
+                        android:layout_weight="1"
+                        android:fillViewport="true">
 
-                        <!-- User Account Card -->
                         <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:padding="16dp"
-                            android:background="@drawable/card_background_with_stroke"
-                            android:layout_marginBottom="20dp">
-
-                            <!-- User Info -->
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical"
-                                android:layout_marginEnd="16dp">
-
-                                <TextView
-                                    android:id="@+id/fullNameTextView"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/unknown_user"
-                                    android:textColor="?attr/colorTextPrimary"
-                                    android:textSize="@dimen/text_medium"
-                                    android:textStyle="bold"
-                                    android:maxLines="1"
-                                    android:ellipsize="end" />
-
-                                <TextView
-                                    android:id="@+id/usernameTextView"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:textColor="?attr/colorTextSecondary"
-                                    android:textSize="@dimen/text_small"
-                                    android:layout_marginTop="2dp"
-                                    android:maxLines="1"
-                                    android:ellipsize="end" />
-                            </LinearLayout>
-
-                            <!-- Buttons Group -->
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:gravity="end">
-
-                                <androidx.appcompat.widget.AppCompatButton
-                                    android:id="@+id/btnLogout"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginEnd="8dp"
-                                    android:background="@drawable/button_logout_background"
-                                    android:backgroundTint="@color/btn_cancel_bg"
-                                    android:paddingStart="24dp"
-                                    android:paddingEnd="24dp"
-                                    android:text="@string/logout"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/btn_cancel_text"
-                                    android:textSize="@dimen/text_small"
-                                    android:textStyle="bold"
-                                    android:minHeight="64dp" />
-
-                                <androidx.appcompat.widget.AppCompatButton
-                                    android:id="@+id/btnDeleteAccount"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:background="@drawable/button_logout_background"
-                                    android:backgroundTint="#D32F2F"
-                                    android:paddingStart="24dp"
-                                    android:paddingEnd="24dp"
-                                    android:text="@string/delete_account"
-                                    android:textAllCaps="false"
-                                    android:textColor="@android:color/white"
-                                    android:textSize="@dimen/text_small"
-                                    android:textStyle="bold"
-                                    android:minHeight="64dp" />
-                            </LinearLayout>
-                        </LinearLayout>
-                        <!-- Vehicle Section -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/vehicle_section"
-                            android:textSize="@dimen/text_small"
-                            android:textStyle="bold"
-                            android:textColor="?attr/colorTextPrimary"
-                            android:layout_marginBottom="12dp" />
-
-                        <!-- Saved car IDs list -->
-                        <LinearLayout
-                            android:id="@+id/carIdListContainer"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical"
-                            android:layout_marginBottom="8dp" />
+                            android:padding="20dp">
 
-                        <!-- Add new car ID row -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical"
-                            android:padding="14dp"
-                            android:background="@drawable/card_background_with_stroke">
-
-                            <EditText
-                                android:id="@+id/editCarId"
-                                android:layout_width="0dp"
+                            <!-- User Account Card -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:hint="@string/car_id_hint"
-                                android:inputType="textNoSuggestions"
-                                android:textSize="@dimen/text_small"
-                                android:textColor="?attr/colorTextPrimary"
-                                android:textColorHint="?attr/colorTextSecondary"
-                                android:background="@null"
-                                android:singleLine="true"
-                                android:layout_marginEnd="12dp" />
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:padding="16dp"
+                                android:background="@drawable/card_background_with_stroke"
+                                android:layout_marginBottom="20dp">
 
-                            <androidx.appcompat.widget.AppCompatButton
-                                android:id="@+id/btnAddCarId"
+                                <!-- User Info -->
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical"
+                                    android:layout_marginEnd="16dp">
+
+                                    <TextView
+                                        android:id="@+id/fullNameTextView"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/unknown_user"
+                                        android:textColor="?attr/colorTextPrimary"
+                                        android:textSize="@dimen/text_medium"
+                                        android:textStyle="bold"
+                                        android:maxLines="1"
+                                        android:ellipsize="end" />
+
+                                    <TextView
+                                        android:id="@+id/usernameTextView"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:textColor="?attr/colorTextSecondary"
+                                        android:textSize="@dimen/text_small"
+                                        android:layout_marginTop="2dp"
+                                        android:maxLines="1"
+                                        android:ellipsize="end" />
+                                </LinearLayout>
+
+                                <!-- Buttons Group -->
+                                <LinearLayout
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="horizontal"
+                                    android:gravity="end">
+
+                                    <androidx.appcompat.widget.AppCompatButton
+                                        android:id="@+id/btnLogout"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginEnd="8dp"
+                                        android:background="@drawable/button_logout_background"
+                                        android:backgroundTint="@color/btn_cancel_bg"
+                                        android:paddingStart="24dp"
+                                        android:paddingEnd="24dp"
+                                        android:text="@string/logout"
+                                        android:textAllCaps="false"
+                                        android:textColor="@color/btn_cancel_text"
+                                        android:textSize="@dimen/text_small"
+                                        android:textStyle="bold"
+                                        android:minHeight="64dp" />
+
+                                    <androidx.appcompat.widget.AppCompatButton
+                                        android:id="@+id/btnDeleteAccount"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:background="@drawable/button_logout_background"
+                                        android:backgroundTint="#D32F2F"
+                                        android:paddingStart="24dp"
+                                        android:paddingEnd="24dp"
+                                        android:text="@string/delete_account"
+                                        android:textAllCaps="false"
+                                        android:textColor="@android:color/white"
+                                        android:textSize="@dimen/text_small"
+                                        android:textStyle="bold"
+                                        android:minHeight="64dp" />
+                                </LinearLayout>
+                            </LinearLayout>
+
+                            <!-- Vehicle Section -->
+                            <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/car_id_add"
-                                android:textAllCaps="false"
+                                android:text="@string/vehicle_section"
                                 android:textSize="@dimen/text_small"
                                 android:textStyle="bold"
-                                android:minHeight="64dp" />
+                                android:textColor="?attr/colorTextPrimary"
+                                android:layout_marginBottom="12dp" />
+
+                            <!-- Saved car IDs list -->
+                            <LinearLayout
+                                android:id="@+id/carIdListContainer"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical" />
+
                         </LinearLayout>
+                    </ScrollView>
+
+                    <!-- Add row pinned at bottom, OUTSIDE the ScrollView -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="14dp"
+                        android:layout_marginStart="20dp"
+                        android:layout_marginEnd="20dp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/card_background_with_stroke">
+
+                        <EditText
+                            android:id="@+id/editCarId"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:hint="@string/car_id_hint"
+                            android:inputType="textNoSuggestions"
+                            android:textSize="@dimen/text_small"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textColorHint="?attr/colorTextSecondary"
+                            android:background="@null"
+                            android:singleLine="true"
+                            android:layout_marginEnd="12dp" />
+
+                        <androidx.appcompat.widget.AppCompatButton
+                            android:id="@+id/btnAddCarId"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/car_id_add"
+                            android:textAllCaps="false"
+                            android:textSize="@dimen/text_small"
+                            android:textStyle="bold"
+                            android:minHeight="64dp" />
                     </LinearLayout>
-                </ScrollView>
+
+                </LinearLayout>
 
                 <!-- 2nd tab visual and accessibility (hidden by default) -->
                 <ScrollView

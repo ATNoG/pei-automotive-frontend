@@ -46,6 +46,7 @@ class AlertSettingsDialog(
 ) {
 
     private var currentSettingsView: View? = null
+    private var savedSoftInputMode: Int = 0
 
     private companion object {
         const val MODAL_SIDE_MARGIN_DP = 24
@@ -64,6 +65,9 @@ class AlertSettingsDialog(
     fun show() {
         if (currentSettingsView != null) return
         changedSections.clear()
+
+        savedSoftInputMode = activity.window.attributes.softInputMode
+        activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         val settingsView = activity.layoutInflater.inflate(R.layout.dialog_settings, null)
         val rootView = activity.findViewById<ViewGroup>(android.R.id.content)
@@ -99,7 +103,7 @@ class AlertSettingsDialog(
 
         (card.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
             lp.width = minOf(targetWidthPx, maxWidth)
-            lp.height = modalHeight
+            lp.height = ViewGroup.LayoutParams.MATCH_PARENT
             lp.gravity = Gravity.CENTER
             lp.topMargin = verticalMarginPx
             lp.bottomMargin = verticalMarginPx
@@ -111,7 +115,7 @@ class AlertSettingsDialog(
 
     private fun setupTabs(settingsView: View) {
         val tabLayout = settingsView.findViewById<TabLayout>(R.id.settingsTabLayout)
-        val tabAccount = settingsView.findViewById<ScrollView>(R.id.tabContentAccount)
+        val tabAccount = settingsView.findViewById<LinearLayout>(R.id.tabContentAccount)
         val tabVisual = settingsView.findViewById<ScrollView>(R.id.tabContentVisual)
         val tabAlerts = settingsView.findViewById<ScrollView>(R.id.tabContentAlerts)
 
@@ -586,6 +590,7 @@ class AlertSettingsDialog(
             rootView.removeView(it)
             currentSettingsView = null
         }
+        activity.window.setSoftInputMode(savedSoftInputMode)
     }
 
     // ── Close Actions ────────────────────────────────────────────────────

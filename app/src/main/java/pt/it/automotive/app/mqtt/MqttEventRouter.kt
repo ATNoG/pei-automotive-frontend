@@ -10,7 +10,7 @@ import pt.it.automotive.app.config.AppConfig
 import org.json.JSONObject
 
 /**
- * MqttEventRouter — Routes incoming MQTT messages to typed event handlers.
+ * MqttEventRouter - Routes incoming MQTT messages to typed event handlers.
  *
  * Responsibilities:
  * - Parse raw MQTT topic + payload into structured events
@@ -133,6 +133,12 @@ class MqttEventRouter(
                 if (BuildConfig.DEBUG) Log.d(TAG, "Car update on $topic")
                 try {
                     val json = JSONObject(message)
+                    if (json.optBoolean("_test_cleanup", false)) {
+                        val carId = topic.substringAfterLast("/")
+                        Log.d(TAG, "Test cleanup sentinel for $carId")
+                        if (carId in userCarIds) listener?.onUserCarCleanup(carId)
+                        return
+                    }
                     val data = parseCarUpdate(json)
                     listener?.onCarUpdate(data)
                 } catch (e: Exception) {

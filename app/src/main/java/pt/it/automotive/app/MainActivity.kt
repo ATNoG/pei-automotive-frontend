@@ -60,6 +60,7 @@ import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
+import android.location.LocationManager
 import android.view.Gravity
 import androidx.core.content.ContextCompat
 
@@ -270,18 +271,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
-        val savedLat = try {
-            appPrefs.getString("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.latitude
-        } catch (e: ClassCastException) {
-            appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
-        }
-        val savedLon = try {
-            appPrefs.getString("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.longitude
-        } catch (e: ClassCastException) {
-            appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
-        }
-        currentLat = savedLat
-        currentLon = savedLon
+        val startPos = resolveStartPosition()
+        currentLat = startPos.first
+        currentLon = startPos.second
 
         observePreferencesState()
         preferencesRepository.loadPreferences()
@@ -892,10 +884,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 stopOpenWeatherPolling()
                 runOnUiThread {
                     if (lastStationAssignment != null) {
-                        Log.d(TAG, "Switching to Ditto — displaying cached station data")
+                        Log.d(TAG, "Switching to Ditto - displaying cached station data")
                         uiController.updateDittoWeatherData(lastStationAssignment!!)
                     } else {
-                        Log.d(TAG, "Switching to Ditto — no station data cached yet, showing waiting state")
+                        Log.d(TAG, "Switching to Ditto - no station data cached yet, showing waiting state")
                         uiController.showDittoWaitingState()
                     }
                 }
@@ -1050,7 +1042,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Use meteo/updates as fallback: find nearest station client-side
         // This ensures data arrives even if station_assigner hasn't published a per-car assignment
         if (hasRealStationAssignment) {
-            Log.d(TAG, "Meteo stations update received, but already have real station assignment — skipping")
+            Log.d(TAG, "Meteo stations update received, but already have real station assignment - skipping")
             return
         }
 
@@ -1121,6 +1113,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
     }
 
+    override fun onUserCarCleanup(carId: String) {
+        Log.d(TAG, "User car test ended: $carId - resetting speed display")
+        currentSpeed = 0.0
+        runOnUiThread {
+            uiController.updateCurrentSpeed(0, null)
+            uiController.hideSpeedAlert()
+            updateDrivingModeButtons()
+        }
+    }
+
     override fun onMqttConnected() {
         runOnUiThread {
             inAppNotificationManager.show(
@@ -1146,6 +1148,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // ========== Car Update Handlers ==========
 
     private fun handleUserCarUpdate(data: MqttEventRouter.CarUpdateData) {
+        if (!vehicleTracker.isValidCoordinate(data.latitude, data.longitude)) {
+            Log.d(TAG, "Ignoring invalid position update: ${data.latitude}, ${data.longitude}")
+            return
+        }
         currentLat = data.latitude
         currentLon = data.longitude
         currentBearing = data.headingDeg
@@ -1511,6 +1517,48 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()
+    }
+
+    /**
+     * Best-effort startup position, in priority order:
+     * 1. Device GPS last known fix (instant, no wait)
+     * 2. Last position saved from a previous MQTT session
+     * 3. Hardcoded Aveiro default
+     */
+    @SuppressLint("MissingPermission")
+    private fun resolveStartPosition(): Pair<Double, Double> {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+            for (provider in providers) {
+                val loc = try { lm.getLastKnownLocation(provider) } catch (_: Exception) { null }
+                if (loc != null && vehicleTracker.isValidCoordinate(loc.latitude, loc.longitude)) {
+                    Log.d(TAG, "Start position from GPS ($provider): ${loc.latitude}, ${loc.longitude}")
+                    return loc.latitude to loc.longitude
+                }
+            }
+        }
+
+        val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        val savedLat = try {
+            appPrefs.getString("lastLat", null)?.toDoubleOrNull()
+        } catch (_: ClassCastException) {
+            appPrefs.getFloat("lastLat", 0f).toDouble().takeIf { it != 0.0 }
+        }
+        val savedLon = try {
+            appPrefs.getString("lastLon", null)?.toDoubleOrNull()
+        } catch (_: ClassCastException) {
+            appPrefs.getFloat("lastLon", 0f).toDouble().takeIf { it != 0.0 }
+        }
+        if (savedLat != null && savedLon != null && vehicleTracker.isValidCoordinate(savedLat, savedLon)) {
+            Log.d(TAG, "Start position from saved session: $savedLat, $savedLon")
+            return savedLat to savedLon
+        }
+
+        Log.d(TAG, "Start position: using hardcoded default (Aveiro)")
+        return AppConfig.DEFAULT_INITIAL_POSITION.latitude to AppConfig.DEFAULT_INITIAL_POSITION.longitude
     }
 
     private fun startTokenRefreshScheduler() {

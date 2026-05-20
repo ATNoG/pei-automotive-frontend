@@ -246,6 +246,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     mqttEventRouter.switchUserCars(activeUserCarIds)
                     mqttEventRouter.switchOtherListCars(otherListIds)
                 }
+                // Remove the newly selected car from the other-cars layer to avoid a ghost marker
+                if (selectedId != null && ::vehicleTracker.isInitialized) {
+                    vehicleTracker.removeOtherCar(selectedId)
+                }
             }
         )
 

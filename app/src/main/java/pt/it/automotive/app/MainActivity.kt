@@ -770,9 +770,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     fun isDrivingMode(): Boolean {
-        // App blocks menus if speed >= 5 km/h OR if the car is actively in a driving gear
+        // App blocks menus if speed >= 0 km/h OR if the car is actively in a driving gear
         val gearDriving = currentGearString == "D" || currentGearString == "R" || currentGearString.matches(Regex("[1-8]"))
-        return currentSpeed >= 5.0 || gearDriving
+        return currentSpeed >= 0.0 || gearDriving
     }
 
     private fun setupSettingsButton() {

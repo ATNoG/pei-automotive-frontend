@@ -945,8 +945,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(
             context = this,
-            brokerAddress = BuildConfig.MQTT_BROKER_ADDRESS,
-            brokerPort = BuildConfig.MQTT_BROKER_PORT.toInt(),
+            brokerUrl = BuildConfig.MQTT_BROKER_URL,
             accessToken = token,
             onConnectionLost = { _ -> handleMqttReconnect() }
         )

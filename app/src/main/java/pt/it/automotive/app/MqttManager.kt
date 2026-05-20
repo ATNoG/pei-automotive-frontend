@@ -11,13 +11,12 @@ import java.util.UUID
 
 class MqttManager(
     private val context: Context,
-    private val brokerAddress: String,
-    private val brokerPort: Int,
+    private val brokerUrl: String,
     private val accessToken: String? = null,
     private val onConnectionLost: ((cause: Throwable?) -> Unit)? = null
 ) {
     private val clientId = "android-${UUID.randomUUID()}"
-    private val serverUri = "tcp://$brokerAddress:$brokerPort"
+    private val serverUri = brokerUrl
     private var client: MqttClient? = null
     private var onMessageReceived: ((topic: String, message: String) -> Unit)? = null
 

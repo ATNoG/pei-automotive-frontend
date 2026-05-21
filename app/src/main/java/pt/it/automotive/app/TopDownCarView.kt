@@ -31,7 +31,7 @@ class TopDownCarView @JvmOverloads constructor(
     private val gridMaxY = 25f
     
     // User car fixed position in grid coordinates (in right lane)
-    private val userCarGridX = 4.7f  // Position in right lane
+    private val userCarGridX = 3.0f  // Position in right lane
     private val userCarGridY = 0f
     
     // Other car positions (relative to user car in meters)
@@ -180,9 +180,7 @@ class TopDownCarView @JvmOverloads constructor(
         
         // Draw other cars
         for (car in otherCars) {
-            // car.x and car.y are already in meters, direction-aware from MainActivity
-            // Convert to grid coordinates (1 grid unit = ~2 meters)
-            val gridX = userCarGridX + (car.x / 0.25f)
+            val gridX = userCarGridX + (car.x / 0.6f)
             val gridY = userCarGridY + (car.y / 1f)
             
             // Only draw if within reasonable bounds
@@ -194,7 +192,7 @@ class TopDownCarView @JvmOverloads constructor(
         
         // Draw emergency vehicles (blue with red ring)
         for (car in evCars) {
-            val gridX = userCarGridX + (car.x / 0.25f)
+            val gridX = userCarGridX + (car.x / 0.6f)
             val gridY = userCarGridY + (car.y / 1f)
             
             if (gridX >= gridMinX && gridX <= gridMaxX && gridY >= gridMinY && gridY <= gridMaxY) {

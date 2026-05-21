@@ -72,6 +72,20 @@ class MqttManager(
         }.start()
     }
 
+    fun subscribeAll(topics: List<String>, onSuccess: () -> Unit, onError: (String) -> Unit) {
+        Thread {
+            try {
+                val topicArray = topics.toTypedArray()
+                val qosArray = IntArray(topics.size) { 1 }
+                client?.subscribe(topicArray, qosArray)
+                onSuccess()
+            } catch (e: Exception) {
+                Log.e("MQTT", "Batch subscribe failed: ${e.message}")
+                onError(e.message ?: "Unknown error")
+            }
+        }.start()
+    }
+
     fun publish(topic: String, message: String) {
         Thread {
             try {

@@ -123,8 +123,6 @@ class LoginActivity : AppCompatActivity() {
                     }
                     is KeycloakClient.PollResult.Error -> {
                         statusText.text = "Error: ${result.message}"
-                        // Optional: You could also call startDeviceFlow() here
-                        // if you want it to be extremely resilient to any error.
                         startDeviceFlow()
                     }
                 }

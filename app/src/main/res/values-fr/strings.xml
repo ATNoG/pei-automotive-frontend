@@ -86,4 +86,12 @@
     <string name="tab_account">Compte</string>
     <string name="tab_visual">Visuel</string>
     <string name="tab_alerts">Alertes</string>
+    <string name="vehicle_section">Véhicule</string>
+    <string name="car_id_hint">Entrez l\'ID du véhicule...</string>
+    <string name="car_id_add">+ Ajouter</string>
+    <string name="car_id_added">ID du véhicule ajouté</string>
+    <string name="car_id_removed">ID du véhicule supprimé</string>
+    <string name="car_id_duplicate">Cet ID de véhicule est déjà dans la liste</string>
+    <string name="car_id_empty_error">Veuillez entrer un ID de véhicule</string>
+    <string name="car_id_remove_desc">Supprimer l\'ID du véhicule</string>
 </resources>

@@ -60,6 +60,7 @@ import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
 import java.util.Locale
+import android.location.LocationManager
 import android.view.Gravity
 import androidx.core.content.ContextCompat
 
@@ -67,13 +68,13 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     companion object {
         private const val TAG = "MainActivity"
-
-        // Car IDs configuration - delegate to AppConfig for centralized management
-        val USER_CAR_IDS get() = AppConfig.USER_CAR_IDS
-        val OTHER_CAR_IDS get() = AppConfig.OTHER_CAR_IDS
         const val ALPHA_LOCKED = 0.80f
         const val ALPHA_UNLOCKED = 1.0f
     }
+
+    private var activeUserCarIds: Set<String> = emptySet()
+    // AppConfig static cars + non-selected list cars
+    private var activeOtherCarIds: Set<String> = AppConfig.OTHER_CAR_IDS
 
     private lateinit var mapController: MapController
     private lateinit var uiController: UiController
@@ -236,7 +237,20 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             mapController,
             onPreferenceSectionChanged = ::onPreferenceSectionChanged,
             onDialogClosed = ::onSettingsDialogClosed,
-            onLogout = { preferencesRepository.clearLocalData() }
+            onLogout = { preferencesRepository.clearLocalData() },
+            onCarSelectionChanged = { selectedId, allIds ->
+                activeUserCarIds = if (selectedId != null) setOf(selectedId) else emptySet()
+                val otherListIds = allIds - activeUserCarIds
+                activeOtherCarIds = AppConfig.OTHER_CAR_IDS + otherListIds
+                if (::mqttEventRouter.isInitialized) {
+                    mqttEventRouter.switchUserCars(activeUserCarIds)
+                    mqttEventRouter.switchOtherListCars(otherListIds)
+                }
+                // Remove the newly selected car from the other-cars layer to avoid a ghost marker
+                if (selectedId != null && ::vehicleTracker.isInitialized) {
+                    vehicleTracker.removeOtherCar(selectedId)
+                }
+            }
         )
 
         // Initialize vehicle tracker (owns position state, throttling, top-down view)
@@ -268,20 +282,19 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Setup weather card click listener
         uiController.setupWeatherCardClick()
 
+        val savedCarIdsRaw = appPrefs.getString("userCarIds", "") ?: ""
+        val savedSelectedId = appPrefs.getString("selectedCarId", "")?.ifBlank { null }
+        if (savedCarIdsRaw.isNotBlank()) {
+            val allIds = savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            activeUserCarIds = if (savedSelectedId != null && savedSelectedId in allIds) setOf(savedSelectedId) else emptySet()
+            activeOtherCarIds = AppConfig.OTHER_CAR_IDS + (allIds - activeUserCarIds)
+        }
+
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
-        val savedLat = try {
-            appPrefs.getString("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.latitude
-        } catch (e: ClassCastException) {
-            appPrefs.getFloat("lastLat", AppConfig.DEFAULT_INITIAL_POSITION.latitude.toFloat()).toDouble()
-        }
-        val savedLon = try {
-            appPrefs.getString("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toString())?.toDoubleOrNull() ?: AppConfig.DEFAULT_INITIAL_POSITION.longitude
-        } catch (e: ClassCastException) {
-            appPrefs.getFloat("lastLon", AppConfig.DEFAULT_INITIAL_POSITION.longitude.toFloat()).toDouble()
-        }
-        currentLat = savedLat
-        currentLon = savedLon
+        val startPos = resolveStartPosition()
+        currentLat = startPos.first
+        currentLon = startPos.second
 
         observePreferencesState()
         preferencesRepository.loadPreferences()
@@ -778,9 +791,9 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     }
 
     fun isDrivingMode(): Boolean {
-        // App blocks menus if speed >= 5 km/h OR if the car is actively in a driving gear
+        // App blocks menus if speed > 0 km/h OR if the car is actively in a driving gear
         val gearDriving = currentGearString == "D" || currentGearString == "R" || currentGearString.matches(Regex("[1-8]"))
-        return currentSpeed >= 5.0 || gearDriving
+        return currentSpeed > 0.0 || gearDriving
     }
 
     private fun setupSettingsButton() {
@@ -892,10 +905,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 stopOpenWeatherPolling()
                 runOnUiThread {
                     if (lastStationAssignment != null) {
-                        Log.d(TAG, "Switching to Ditto — displaying cached station data")
+                        Log.d(TAG, "Switching to Ditto - displaying cached station data")
                         uiController.updateDittoWeatherData(lastStationAssignment!!)
                     } else {
-                        Log.d(TAG, "Switching to Ditto — no station data cached yet, showing waiting state")
+                        Log.d(TAG, "Switching to Ditto - no station data cached yet, showing waiting state")
                         uiController.showDittoWaitingState()
                     }
                 }
@@ -944,7 +957,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
         mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
-        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, USER_CAR_IDS, OTHER_CAR_IDS)
+        mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, activeUserCarIds, activeOtherCarIds)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
     }
@@ -1027,8 +1040,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         runOnUiThread {
             val normalizedCarId = data.carId.trim()
             when {
-                normalizedCarId in USER_CAR_IDS -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
-                normalizedCarId in OTHER_CAR_IDS -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in activeUserCarIds -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in activeOtherCarIds -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
                 // SUMO-generated vehicles: any sumo-N other than the user car is shown on the map.
                 normalizedCarId.startsWith(AppConfig.SUMO_CAR_PREFIX) -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
@@ -1039,7 +1052,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                         TAG,
                         "Unknown car_id raw='${data.carId}' normalized='$normalizedCarId' " +
                                 "(rawLen=${data.carId.length}, normalizedLen=${normalizedCarId.length}), " +
-                                "bytes=[$bytes], ignoring. Configured other cars: $OTHER_CAR_IDS"
+                                "bytes=[$bytes], ignoring. Configured other cars: $activeOtherCarIds"
                     )
                 }
             }
@@ -1050,7 +1063,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         // Use meteo/updates as fallback: find nearest station client-side
         // This ensures data arrives even if station_assigner hasn't published a per-car assignment
         if (hasRealStationAssignment) {
-            Log.d(TAG, "Meteo stations update received, but already have real station assignment — skipping")
+            Log.d(TAG, "Meteo stations update received, but already have real station assignment - skipping")
             return
         }
 
@@ -1121,6 +1134,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
     }
 
+    override fun onUserCarCleanup(carId: String) {
+        Log.d(TAG, "User car test ended: $carId - resetting speed display")
+        currentSpeed = 0.0
+        runOnUiThread {
+            uiController.updateCurrentSpeed(0, null)
+            uiController.hideSpeedAlert()
+            updateDrivingModeButtons()
+        }
+    }
+
     override fun onMqttConnected() {
         runOnUiThread {
             inAppNotificationManager.show(
@@ -1146,6 +1169,10 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     // ========== Car Update Handlers ==========
 
     private fun handleUserCarUpdate(data: MqttEventRouter.CarUpdateData) {
+        if (!vehicleTracker.isValidCoordinate(data.latitude, data.longitude)) {
+            Log.d(TAG, "Ignoring invalid position update: ${data.latitude}, ${data.longitude}")
+            return
+        }
         currentLat = data.latitude
         currentLon = data.longitude
         currentBearing = data.headingDeg
@@ -1206,7 +1233,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         try {
             val json = org.json.JSONObject(message)
             val targetCarId = topic.substringAfterLast("/")
-            if (targetCarId !in USER_CAR_IDS) return
+            if (targetCarId !in activeUserCarIds) return
 
             val notificationType = json.optString("notification_type", "")
             if (notificationType != "accident_alert") return
@@ -1297,7 +1324,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val direction = json.optString("direction", "nearby")
             val distanceM = json.optDouble("distance_m", Double.NaN)
 
-            if (regularCarId.isNotEmpty() && regularCarId !in USER_CAR_IDS) return
+            if (regularCarId.isNotEmpty() && regularCarId !in activeUserCarIds) return
             
             val metadata = parseAlertMetadata(json)
 
@@ -1511,6 +1538,48 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         uiController.cleanup()
         mapController.onDestroy()
         super.onDestroy()
+    }
+
+    /**
+     * Best-effort startup position, in priority order:
+     * 1. Device GPS last known fix (instant, no wait)
+     * 2. Last position saved from a previous MQTT session
+     * 3. Hardcoded Aveiro default
+     */
+    @SuppressLint("MissingPermission")
+    private fun resolveStartPosition(): Pair<Double, Double> {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            val lm = getSystemService(LOCATION_SERVICE) as LocationManager
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+            for (provider in providers) {
+                val loc = try { lm.getLastKnownLocation(provider) } catch (_: Exception) { null }
+                if (loc != null && vehicleTracker.isValidCoordinate(loc.latitude, loc.longitude)) {
+                    Log.d(TAG, "Start position from GPS ($provider): ${loc.latitude}, ${loc.longitude}")
+                    return loc.latitude to loc.longitude
+                }
+            }
+        }
+
+        val appPrefs = getSharedPreferences("AppSettings", MODE_PRIVATE)
+        val savedLat = try {
+            appPrefs.getString("lastLat", null)?.toDoubleOrNull()
+        } catch (_: ClassCastException) {
+            appPrefs.getFloat("lastLat", 0f).toDouble().takeIf { it != 0.0 }
+        }
+        val savedLon = try {
+            appPrefs.getString("lastLon", null)?.toDoubleOrNull()
+        } catch (_: ClassCastException) {
+            appPrefs.getFloat("lastLon", 0f).toDouble().takeIf { it != 0.0 }
+        }
+        if (savedLat != null && savedLon != null && vehicleTracker.isValidCoordinate(savedLat, savedLon)) {
+            Log.d(TAG, "Start position from saved session: $savedLat, $savedLon")
+            return savedLat to savedLon
+        }
+
+        Log.d(TAG, "Start position: using hardcoded default (Aveiro)")
+        return AppConfig.DEFAULT_INITIAL_POSITION.latitude to AppConfig.DEFAULT_INITIAL_POSITION.longitude
     }
 
     private fun startTokenRefreshScheduler() {

@@ -50,9 +50,9 @@ android {
             buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.0.2.2:8081\"")
         }
         create("staging") {
-            buildConfigField("String", "MQTT_BROKER_URL", "\"ssl://mqtt-auto.ddns.net\"")
+            buildConfigField("String", "MQTT_BROKER_URL", "\"ssl://mqtt-auto.ddns.net:8883\"")
             buildConfigField("String", "KEYCLOAK_BASE_URL", "\"https://auth-auto.ddns.net\"")
-            buildConfigField("String", "PREFERENCES_BASE_URL", "\"https://api-auto.ddns.net:8082\"")
+            buildConfigField("String", "PREFERENCES_BASE_URL", "\"https://api-auto.ddns.net\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

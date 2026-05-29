@@ -238,17 +238,16 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             onPreferenceSectionChanged = ::onPreferenceSectionChanged,
             onDialogClosed = ::onSettingsDialogClosed,
             onLogout = { preferencesRepository.clearLocalData() },
-            onCarSelectionChanged = { selectedId, allIds ->
-                activeUserCarIds = if (selectedId != null) setOf(selectedId) else emptySet()
-                val otherListIds = allIds - activeUserCarIds
+            onCarSelectionChanged = { selectedUserCarIds, allIds ->
+                activeUserCarIds = selectedUserCarIds
+                val otherListIds = allIds - selectedUserCarIds
                 activeOtherCarIds = AppConfig.OTHER_CAR_IDS + otherListIds
                 if (::mqttEventRouter.isInitialized) {
                     mqttEventRouter.switchUserCars(activeUserCarIds)
                     mqttEventRouter.switchOtherListCars(otherListIds)
                 }
-                // Remove the newly selected car from the other-cars layer to avoid a ghost marker
-                if (selectedId != null && ::vehicleTracker.isInitialized) {
-                    vehicleTracker.removeOtherCar(selectedId)
+                if (::vehicleTracker.isInitialized) {
+                    activeUserCarIds.forEach { vehicleTracker.removeOtherCar(it) }
                 }
             }
         )
@@ -283,12 +282,24 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         uiController.setupWeatherCardClick()
 
         val savedCarIdsRaw = appPrefs.getString("userCarIds", "") ?: ""
-        val savedSelectedId = appPrefs.getString("selectedCarId", "")?.ifBlank { null }
-        if (savedCarIdsRaw.isNotBlank()) {
-            val allIds = savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            activeUserCarIds = if (savedSelectedId != null && savedSelectedId in allIds) setOf(savedSelectedId) else emptySet()
-            activeOtherCarIds = AppConfig.OTHER_CAR_IDS + (allIds - activeUserCarIds)
+        val savedSelectedUserIdsRaw = appPrefs.getString("selectedCarIds", "") ?: ""
+        val allIds = if (savedCarIdsRaw.isNotBlank()) {
+            savedCarIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        } else {
+            AppConfig.DEFAULT_CAR_IDS
         }
+
+        activeUserCarIds = if (savedSelectedUserIdsRaw.isNotBlank()) {
+            savedSelectedUserIdsRaw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        } else {
+            val oldSelected = appPrefs.getString("selectedCarId", "")?.ifBlank { null }
+            if (oldSelected != null && oldSelected in allIds) {
+                setOf(oldSelected)
+            } else {
+                AppConfig.DEFAULT_USER_CAR_IDS.filter { it in allIds }.toSet()
+            }
+        }
+        activeOtherCarIds = AppConfig.OTHER_CAR_IDS + (allIds - activeUserCarIds)
 
         // Setup MQTT via event router (after uiController is initialized)
         setupMqtt()
@@ -1041,8 +1052,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             val normalizedCarId = data.carId.trim()
             when {
                 normalizedCarId in activeUserCarIds -> handleUserCarUpdate(data.copy(carId = normalizedCarId))
-                normalizedCarId in activeOtherCarIds -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 normalizedCarId in AppConfig.EMERGENCY_VEHICLE_IDS -> handleEVCarUpdate(data.copy(carId = normalizedCarId))
+                normalizedCarId in activeOtherCarIds -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 // SUMO-generated vehicles: any sumo-N other than the user car is shown on the map.
                 normalizedCarId.startsWith(AppConfig.SUMO_CAR_PREFIX) -> handleOtherCarUpdate(data.copy(carId = normalizedCarId))
                 else -> {

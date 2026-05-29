@@ -50,6 +50,45 @@ object AppConfig {
     const val SUMO_CAR_PREFIX = "sumo-"
 
     /**
+     * All known test/simulation car IDs, pre-populated in the settings vehicle section.
+     * Users can add/remove cars freely; this list seeds the initial state.
+     */
+    val DEFAULT_CAR_IDS = listOf(
+        "minimal-jam-lead", "minimal-jam-car-1", "minimal-jam-car-2", "minimal-jam-car-3",
+        "minimal-jam-car-4", "minimal-jam-car-5", "speed-car", "rw-direct-entering",
+        "rw-direct-left", "curved-route-car", "ev-test-regular", "ev-test-emergency",
+        "highway-car", "entering-car", "highway-car-2", "entering-car-2",
+        "overtaking-car-front", "overtaking-car-behind", "accident-car", "car-behind",
+        "car-ahead", "rw-entering-car", "rw-entering-car-2", "rw-left-car",
+        "prox-aveiro-slow", "prox-aveiro-fast", "prox-lisbon-fast", "prox-lisbon-slow",
+        "jam-lead", "jam-car-1", "jam-car-2", "jam-car-3", "jam-car-4",
+        "jam-car-5", "jam-car-6", "jam-car-7", "jam-car-8", "jam-car-9",
+        "navigation-car", "main-car"
+    )
+
+    /**
+     * Default subset of [DEFAULT_CAR_IDS] pre-selected as "my cars" on first launch.
+     * Only the primary subject cars from each test scenario — background/other traffic
+     * cars are not pre-selected (they show as other cars on the map).
+     */
+    val DEFAULT_USER_CAR_IDS = setOf(
+        "speed-car",
+        "curved-route-car",
+        "ev-test-regular",
+        "rw-direct-entering",
+        "overtaking-car-front",
+        "entering-car",
+        "entering-car-2",
+        "accident-car",
+        "car-behind",
+        "minimal-jam-lead",
+        // deprecated test subjects
+        "rw-entering-car",
+        "jam-lead",
+        "prox-aveiro-slow"
+    )
+
+    /**
      * Car IDs that represent other vehicles (for overtaking animation).
      * These vehicles are displayed on the map but don't control the camera.
      */

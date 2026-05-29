@@ -177,7 +177,7 @@ object AppConfig {
      *   60.0 – original 3D perspective view
      *    0.0 – flat 2D top-down view (better road visibility on low-detail styles)
      */
-    const val DEFAULT_MAP_TILT = 60.0
+    const val DEFAULT_MAP_TILT = 0.0
 
     /**
      * Animation duration for camera movements (milliseconds).

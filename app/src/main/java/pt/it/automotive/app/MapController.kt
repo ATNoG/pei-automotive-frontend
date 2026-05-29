@@ -623,8 +623,7 @@ class MapController(
         val mapZoom = map.cameraPosition.zoom
         val targetZoom = if (mapZoom < 10.0) 19.0 else mapZoom
         
-        val mapTilt = map.cameraPosition.tilt
-        val targetTilt = if (mapTilt < 10.0) 60.0 else mapTilt
+        val targetTilt = 0.0
 
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))

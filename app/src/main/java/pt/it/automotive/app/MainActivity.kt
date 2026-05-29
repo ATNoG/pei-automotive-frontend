@@ -1134,13 +1134,17 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
     }
 
-    override fun onUserCarCleanup(carId: String) {
-        Log.d(TAG, "User car test ended: $carId - resetting speed display")
-        currentSpeed = 0.0
+    override fun onCarCleanup(carId: String) {
+        Log.d(TAG, "Car cleanup sentinel: $carId - removing from map")
         runOnUiThread {
-            uiController.updateCurrentSpeed(0, null)
-            uiController.hideSpeedAlert()
-            updateDrivingModeButtons()
+            if (carId in activeUserCarIds) {
+                currentSpeed = 0.0
+                uiController.updateCurrentSpeed(0, null)
+                uiController.hideSpeedAlert()
+                updateDrivingModeButtons()
+            }
+            vehicleTracker.removeOtherCar(carId)
+            vehicleTracker.removeEVCar(carId)
         }
     }
 

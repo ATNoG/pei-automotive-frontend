@@ -233,6 +233,17 @@ class VehicleTracker(
         mainHandler.postDelayed({ cleanupEV(evId) }, EV_CLEANUP_DELAY_MS)
     }
 
+    /**
+     * Immediately remove an EV from tracking (bypasses the inactivity timeout).
+     */
+    fun removeEVCar(evId: String) {
+        activeEmergencyVehicles.remove(evId)
+        if (evCarPositions.remove(evId) != null) {
+            scheduleEVMapUpdate()
+            refreshTopDownView()
+        }
+    }
+
     /** Live distance (meters) from the user car to a given coordinate. */
     fun liveDistanceToUser(lat: Double, lon: Double): Double =
         haversineDistanceM(userLat, userLon, lat, lon)

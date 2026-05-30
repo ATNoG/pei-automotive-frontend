@@ -260,7 +260,7 @@ class MapController(
         val symbolLayer = SymbolLayer(ARROW_LAYER_ID, ARROW_SOURCE_ID).apply {
             setProperties(
                 iconImage(ARROW_IMAGE_ID),
-                iconSize(0.07f),  // Smaller arrow for better map visibility
+                iconSize(0.05f),
                 iconAllowOverlap(true),
                 iconIgnorePlacement(true),
 
@@ -620,8 +620,7 @@ class MapController(
 
         Choreographer.getInstance().postFrameCallback(frameCallback)
 
-        val mapZoom = map.cameraPosition.zoom
-        val targetZoom = if (mapZoom < 10.0) 19.0 else mapZoom
+        val targetZoom = AppConfig.DEFAULT_MAP_ZOOM
         
         val targetTilt = 0.0
 

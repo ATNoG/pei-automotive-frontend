@@ -424,8 +424,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                     initialAppearanceSyncHandled = true
                     val launchAppearance = initialAppearanceAtLaunch
                     if (launchAppearance != null && state.preferences.appearance != launchAppearance) {
-                        recreate()
-                        return@collect
+                        applyTheme(state.preferences.appearance.darkMode)
                     }
                 }
             }
@@ -440,11 +439,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         if (changedSections.isEmpty()) return
 
         lifecycleScope.launch {
-            val success = preferencesRepository.flushDirtySectionsAwait()
-
-            if (success && changedSections.contains(PreferencesSectionType.APPEARANCE)) {
-                recreate()
-            }
+            preferencesRepository.flushDirtySectionsAwait()
         }
     }
 

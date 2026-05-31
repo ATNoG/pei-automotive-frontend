@@ -5,6 +5,9 @@
     <string name="map_style">Stile Mappa</string>
     <string name="theme_mode">Modalità Tema</string>
     <string name="colorblind">Modalità Daltonismo</string>
+    <string name="map_perspective">Prospettiva Mappa</string>
+    <string name="perspective_2d">2D</string>
+    <string name="perspective_3d">3D</string>
     <string name="accessibility">Accessibilità</string>
     <string name="alerts">Avvisi</string>
     <string name="alert_accident">Incidente</string>

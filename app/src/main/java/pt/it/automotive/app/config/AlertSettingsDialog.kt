@@ -42,7 +42,7 @@ class AlertSettingsDialog(
     private val onPreferenceSectionChanged: ((PreferencesSectionUpdate) -> Unit)? = null,
     private val onDialogClosed: ((Set<PreferencesSectionType>) -> Unit)? = null,
     private val onLogout: (() -> Unit)? = null,
-    private val onCarSelectionChanged: ((selectedId: String?, allIds: List<String>) -> Unit)? = null
+    private val onCarSelectionChanged: ((selectedUserCarIds: Set<String>, allIds: List<String>) -> Unit)? = null
 ) {
 
     private var currentSettingsView: View? = null
@@ -78,6 +78,7 @@ class AlertSettingsDialog(
         setupTabs(settingsView)
         setupCarIdList(settingsView)
         setupMapStyleToggle(settingsView)
+        setupMapPerspectiveToggle(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupLogoutButton(settingsView)
@@ -161,6 +162,20 @@ class AlertSettingsDialog(
         }
     }
             
+    // ── Map Perspective 2D/3D ────────────────────────────────────────────
+
+    private fun setupMapPerspectiveToggle(settingsView: View) {
+        val switchPerspective = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchMapPerspective)
+        switchPerspective.scaleX = 1.2f
+        switchPerspective.scaleY = 1.2f
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        switchPerspective.isChecked = prefs.getBoolean("map3dMode", false)
+        switchPerspective.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("map3dMode", isChecked).apply()
+            mapController.setMapPerspective(isChecked)
+        }
+    }
+
     // ── Colorblind Mode ──────────────────────────────────────────────────
 
     private fun setupColorBlindToggle(settingsView: View) {
@@ -364,31 +379,50 @@ class AlertSettingsDialog(
         val btnAddCarId = settingsView.findViewById<Button>(R.id.btnAddCarId) ?: return
 
         val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
-        val carIds = loadCarIds(prefs).toMutableList()
-        // Array wrapper so lambdas can reassign the selection
-        val selectedHolder = arrayOf(loadSelectedCarId(prefs))
+
+        var carIds = loadCarIds(prefs)
+        if (carIds.isEmpty()) {
+            carIds = AppConfig.DEFAULT_CAR_IDS
+            saveCarIds(prefs, carIds)
+        }
+        val carIdsMutable = carIds.toMutableList()
+
+        var selectedUserCarIds = loadSelectedUserCarIds(prefs)
+        if (selectedUserCarIds.isEmpty()) {
+            val oldSelected = loadSelectedCarId(prefs)
+            selectedUserCarIds = if (oldSelected != null && oldSelected in carIdsMutable) {
+                setOf(oldSelected)
+            } else {
+                AppConfig.DEFAULT_USER_CAR_IDS.filter { it in carIdsMutable }.toSet()
+            }
+            saveSelectedUserCarIds(prefs, selectedUserCarIds)
+        }
+
+        fun emitChange() {
+            saveCarIds(prefs, carIdsMutable)
+            saveSelectedUserCarIds(prefs, selectedUserCarIds)
+            onCarSelectionChanged?.invoke(selectedUserCarIds, carIdsMutable.toList())
+        }
 
         fun rebuildList() {
             listContainer.removeAllViews()
-            carIds.forEach { carId ->
+            carIdsMutable.forEach { carId ->
                 listContainer.addView(buildCarIdRow(
                     carId = carId,
-                    isSelected = carId == selectedHolder[0],
-                    onSelect = {
-                        selectedHolder[0] = carId
-                        saveSelectedCarId(prefs, carId)
-                        onCarSelectionChanged?.invoke(carId, carIds.toList())
+                    isUserCar = carId in selectedUserCarIds,
+                    onToggleUserCar = {
+                        if (carId in selectedUserCarIds) {
+                            selectedUserCarIds = selectedUserCarIds - carId
+                        } else {
+                            selectedUserCarIds = selectedUserCarIds + carId
+                        }
+                        emitChange()
                         rebuildList()
                     },
                     onRemove = {
-                        val wasSelected = carId == selectedHolder[0]
-                        carIds.remove(carId)
-                        if (wasSelected) {
-                            selectedHolder[0] = null
-                            saveSelectedCarId(prefs, null)
-                        }
-                        saveCarIds(prefs, carIds)
-                        onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
+                        carIdsMutable.remove(carId)
+                        selectedUserCarIds = selectedUserCarIds - carId
+                        emitChange()
                         rebuildList()
                         Toast.makeText(activity, activity.getString(R.string.car_id_removed), Toast.LENGTH_SHORT).show()
                     }
@@ -402,11 +436,10 @@ class AlertSettingsDialog(
             val newId = editCarId.text.toString().trim()
             when {
                 newId.isEmpty() -> Toast.makeText(activity, activity.getString(R.string.car_id_empty_error), Toast.LENGTH_SHORT).show()
-                carIds.contains(newId) -> Toast.makeText(activity, activity.getString(R.string.car_id_duplicate), Toast.LENGTH_SHORT).show()
+                carIdsMutable.contains(newId) -> Toast.makeText(activity, activity.getString(R.string.car_id_duplicate), Toast.LENGTH_SHORT).show()
                 else -> {
-                    carIds.add(newId)
-                    saveCarIds(prefs, carIds)
-                    onCarSelectionChanged?.invoke(selectedHolder[0], carIds.toList())
+                    carIdsMutable.add(newId)
+                    emitChange()
                     editCarId.setText("")
                     rebuildList()
                     Toast.makeText(activity, activity.getString(R.string.car_id_added), Toast.LENGTH_SHORT).show()
@@ -417,14 +450,13 @@ class AlertSettingsDialog(
 
     private fun buildCarIdRow(
         carId: String,
-        isSelected: Boolean,
-        onSelect: () -> Unit,
+        isUserCar: Boolean,
+        onToggleUserCar: () -> Unit,
         onRemove: () -> Unit
     ): LinearLayout {
         val density = activity.resources.displayMetrics.density
         val padV = (12 * density).toInt()
         val padH = (14 * density).toInt()
-        val dotSize = (12 * density).toInt()
         val selectableItemBg = android.R.attr.selectableItemBackgroundBorderless.let {
             val ta = activity.obtainStyledAttributes(intArrayOf(it))
             val res = ta.getResourceId(0, 0)
@@ -441,31 +473,24 @@ class AlertSettingsDialog(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply { bottomMargin = (8 * density).toInt() }
-            isClickable = true
-            isFocusable = true
-            setOnClickListener { onSelect() }
         }
 
-        val dot = android.view.View(activity).apply {
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                if (isSelected) {
-                    setColor(0xFF4CAF50.toInt())
-                } else {
-                    setColor(0x00000000)
-                    setStroke((2 * density).toInt(), ContextCompat.getColor(activity, R.color.text_secondary))
-                }
-            }
-            layoutParams = LinearLayout.LayoutParams(dotSize, dotSize).apply {
-                marginEnd = (10 * density).toInt()
-            }
+        val checkBox = android.widget.CheckBox(activity).apply {
+            isChecked = isUserCar
+            scaleX = 1.3f
+            scaleY = 1.3f
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { marginEnd = (12 * density).toInt() }
+            setOnClickListener { onToggleUserCar() }
         }
 
         val label = TextView(activity).apply {
             text = carId
             textSize = 24f
             setTextColor(ContextCompat.getColor(activity, R.color.text_primary))
-            if (isSelected) setTypeface(null, android.graphics.Typeface.BOLD)
+            if (isUserCar) setTypeface(null, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
@@ -483,7 +508,7 @@ class AlertSettingsDialog(
             setOnClickListener { onRemove() }
         }
 
-        row.addView(dot)
+        row.addView(checkBox)
         row.addView(label)
         row.addView(deleteBtn)
         return row
@@ -503,8 +528,13 @@ class AlertSettingsDialog(
         return v.ifBlank { null }
     }
 
-    private fun saveSelectedCarId(prefs: android.content.SharedPreferences, id: String?) {
-        prefs.edit().putString("selectedCarId", id ?: "").apply()
+    private fun loadSelectedUserCarIds(prefs: android.content.SharedPreferences): Set<String> {
+        val raw = prefs.getString("selectedCarIds", "") ?: ""
+        return if (raw.isBlank()) emptySet() else raw.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+    }
+
+    private fun saveSelectedUserCarIds(prefs: android.content.SharedPreferences, ids: Set<String>) {
+        prefs.edit().putString("selectedCarIds", ids.joinToString(",")).apply()
     }
 
     private fun setupLogoutButton(settingsView: View) {

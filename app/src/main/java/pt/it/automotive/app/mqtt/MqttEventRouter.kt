@@ -139,7 +139,7 @@ class MqttEventRouter(
                     if (json.optBoolean("_test_cleanup", false)) {
                         val carId = topic.substringAfterLast("/")
                         Log.d(TAG, "Test cleanup sentinel for $carId")
-                        if (carId in userCarIds) listener?.onUserCarCleanup(carId)
+                        listener?.onCarCleanup(carId)
                         return
                     }
                     val data = parseCarUpdate(json)

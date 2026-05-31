@@ -74,10 +74,10 @@ interface MqttEventListener {
     fun onMeteoStationsUpdate(payload: String)
 
     /**
-     * A test-cleanup sentinel was received for a user car.
-     * The car is no longer active - reset speed and related UI state.
+     * A test-cleanup sentinel was received for a car.
+     * The car is no longer active - remove from map and reset related UI.
      */
-    fun onUserCarCleanup(carId: String)
+    fun onCarCleanup(carId: String)
 
     /** MQTT connection established successfully. */
     fun onMqttConnected()

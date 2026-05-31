@@ -5,6 +5,9 @@
     <string name="map_style">Map Style</string>
     <string name="theme_mode">Theme Mode</string>
     <string name="colorblind">Colorblind Mode</string>
+    <string name="map_perspective">Map Perspective</string>
+    <string name="perspective_2d">2D</string>
+    <string name="perspective_3d">3D</string>
     <string name="accessibility">Accessibility</string>
     <string name="alerts">Alerts</string>
     <string name="alert_accident">Accident</string>

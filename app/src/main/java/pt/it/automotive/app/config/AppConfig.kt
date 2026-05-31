@@ -180,6 +180,11 @@ object AppConfig {
     const val DEFAULT_MAP_TILT = 0.0
 
     /**
+     * Tilt angle for 3D perspective view (degrees).
+     */
+    const val MAP_TILT_3D = 60.0
+
+    /**
      * Animation duration for camera movements (milliseconds).
      */
     const val CAMERA_ANIMATION_MS = 800L

@@ -621,8 +621,8 @@ class MapController(
         Choreographer.getInstance().postFrameCallback(frameCallback)
 
         val targetZoom = AppConfig.DEFAULT_MAP_ZOOM
-        
-        val targetTilt = 0.0
+        val prefs = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+        val targetTilt = if (prefs.getBoolean("map3dMode", false)) AppConfig.MAP_TILT_3D else 0.0
 
         val camera = CameraPosition.Builder()
             .target(LatLng(lat, lon))
@@ -1227,6 +1227,24 @@ class MapController(
         }
     }
     
+    /**
+     * Toggle between 2D (flat) and 3D (perspective) map views.
+     */
+    fun setMapPerspective(enable3d: Boolean) {
+        val map = mapLibreMap ?: return
+        val tilt = if (enable3d) AppConfig.MAP_TILT_3D else 0.0
+        val camera = CameraPosition.Builder()
+            .target(map.cameraPosition.target)
+            .zoom(map.cameraPosition.zoom)
+            .tilt(tilt)
+            .bearing(map.cameraPosition.bearing)
+            .build()
+        map.animateCamera(
+            CameraUpdateFactory.newCameraPosition(camera),
+            AppConfig.CAMERA_ANIMATION_MS.toInt()
+        )
+    }
+
     // ========== Accident Marker Methods ==========
     
     /**

@@ -78,6 +78,7 @@ class AlertSettingsDialog(
         setupTabs(settingsView)
         setupCarIdList(settingsView)
         setupMapStyleToggle(settingsView)
+        setupMapPerspectiveToggle(settingsView)
         setupColorBlindToggle(settingsView)
         buildAlertGrid(settingsView)
         setupLogoutButton(settingsView)
@@ -161,6 +162,20 @@ class AlertSettingsDialog(
         }
     }
             
+    // ── Map Perspective 2D/3D ────────────────────────────────────────────
+
+    private fun setupMapPerspectiveToggle(settingsView: View) {
+        val switchPerspective = settingsView.findViewById<androidx.appcompat.widget.SwitchCompat>(R.id.switchMapPerspective)
+        switchPerspective.scaleX = 1.2f
+        switchPerspective.scaleY = 1.2f
+        val prefs = activity.getSharedPreferences("AppSettings", AppCompatActivity.MODE_PRIVATE)
+        switchPerspective.isChecked = prefs.getBoolean("map3dMode", false)
+        switchPerspective.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("map3dMode", isChecked).apply()
+            mapController.setMapPerspective(isChecked)
+        }
+    }
+
     // ── Colorblind Mode ──────────────────────────────────────────────────
 
     private fun setupColorBlindToggle(settingsView: View) {

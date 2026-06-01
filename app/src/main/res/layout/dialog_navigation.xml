@@ -5,45 +5,39 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="?attr/colorSurfaceOverlay"
-    android:clickable="true"
-    android:focusable="true">
+    android:clickable="true">
 
     <androidx.cardview.widget.CardView
         android:id="@+id/dialogCard"
-        android:layout_width="450dp"
-        android:layout_height="wrap_content"
+        android:layout_width="@dimen/dialog_width"
+        android:layout_height="match_parent"
         android:layout_gravity="center"
-        android:layout_marginTop="24dp"
-        android:layout_marginBottom="24dp"
-        app:cardBackgroundColor="?attr/colorSurfaceDialogCard"
-        app:cardCornerRadius="@dimen/dialog_margin"
-        app:cardElevation="@dimen/card_corner_radius">
+        android:layout_margin="@dimen/dialog_margin"
+        android:elevation="8dp"
+        app:cardCornerRadius="@dimen/card_corner_radius">
 
-        <ScrollView
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="?attr/colorSurfaceDialog">
 
+            <!-- Fixed Header (matches settings/weather dialog header style) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="28dp">
-
-            <!-- Header -->
-            <LinearLayout
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="@dimen/dialog_margin">
-                
+                android:padding="14dp"
+                android:background="?attr/colorSurfaceDialogHeader">
+
                 <ImageView
                     android:src="@drawable/ic_navigation"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_marginEnd="14dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginEnd="12dp"
                     app:tint="?attr/colorAccentBlue" />
-                
+
                 <TextView
                     android:text="@string/alert_navigation"
                     android:textColor="?attr/colorTextPrimary"
@@ -52,136 +46,164 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1" />
-                
+
                 <ImageButton
                     android:id="@+id/btnClose"
                     android:src="@drawable/ic_close"
-                    android:background="?android:attr/selectableItemBackgroundBorderless"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:padding="8dp"
-                    app:tint="?attr/colorIconMuted" />
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:contentDescription="@string/cancel"
+                    app:tint="?attr/colorIconDefault" />
             </LinearLayout>
 
-            <!-- Search Input -->
-            <EditText
-                android:id="@+id/edtSearchDestination"
-                android:hint="@string/search_destination"
-                android:inputType="text|textNoSuggestions"
-                android:textColor="?attr/colorTextPrimary"
-                android:textColorHint="?attr/colorTextTertiary"
-                android:textSize="@dimen/text_regular"
+            <!-- Scrollable Content -->
+            <ScrollView
                 android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:layout_marginBottom="@dimen/card_corner_radius"
-                android:background="?attr/colorSurfaceButtonNeutral"
-                android:maxLines="1"
-                android:imeOptions="flagNoExtractUi|actionDone"
-                android:importantForAutofill="no" />
-
-            <!-- Search Results Container -->
-            <FrameLayout
-                android:id="@+id/searchResultsContainer"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"  
-                android:layout_weight="1"    
-                android:visibility="gone">
-
-                <!-- Results RecyclerView -->
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvSearchResults"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:background="?attr/colorSurfaceButtonNeutral" />
-
-                <!-- Empty State / Loading -->
-                <TextView
-                    android:id="@+id/txtSearchEmpty"
-                    android:text="@string/no_results"
-                    android:textColor="?attr/colorTextTertiary"
-                    android:textSize="@dimen/text_regular"
-                    android:gravity="center"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:visibility="gone" />
-            </FrameLayout>
-
-            <!-- Route Info Preview (shown after selection) -->
-            <LinearLayout
-                android:id="@+id/routeInfoPreview"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"  
-                android:layout_weight="1"    
-                android:orientation="vertical"
-                android:gravity="center"
-                android:visibility="gone">
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:fillViewport="true">
 
                 <LinearLayout
-                    android:orientation="vertical"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1">
-                    
-                    <TextView
-                        android:id="@+id/txtRouteDestination"
-                        android:text="Mercado Santiago"
-                        android:textColor="?attr/colorTextPrimary"
-                        android:textSize="@dimen/text_medium_small"
-                        android:textStyle="bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                    
-                    <TextView
-                        android:id="@+id/txtRouteInfo"
-                        android:text="@string/calculating_route"
-                        android:textColor="?attr/colorTextSecondary"
-                        android:textSize="@dimen/text_small"
-                        android:layout_marginTop="4dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Search Input Row (matches settings car ID row style) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="14dp"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:layout_marginBottom="@dimen/card_corner_radius">
+
+                        <EditText
+                            android:id="@+id/edtSearchDestination"
+                            android:hint="@string/search_destination"
+                            android:inputType="text|textNoSuggestions"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textColorHint="?attr/colorTextSecondary"
+                            android:textSize="@dimen/text_small"
+                            android:background="@null"
+                            android:singleLine="true"
+                            android:imeOptions="flagNoExtractUi|actionSearch"
+                            android:importantForAutofill="no"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="12dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="🔍"
+                            android:textSize="@dimen/text_regular" />
+                    </LinearLayout>
+
+                    <!-- Search Results Container -->
+                    <FrameLayout
+                        android:id="@+id/searchResultsContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:visibility="gone">
+
+                        <!-- Results RecyclerView -->
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rvSearchResults"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content" />
+
+                        <!-- Empty State / Loading -->
+                        <TextView
+                            android:id="@+id/txtSearchEmpty"
+                            android:text="@string/no_results"
+                            android:textColor="?attr/colorTextTertiary"
+                            android:textSize="@dimen/text_small"
+                            android:gravity="center"
+                            android:padding="20dp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:visibility="gone" />
+                    </FrameLayout>
+
+                    <!-- Route Info Preview (shown after selection) -->
+                    <LinearLayout
+                        android:id="@+id/routeInfoPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="14dp"
+                        android:background="@drawable/card_background_with_stroke"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/txtRouteDestination"
+                            android:text="Mercado Santiago"
+                            android:textColor="?attr/colorTextPrimary"
+                            android:textSize="@dimen/text_medium_small"
+                            android:textStyle="bold"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                        <TextView
+                            android:id="@+id/txtRouteInfo"
+                            android:text="@string/calculating_route"
+                            android:textColor="?attr/colorTextSecondary"
+                            android:textSize="@dimen/text_small"
+                            android:layout_marginTop="4dp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+                    </LinearLayout>
                 </LinearLayout>
+            </ScrollView>
 
-            </LinearLayout>
-
-            <!-- Action Buttons -->
+            <!-- Action Buttons (pinned bottom, matches settings button styling) -->
             <LinearLayout
-                android:orientation="horizontal"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="14dp">
 
-                <Button
+                <androidx.appcompat.widget.AppCompatButton
                     android:id="@+id/btnCancel"
-                    android:text="@string/cancel"
-                    android:textSize="@dimen/text_regular"
-                    android:textAllCaps="false"
-                    android:textColor="?attr/colorTextSecondary"
                     android:layout_width="0dp"
-                    android:layout_height="56dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:layout_marginEnd="8dp"
-                    android:backgroundTint="?attr/colorSurfaceButtonNeutral" />
-
-                <Button
-                    android:id="@+id/btnStartNavigation"
-                    android:text="@string/start_navigation"
-                    android:textSize="@dimen/text_regular"
+                    android:background="@drawable/button_logout_background"
+                    android:backgroundTint="@color/btn_cancel_bg"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
+                    android:minHeight="64dp"
+                    android:text="@string/cancel"
                     android:textAllCaps="false"
-                    android:textColor="?attr/colorTextPrimary"
-                    android:enabled="false"
+                    android:textColor="@color/btn_cancel_text"
+                    android:textSize="@dimen/text_small"
+                    android:textStyle="bold" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnStartNavigation"
                     android:layout_width="0dp"
-                    android:layout_height="56dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1.5"
                     android:layout_marginStart="8dp"
-                    android:backgroundTint="?attr/colorStatusSuccess" />
-
+                    android:background="@drawable/button_logout_background"
+                    android:backgroundTint="@color/accent_blue"
+                    android:paddingStart="24dp"
+                    android:paddingEnd="24dp"
+                    android:minHeight="64dp"
+                    android:text="@string/start_navigation"
+                    android:textAllCaps="false"
+                    android:textColor="@android:color/white"
+                    android:textSize="@dimen/text_small"
+                    android:textStyle="bold"
+                    android:enabled="false" />
             </LinearLayout>
-
         </LinearLayout>
-        </ScrollView>
-
     </androidx.cardview.widget.CardView>
-
 </FrameLayout>

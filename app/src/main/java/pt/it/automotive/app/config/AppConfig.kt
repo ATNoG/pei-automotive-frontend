@@ -72,20 +72,35 @@ object AppConfig {
      * cars are not pre-selected (they show as other cars on the map).
      */
     val DEFAULT_USER_CAR_IDS = setOf(
-        "speed-car",
-        "curved-route-car",
-        "ev-test-regular",
-        "rw-direct-entering",
-        "overtaking-car-front",
-        "entering-car",
-        "entering-car-2",
-        "accident-car",
+        // ditto
+        // test_accident
         "car-behind",
-        "minimal-jam-5",
-        // deprecated test subjects
-        "rw-entering-car",
-        "jam-lead",
-        "prox-aveiro-slow"
+        // test_curved_route
+        "curved-route-car",
+        // test_emergency_vehicle
+        "ev-test-regular",
+        // test_it_scenatio
+        "rw-direct-entering",
+        // test_lane_merge
+        "highway-car",
+        "highway-car-2",
+        // test_overtaking
+        "overtaking-car-front",
+        // test_speeding
+        "speed-car",
+        // test_traffic_jam
+        "minimal-jam-car-5",
+
+        // hono
+        // test_accident is same
+        // test_curved_route is same
+        // test_emergency_vehicle is same
+        // test_lane_merge is same
+        // test_overtaking is same
+        // test_proximity_filter is not needed
+        // test_real_world_scenario is not needed
+        // test_speeding is same
+        // test_traffic_jam is same
     )
 
     /**
@@ -93,28 +108,27 @@ object AppConfig {
      * These vehicles are displayed on the map but don't control the camera.
      */
     val OTHER_CAR_IDS = setOf(
-        "overtaking-car-behind",
-        "accident-car",
+        // ditto
+        // test_accident
         "car-ahead",
-        "highway-car",
-        "highway-car-2",
+        "accident-car",
+        // test_curved_route is not needed
+        // test_emergency_vehicle
+        "ev-test-emergency",
+        // test_it_scenatio
+        "rw-direct-left",
+        // test_lane_merge
+        "entering-car",
+        "entering-car-2",
+        // test_overtaking
+        "overtaking-car-behind",
+        // test_speeding is not needed
+        // test_traffic_jam
         "minimal-jam-car-1",
         "minimal-jam-car-2",
         "minimal-jam-car-3",
         "minimal-jam-car-4",
         "minimal-jam-lead",
-        "jam-car-1",
-        "jam-car-2",
-        "jam-car-3",
-        "jam-car-4",
-        "jam-car-5",
-        "jam-car-6",
-        "jam-car-7",
-        "jam-car-8",
-        "jam-car-9",
-        "prox-aveiro-fast",
-        "prox-lisbon-slow",
-        "prox-lisbon-fast",
     )
 
     // ========== Default Positions ==========

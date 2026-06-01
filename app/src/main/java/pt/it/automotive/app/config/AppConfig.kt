@@ -81,7 +81,7 @@ object AppConfig {
         "entering-car-2",
         "accident-car",
         "car-behind",
-        "minimal-jam-lead",
+        "minimal-jam-5",
         // deprecated test subjects
         "rw-entering-car",
         "jam-lead",

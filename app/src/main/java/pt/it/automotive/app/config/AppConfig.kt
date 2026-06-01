@@ -54,16 +54,28 @@ object AppConfig {
      * Users can add/remove cars freely; this list seeds the initial state.
      */
     val DEFAULT_CAR_IDS = listOf(
-        "minimal-jam-lead", "minimal-jam-car-1", "minimal-jam-car-2", "minimal-jam-car-3",
-        "minimal-jam-car-4", "minimal-jam-car-5", "speed-car", "rw-direct-entering",
-        "rw-direct-left", "curved-route-car", "ev-test-regular", "ev-test-emergency",
-        "highway-car", "entering-car", "highway-car-2", "entering-car-2",
-        "overtaking-car-front", "overtaking-car-behind", "accident-car", "car-behind",
-        "car-ahead", "rw-entering-car", "rw-entering-car-2", "rw-left-car",
-        "prox-aveiro-slow", "prox-aveiro-fast", "prox-lisbon-fast", "prox-lisbon-slow",
-        "jam-lead", "jam-car-1", "jam-car-2", "jam-car-3", "jam-car-4",
-        "jam-car-5", "jam-car-6", "jam-car-7", "jam-car-8", "jam-car-9",
-        "navigation-car", "main-car"
+        "car-behind",
+        "curved-route-car",
+        "ev-test-regular",
+        "rw-direct-entering",
+        "entering-car",
+        "entering-car-2",
+        "overtaking-car-front",
+        "speed-car",
+        "minimal-jam-car-5",
+
+        "car-ahead",
+        "accident-car",
+        "ev-test-emergency",
+        "rw-direct-left",
+        "highway-car",
+        "highway-car-2",
+        "overtaking-car-behind",
+        "minimal-jam-car-1",
+        "minimal-jam-car-2",
+        "minimal-jam-car-3",
+        "minimal-jam-car-4",
+        "minimal-jam-lead",
     )
 
     /**
@@ -82,8 +94,8 @@ object AppConfig {
         // test_it_scenatio
         "rw-direct-entering",
         // test_lane_merge
-        "highway-car",
-        "highway-car-2",
+        "entering-car",
+        "entering-car-2",
         // test_overtaking
         "overtaking-car-front",
         // test_speeding
@@ -118,8 +130,8 @@ object AppConfig {
         // test_it_scenatio
         "rw-direct-left",
         // test_lane_merge
-        "entering-car",
-        "entering-car-2",
+        "highway-car",
+        "highway-car-2",
         // test_overtaking
         "overtaking-car-behind",
         // test_speeding is not needed

@@ -11,7 +11,6 @@ import android.text.TextWatcher
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -26,6 +25,7 @@ import android.car.hardware.property.CarPropertyManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.widget.AppCompatButton
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -521,7 +521,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         val routeInfoPreview = overlayView.findViewById<LinearLayout>(R.id.routeInfoPreview)
         val txtRouteInfo = overlayView.findViewById<TextView>(R.id.txtRouteInfo)
         val txtRouteDestination = overlayView.findViewById<TextView>(R.id.txtRouteDestination)
-        val btnStartNavigation = overlayView.findViewById<Button>(R.id.btnStartNavigation)
+        val btnStartNavigation = overlayView.findViewById<AppCompatButton>(R.id.btnStartNavigation)
 
         // Setup RecyclerView for search results
         val resultsAdapter = GeoCodeResultAdapter { selectedResult ->
@@ -594,7 +594,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         }
 
         // Cancel button
-        overlayView.findViewById<Button>(R.id.btnCancel)?.setOnClickListener {
+        overlayView.findViewById<AppCompatButton>(R.id.btnCancel)?.setOnClickListener {
             closeNavigationDialog()
         }
 
@@ -632,7 +632,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         routeInfoPreview: LinearLayout?,
         txtRouteInfo: TextView?,
         txtRouteDestination: TextView?,
-        btnStartNavigation: Button?,
+        btnStartNavigation: AppCompatButton?,
         searchEdit: EditText?,
         rootView: ViewGroup
     ) {

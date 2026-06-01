@@ -2,7 +2,6 @@ package pt.it.automotive.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -59,7 +58,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
-import java.util.Locale
 import android.location.LocationManager
 import android.view.Gravity
 import androidx.core.content.ContextCompat
@@ -1451,23 +1449,23 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 else -> getString(R.string.lane_merge_warning)
             }
 
-        val metadata = parseAlertMetadata(json)
+            val metadata = parseAlertMetadata(json)
 
-        val notification = InAppNotificationManager.AppNotification(
-            type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
-            title = title,
-            message = messageText,
-            duration = InAppNotificationManager.DEFAULT_DURATION_MS,
-            priority = metadata.priority,
-            expirationS = metadata.expirationS,
-            timestamp = metadata.timestamp,
-            playAudioAction = {
-                alertNotificationManager.speakForAlert(
-                    AlertPreferenceManager.AlertType.LANE_MERGE,
-                    ttsText
-                )
-            }
-        )
+            val notification = InAppNotificationManager.AppNotification(
+                type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
+                title = title,
+                message = messageText,
+                duration = InAppNotificationManager.DEFAULT_DURATION_MS,
+                priority = metadata.priority,
+                expirationS = metadata.expirationS,
+                timestamp = metadata.timestamp,
+                playAudioAction = {
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.LANE_MERGE,
+                        ttsText
+                    )
+                }
+            )
 
             inAppNotificationManager.handleAlert(notification)
         } catch (e: Exception) {

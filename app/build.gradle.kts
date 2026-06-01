@@ -39,7 +39,6 @@ android {
         //// openrouter api (like wtf is this but ok)
         buildConfigField("String", "OPENROUTESERVICE_API_KEY", "\"${localProperties.getProperty("OPENROUTESERVICE_API_KEY", "")}\"")
 
-        buildConfigField("String", "MQTT_BROKER_PORT", "\"${localProperties.getProperty("MQTT_BROKER_PORT", "1884")}\"")
         buildConfigField("String", "PREFERENCES_BASE_URL", "\"${localProperties.getProperty("PREFERENCES_BASE_URL", "http://10.0.2.2:8082")}\"")
     }
 
@@ -47,14 +46,13 @@ android {
         debug {
             // Local emulator: 10.0.2.2 is the host machine alias inside the Android emulator.
             // Run the backend with `docker compose up` and this APK connects automatically.
-            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.0.2.2\"")
+            buildConfigField("String", "MQTT_BROKER_URL", "\"tcp://10.0.2.2:1883\"")
             buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.0.2.2:8081\"")
         }
         create("staging") {
-            // Staging VM. Signed with the debug keystore so it can be installed directly from
-            // Android Studio; the CI workflow also produces this APK for distribution.
-            buildConfigField("String", "MQTT_BROKER_ADDRESS", "\"10.255.28.243\"")
-            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"http://10.255.28.243:8081\"")
+            buildConfigField("String", "MQTT_BROKER_URL", "\"wss://mqtt-auto.ddns.net/mqtt\"")
+            buildConfigField("String", "KEYCLOAK_BASE_URL", "\"https://auth-auto.ddns.net\"")
+            buildConfigField("String", "PREFERENCES_BASE_URL", "\"https://api-auto.ddns.net\"")
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

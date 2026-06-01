@@ -2,7 +2,6 @@ package pt.it.automotive.app
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -59,7 +58,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import org.maplibre.android.MapLibre
 import org.maplibre.android.WellKnownTileServer
-import java.util.Locale
 import android.location.LocationManager
 import android.view.Gravity
 import androidx.core.content.ContextCompat
@@ -962,10 +960,59 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     private fun setupMqtt() {
         val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this)
-        mqttManager = MqttManager(this, BuildConfig.MQTT_BROKER_ADDRESS, BuildConfig.MQTT_BROKER_PORT.toInt(), token)
+        mqttManager = MqttManager(
+            context = this,
+            brokerUrl = BuildConfig.MQTT_BROKER_URL,
+            accessToken = token,
+            onConnectionLost = { _ -> handleMqttReconnect() }
+        )
         mqttEventRouter = MqttEventRouter(mqttManager, alertNotificationManager, activeUserCarIds, activeOtherCarIds)
         mqttEventRouter.setListener(this)
         mqttEventRouter.connectAndSubscribe()
+    }
+
+    private fun handleMqttReconnect() {
+        lifecycleScope.launch {
+            // If the current token is still valid, reconnect immediately.
+            if (pt.it.automotive.app.auth.TokenStore.isAccessTokenValid(this@MainActivity)) {
+                val token = pt.it.automotive.app.auth.TokenStore.getAccessToken(this@MainActivity)
+                mqttManager.reconnect(
+                    newToken = token,
+                    onSuccess = { mqttEventRouter.resubscribeTopics() },
+                    onError = { e -> Log.e(TAG, "MQTT reconnect failed: $e") }
+                )
+                return@launch
+            }
+
+            // Token expired — try to refresh before reconnecting.
+            val refreshToken = pt.it.automotive.app.auth.TokenStore.getRefreshToken(this@MainActivity)
+            if (refreshToken == null) {
+                redirectToLogin()
+                return@launch
+            }
+
+            val tokens = pt.it.automotive.app.auth.KeycloakClient.refreshToken(refreshToken)
+            if (tokens != null) {
+                pt.it.automotive.app.auth.TokenStore.save(
+                    this@MainActivity,
+                    tokens.accessToken,
+                    tokens.refreshToken,
+                    tokens.expiresIn
+                )
+                mqttManager.reconnect(
+                    newToken = tokens.accessToken,
+                    onSuccess = { mqttEventRouter.resubscribeTopics() },
+                    onError = { e -> Log.e(TAG, "MQTT reconnect after token refresh failed: $e") }
+                )
+            } else {
+                redirectToLogin()
+            }
+        }
+    }
+
+    private fun redirectToLogin() {
+        startActivity(Intent(this, pt.it.automotive.app.auth.LoginActivity::class.java))
+        finish()
     }
 
     // ========== MqttEventListener Implementation ==========
@@ -1402,23 +1449,23 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
                 else -> getString(R.string.lane_merge_warning)
             }
 
-        val metadata = parseAlertMetadata(json)
+            val metadata = parseAlertMetadata(json)
 
-        val notification = InAppNotificationManager.AppNotification(
-            type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
-            title = title,
-            message = messageText,
-            duration = InAppNotificationManager.DEFAULT_DURATION_MS,
-            priority = metadata.priority,
-            expirationS = metadata.expirationS,
-            timestamp = metadata.timestamp,
-            playAudioAction = {
-                alertNotificationManager.speakForAlert(
-                    AlertPreferenceManager.AlertType.LANE_MERGE,
-                    ttsText
-                )
-            }
-        )
+            val notification = InAppNotificationManager.AppNotification(
+                type = if (status == "unsafe") InAppNotificationManager.Type.WARNING else InAppNotificationManager.Type.SUCCESS,
+                title = title,
+                message = messageText,
+                duration = InAppNotificationManager.DEFAULT_DURATION_MS,
+                priority = metadata.priority,
+                expirationS = metadata.expirationS,
+                timestamp = metadata.timestamp,
+                playAudioAction = {
+                    alertNotificationManager.speakForAlert(
+                        AlertPreferenceManager.AlertType.LANE_MERGE,
+                        ttsText
+                    )
+                }
+            )
 
             inAppNotificationManager.handleAlert(notification)
         } catch (e: Exception) {

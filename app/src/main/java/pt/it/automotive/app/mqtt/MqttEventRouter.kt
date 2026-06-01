@@ -59,7 +59,7 @@ class MqttEventRouter(
             onSuccess = {
                 Log.d(TAG, "Connected to MQTT broker")
                 listener?.onMqttConnected()
-                subscribeToTopics()
+                resubscribeTopics()
             },
             onError = { error ->
                 Log.e(TAG, "Connection failed: $error")
@@ -234,18 +234,35 @@ class MqttEventRouter(
 
     fun getUserCarIds(): Set<String> = userCarIds.toSet()
 
-    private fun subscribeToTopics() {
-        subscribe(AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED)
-        subscribe(AppConfig.MQTT_TOPIC_METEO_UPDATES)
-
-        userCarIds.forEach { carId -> subscribeUserCar(carId) }
-        otherCarIds.forEach { carId -> subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId") }
+    fun resubscribeTopics() {
+        val topics = mutableListOf(
+            AppConfig.MQTT_TOPIC_ACCIDENT_CLEARED,
+            AppConfig.MQTT_TOPIC_METEO_UPDATES
+        )
+        userCarIds.forEach { carId ->
+            topics.add("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
+            alertBases.forEach { base -> topics.add("$base/$carId") }
+            topics.add("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
+        }
+        otherCarIds.forEach { carId ->
+            topics.add("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
+        }
+        mqttManager.subscribeAll(
+            topics,
+            onSuccess = { Log.d(TAG, "Subscribed to ${topics.size} topics") },
+            onError = { error -> Log.e(TAG, "Batch subscribe failed: $error") }
+        )
     }
 
     private fun subscribeUserCar(carId: String) {
-        subscribe("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
-        alertBases.forEach { base -> subscribe("$base/$carId") }
-        subscribe("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
+        val topics = mutableListOf("${AppConfig.MQTT_TOPIC_CAR_UPDATES}/$carId")
+        alertBases.forEach { base -> topics.add("$base/$carId") }
+        topics.add("${AppConfig.MQTT_TOPIC_STATION_ASSIGNMENT_BASE}/$carId")
+        mqttManager.subscribeAll(
+            topics,
+            onSuccess = { Log.d(TAG, "Subscribed user car $carId (${topics.size} topics)") },
+            onError = { error -> Log.e(TAG, "Batch subscribe failed for user car $carId: $error") }
+        )
     }
 
     private fun unsubscribeUserCar(carId: String) {

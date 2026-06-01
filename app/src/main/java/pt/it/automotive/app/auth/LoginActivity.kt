@@ -48,6 +48,23 @@ class LoginActivity : AppCompatActivity() {
         statusText          = findViewById(R.id.statusText)
         rememberMeCheckbox  = findViewById(R.id.rememberMe)
 
+        // Access token expired — try the refresh token silently before showing the QR flow
+        val storedRefresh = TokenStore.getRefreshToken(this)
+        if (storedRefresh != null) {
+            statusText.text = "Resuming session…"
+            lifecycleScope.launch {
+                val tokens = KeycloakClient.refreshToken(storedRefresh)
+                if (tokens != null) {
+                    TokenStore.save(this@LoginActivity, tokens.accessToken, tokens.refreshToken, tokens.expiresIn)
+                    launchMain()
+                } else {
+                    TokenStore.clear(this@LoginActivity)
+                    startDeviceFlow()
+                }
+            }
+            return
+        }
+
         startDeviceFlow()
     }
 

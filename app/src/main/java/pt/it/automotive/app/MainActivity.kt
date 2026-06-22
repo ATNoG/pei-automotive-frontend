@@ -205,6 +205,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         MapLibre.getInstance(this, BuildConfig.MAPTILER_API_KEY, WellKnownTileServer.MapTiler)
 
         setContentView(R.layout.activity_main)
+        applyResponsiveRightPanelWidth()
 
         // Initialize OsrmApiClient with OpenRouteService API key
         OsrmApiClient.initialize(BuildConfig.OPENROUTESERVICE_API_KEY)
@@ -328,6 +329,15 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         } else {
             setupCarApi()
         }
+    }
+
+    private fun applyResponsiveRightPanelWidth() {
+        if (resources.configuration.smallestScreenWidthDp < 720) return
+
+        val panel = findViewById<LinearLayout>(R.id.rightPanel)
+        val params = panel.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams ?: return
+        params.matchConstraintPercentWidth = 0.30f
+        panel.layoutParams = params
     }
 
     fun applyTheme(isNight: Boolean) {

@@ -66,6 +66,8 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val CAR_POWERTRAIN_PERMISSION = "android.car.permission.CAR_POWERTRAIN"
+        private const val CAR_EXTERIOR_PERMISSION = "android.car.permission.CAR_EXTERIOR_ENVIRONMENT"
         const val ALPHA_LOCKED = 0.80f
         const val ALPHA_UNLOCKED = 1.0f
     }
@@ -203,6 +205,7 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
         MapLibre.getInstance(this, BuildConfig.MAPTILER_API_KEY, WellKnownTileServer.MapTiler)
 
         setContentView(R.layout.activity_main)
+        applyResponsiveRightPanelWidth()
 
         // Initialize OsrmApiClient with OpenRouteService API key
         OsrmApiClient.initialize(BuildConfig.OPENROUTESERVICE_API_KEY)
@@ -318,14 +321,23 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
             )
         }
         startTokenRefreshScheduler()
-        if (checkSelfPermission("android.car.permission.CAR_EXTERIOR_ENVIRONMENT") != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(
-                arrayOf("android.car.permission.CAR_EXTERIOR_ENVIRONMENT"), 
-                CAR_PERMISSION_REQUEST_CODE
-            )
+        val missingCarPermissions = arrayOf(CAR_POWERTRAIN_PERMISSION, CAR_EXTERIOR_PERMISSION)
+            .filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+            .toTypedArray()
+        if (missingCarPermissions.isNotEmpty()) {
+            requestPermissions(missingCarPermissions, CAR_PERMISSION_REQUEST_CODE)
         } else {
             setupCarApi()
         }
+    }
+
+    private fun applyResponsiveRightPanelWidth() {
+        if (resources.configuration.smallestScreenWidthDp < 720) return
+
+        val panel = findViewById<LinearLayout>(R.id.rightPanel)
+        val params = panel.layoutParams as? androidx.constraintlayout.widget.ConstraintLayout.LayoutParams ?: return
+        params.matchConstraintPercentWidth = 0.30f
+        panel.layoutParams = params
     }
 
     fun applyTheme(isNight: Boolean) {
@@ -360,35 +372,49 @@ class MainActivity : AppCompatActivity(), NavigationListener, MqttEventListener 
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAR_PERMISSION_REQUEST_CODE) {
-            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, safe to connect to the sensor!
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 setupCarApi()
             } else {
-                Log.w(TAG, "Car exterior environment permission denied. Auto-night mode will not work.")
+                Log.w(TAG, "Car property permissions denied; vehicle sensor features disabled.")
             }
         }
     }
     
     private fun setupCarApi() {
-        if (packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
-            car = Car.createCar(this, null, Car.CAR_WAIT_TIMEOUT_WAIT_FOREVER) { carObj, ready ->
-                if (ready) {
-                    carPropertyManager = carObj.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
-                    carPropertyManager?.registerCallback(
-                        carPropertyListener,
-                        VehiclePropertyIds.GEAR_SELECTION,
-                        CarPropertyManager.SENSOR_RATE_ONCHANGE
-                    )
-                    carPropertyManager?.registerCallback(
-                        carPropertyListener,
-                        VehiclePropertyIds.NIGHT_MODE,
-                        CarPropertyManager.SENSOR_RATE_ONCHANGE
-                    )
-                } else {
-                    carPropertyManager?.unregisterCallback(carPropertyListener)
-                    carPropertyManager = null
-                }
-            }
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) return
+
+        val carObj = try {
+            Car.createCar(this)
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Car service unavailable; vehicle sensor features disabled.", e)
+            return
+        } catch (e: LinkageError) {
+            Log.w(TAG, "Car service API incompatible; vehicle sensor features disabled.", e)
+            return
+        }
+
+        car = carObj
+        carPropertyManager = try {
+            carObj.getCarManager(Car.PROPERTY_SERVICE) as? CarPropertyManager
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Car property service unavailable; vehicle sensor features disabled.", e)
+            null
+        }
+
+        val manager = carPropertyManager ?: return
+        registerCarProperty(manager, VehiclePropertyIds.GEAR_SELECTION)
+        registerCarProperty(manager, VehiclePropertyIds.NIGHT_MODE)
+    }
+
+    private fun registerCarProperty(manager: CarPropertyManager, propertyId: Int) {
+        try {
+            manager.registerCallback(
+                carPropertyListener,
+                propertyId,
+                CarPropertyManager.SENSOR_RATE_ONCHANGE
+            )
+        } catch (e: RuntimeException) {
+            Log.w(TAG, "Car property $propertyId unavailable; continuing without it.", e)
         }
     }
 

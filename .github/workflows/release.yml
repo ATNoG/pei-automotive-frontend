@@ -1,4 +1,4 @@
-name: Release APK
+name: Release APK & App Bundle
 
 on:
   push:
@@ -42,6 +42,19 @@ jobs:
 
       - name: Build APKs and App Bundle
         run: ./gradlew assembleDebug assembleStaging bundleStaging
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+      
+      - name: Sign App Bundle
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore app/release.keystore \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            app/build/outputs/bundle/staging/app-staging.aab \
+            ${{ secrets.KEY_ALIAS }}
 
       - name: Rename APKs
         run: |

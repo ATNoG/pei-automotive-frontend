@@ -92,4 +92,4 @@ jobs:
           files: |
             app/build/outputs/apk/debug/pei-automotive-*-debug.apk
             app/build/outputs/apk/staging/pei-automotive-*-staging.apk
-            app/build/outputs/bundle/release/pei-automotive-*.aab
+            app/build/outputs/bundle/staging/pei-automotive-*.aab

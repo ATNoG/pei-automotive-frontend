@@ -1,4 +1,4 @@
-name: Release APK
+name: Release APK & App Bundle
 
 on:
   push:
@@ -42,6 +42,31 @@ jobs:
 
       - name: Build APKs and App Bundle
         run: ./gradlew assembleDebug assembleStaging bundleStaging
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/release.keystore
+      
+      - name: Sign App Bundle
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore app/release.keystore \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEY_PASSWORD }}" \
+            app/build/outputs/bundle/staging/app-staging.aab \
+            ${{ secrets.KEY_ALIAS }}
+
+      - name: ZipAlign App Bundle
+        run: |
+          BUILD_TOOLS_DIR=$ANDROID_HOME/build-tools/34.0.0
+          if [ ! -d "$BUILD_TOOLS_DIR" ]; then
+            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
+          fi
+          $BUILD_TOOLS_DIR/zipalign -v 4 \
+            app/build/outputs/bundle/staging/app-staging.aab \
+            app/build/outputs/bundle/staging/app-staging-aligned.aab
+          mv app/build/outputs/bundle/staging/app-staging-aligned.aab \
+             app/build/outputs/bundle/staging/app-staging.aab
 
       - name: Rename APKs
         run: |

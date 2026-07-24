@@ -40,8 +40,8 @@ jobs:
           MQTT_BROKER_PORT=1884
           EOF
 
-      - name: Build APKs
-        run: ./gradlew assembleDebug assembleStaging
+      - name: Build APKs and App Bundle
+        run: ./gradlew assembleDebug assembleStaging bundleStaging
 
       - name: Rename APKs
         run: |
@@ -50,6 +50,12 @@ jobs:
              app/build/outputs/apk/debug/pei-automotive-${TAG}-debug.apk
           mv app/build/outputs/apk/staging/app-staging.apk \
              app/build/outputs/apk/staging/pei-automotive-${TAG}-staging.apk
+      
+      - name: Rename App Bundle
+        run: |
+          TAG=${{ github.event.inputs.tag || github.ref_name }}
+          mv app/build/outputs/bundle/staging/app-staging.aab \
+             app/build/outputs/bundle/staging/pei-automotive-${TAG}.aab
 
       - name: Upload APK artifacts
         uses: actions/upload-artifact@v4
@@ -58,6 +64,7 @@ jobs:
           path: |
             app/build/outputs/apk/debug/pei-automotive-*-debug.apk
             app/build/outputs/apk/staging/pei-automotive-*-staging.apk
+            app/build/outputs/bundle/staging/pei-automotive-*.aab
           retention-days: 30
 
       - name: Create GitHub Release
@@ -85,3 +92,4 @@ jobs:
           files: |
             app/build/outputs/apk/debug/pei-automotive-*-debug.apk
             app/build/outputs/apk/staging/pei-automotive-*-staging.apk
+            app/build/outputs/bundle/release/pei-automotive-*.aab

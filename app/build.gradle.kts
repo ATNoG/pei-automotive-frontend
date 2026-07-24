@@ -23,7 +23,7 @@ android {
     useLibrary("android.car")
 
     defaultConfig {
-        applicationId = "pt.it.automotive.app"
+        applicationId = "it.av.pt.automotive_app"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

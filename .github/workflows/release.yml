@@ -56,6 +56,18 @@ jobs:
             app/build/outputs/bundle/staging/app-staging.aab \
             ${{ secrets.KEY_ALIAS }}
 
+      - name: ZipAlign App Bundle
+        run: |
+          BUILD_TOOLS_DIR=$ANDROID_HOME/build-tools/34.0.0
+          if [ ! -d "$BUILD_TOOLS_DIR" ]; then
+            BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -n 1)
+          fi
+          $BUILD_TOOLS_DIR/zipalign -v 4 \
+            app/build/outputs/bundle/staging/app-staging.aab \
+            app/build/outputs/bundle/staging/app-staging-aligned.aab
+          mv app/build/outputs/bundle/staging/app-staging-aligned.aab \
+             app/build/outputs/bundle/staging/app-staging.aab
+
       - name: Rename APKs
         run: |
           TAG=${{ github.event.inputs.tag || github.ref_name }}
